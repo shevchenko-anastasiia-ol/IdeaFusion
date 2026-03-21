@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ContentService", "ContentService", "{166E3357-009F-464B-A509-9214003DFDCA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentDAL", "ContentDAL\ContentDAL.csproj", "{C54270B4-DCAB-43A5-9350-0182A1F6294B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentDomain", "ContentDomain\ContentDomain.csproj", "{873EF04E-6D62-4914-817C-B9E39C64A6D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentAPI", "ContentAPI\ContentAPI.csproj", "{85BBAF03-5B5B-4F43-98EC-F676994141F2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C54270B4-DCAB-43A5-9350-0182A1F6294B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C54270B4-DCAB-43A5-9350-0182A1F6294B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C54270B4-DCAB-43A5-9350-0182A1F6294B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C54270B4-DCAB-43A5-9350-0182A1F6294B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{873EF04E-6D62-4914-817C-B9E39C64A6D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{873EF04E-6D62-4914-817C-B9E39C64A6D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{873EF04E-6D62-4914-817C-B9E39C64A6D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{873EF04E-6D62-4914-817C-B9E39C64A6D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{85BBAF03-5B5B-4F43-98EC-F676994141F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85BBAF03-5B5B-4F43-98EC-F676994141F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85BBAF03-5B5B-4F43-98EC-F676994141F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85BBAF03-5B5B-4F43-98EC-F676994141F2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C54270B4-DCAB-43A5-9350-0182A1F6294B} = {166E3357-009F-464B-A509-9214003DFDCA}
+		{873EF04E-6D62-4914-817C-B9E39C64A6D4} = {166E3357-009F-464B-A509-9214003DFDCA}
+		{85BBAF03-5B5B-4F43-98EC-F676994141F2} = {166E3357-009F-464B-A509-9214003DFDCA}
+	EndGlobalSection
+EndGlobal
