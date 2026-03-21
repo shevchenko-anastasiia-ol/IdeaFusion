@@ -19,7 +19,6 @@ public class Post
     public string? UpdatedBy { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public bool IsDeleted { get; set; } = false;
-    public byte[] RowVer { get; set; } = null!;
  
     public PostAuthor? Author { get; set; }
     public CollaborationSnapshot? Collaboration { get; set; }

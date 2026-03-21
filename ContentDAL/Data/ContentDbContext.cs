@@ -2,6 +2,7 @@
 
 using ContentDomain.Entity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbContext(options)
 {
@@ -102,15 +103,13 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
  
             entity.Property(p => p.IsDeleted)
                 .HasDefaultValueSql("false");
- 
-            entity.Property(p => p.RowVer)
-                .IsRowVersion();
+            
  
             // один пост не може бути і особистим, і від колаборації одночасно
             entity.ToTable(t => t.HasCheckConstraint(
-                "CK_Post_AuthorOrCollaboration",
-                "(\"PostAuthorId\" IS NOT NULL AND \"CollaborationSnapshotId\" IS NULL) OR " +
-                "(\"PostAuthorId\" IS NULL AND \"CollaborationSnapshotId\" IS NOT NULL)"));
+                "ck_post_authororcollaboration",
+                "(postauthorid IS NOT NULL AND collaborationsnapshotid IS NULL) OR " +
+                "(postauthorid IS NULL AND collaborationsnapshotid IS NOT NULL)"));
  
             entity.HasOne(p => p.Author)
                 .WithMany(a => a.Posts)
@@ -176,9 +175,7 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
  
             entity.Property(c => c.IsDeleted)
                 .HasDefaultValueSql("false");
- 
-            entity.Property(c => c.RowVer)
-                .IsRowVersion();
+            
  
             entity.HasOne(c => c.Post)
                 .WithMany(p => p.Comments)
@@ -251,5 +248,42 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
                 .HasForeignKey(s => s.PostId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+        modelBuilder.ApplyLowercaseNaming();
+    }
+}
+
+public static class LowercaseNamingExtension
+{
+    public static void ApplyLowercaseNaming(this ModelBuilder modelBuilder)
+    {
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            // таблиця
+            entity.SetTableName(entity.GetTableName()!.ToLowerInvariant());
+ 
+            // колонки
+            foreach (var property in entity.GetProperties())
+            {
+                property.SetColumnName(property.GetColumnName().ToLowerInvariant());
+            }
+ 
+            // ключі
+            foreach (var key in entity.GetKeys())
+            {
+                key.SetName(key.GetName()!.ToLowerInvariant());
+            }
+ 
+            // foreign keys
+            foreach (var fk in entity.GetForeignKeys())
+            {
+                fk.SetConstraintName(fk.GetConstraintName()!.ToLowerInvariant());
+            }
+ 
+            // індекси
+            foreach (var index in entity.GetIndexes())
+            {
+                index.SetDatabaseName(index.GetDatabaseName()!.ToLowerInvariant());
+            }
+        }
     }
 }

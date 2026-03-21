@@ -18,10 +18,11 @@ public class ContentDbSeed
     private const int LIKES_PER_POST = 10;
     private const int VIEWS_PER_POST = 20;
     private const int SAVED_PER_POST = 5;
+ 
     private const int AUTHORS_COUNT = 30;
  
     // імітуємо існуючих юзерів та колаборації з інших сервісів
-    private static readonly int[] FakeUserIds = Enumerable.Range(1, 30).ToArray();
+    private static readonly int[] FakeUserIds = Enumerable.Range(1, AUTHORS_COUNT).ToArray();
     private static readonly int[] FakeCollaborationIds = Enumerable.Range(1, 10).ToArray();
  
     public ContentDbSeed(ContentDbContext context, ILogger<ContentDbSeed> logger)
@@ -130,7 +131,7 @@ public class ContentDbSeed
                 UserId    = userId,
                 UserName  = faker.Internet.UserName(),
                 AvatarUrl = faker.Random.Bool(0.7f) ? faker.Internet.Avatar() : null,
-                SyncedAt  = faker.Date.Recent(7)
+                SyncedAt  = faker.Date.Recent(7).ToUniversalTime()
             }).ToList();
  
             await _context.PostAuthors.AddRangeAsync(authors);
@@ -156,7 +157,7 @@ public class ContentDbSeed
                 CollaborationId = collabId,
                 Name            = faker.Company.CompanyName(),
                 AvatarUrl       = faker.Random.Bool(0.6f) ? faker.Internet.Avatar() : null,
-                SyncedAt        = faker.Date.Recent(7)
+                SyncedAt        = faker.Date.Recent(7).ToUniversalTime()
             }).ToList();
  
             await _context.CollaborationSnapshots.AddRangeAsync(snapshots);
@@ -243,9 +244,9 @@ public class ContentDbSeed
                     Status           = faker.Random.WeightedRandom(
                                            new[] { PostStatus.Published, PostStatus.Archived, PostStatus.Draft },
                                            new[] { 0.75f, 0.15f, 0.10f }),
-                    CreatedAt        = faker.Date.Past(1),
+                    CreatedAt        = faker.Date.Past(1).ToUniversalTime(),
                     CreatedBy        = "seed",
-                    UpdatedAt        = faker.Random.Bool(0.25f) ? faker.Date.Recent(60) : null,
+                    UpdatedAt        = faker.Random.Bool(0.25f) ? faker.Date.Recent(60).ToUniversalTime() : null,
                     UpdatedBy        = faker.Random.Bool(0.25f) ? "seed" : null,
                     IsDeleted        = false
                 };
@@ -310,9 +311,9 @@ public class ContentDbSeed
                         PostAuthorId    = faker.PickRandom(authorIds),
                         ParentCommentId = null,
                         Body            = faker.Lorem.Sentences(faker.Random.Int(1, 3)),
-                        CreatedAt       = faker.Date.Past(1),
+                        CreatedAt       = faker.Date.Past(1).ToUniversalTime(),
                         CreatedBy       = "seed",
-                        UpdatedAt       = faker.Random.Bool(0.15f) ? faker.Date.Recent(30) : null,
+                        UpdatedAt       = faker.Random.Bool(0.15f) ? faker.Date.Recent(30).ToUniversalTime() : null,
                         UpdatedBy       = faker.Random.Bool(0.15f) ? "seed" : null,
                         IsDeleted       = false
                     };
@@ -338,7 +339,7 @@ public class ContentDbSeed
                             PostAuthorId    = faker.PickRandom(authorIds),
                             ParentCommentId = parent.CommentId,
                             Body            = faker.Lorem.Sentence(),
-                            CreatedAt       = parent.CreatedAt.AddMinutes(faker.Random.Int(1, 1440)),
+                            CreatedAt       = parent.CreatedAt.ToUniversalTime().AddMinutes(faker.Random.Int(1, 1440)),
                             CreatedBy       = "seed",
                             UpdatedAt       = null,
                             UpdatedBy       = null,
@@ -398,7 +399,7 @@ public class ContentDbSeed
                     {
                         PostId    = postId,
                         UserId    = userId,
-                        CreatedAt = faker.Date.Past(1)
+                        CreatedAt = faker.Date.Past(1).ToUniversalTime()
                     });
                 }
             }
@@ -444,7 +445,7 @@ public class ContentDbSeed
                         PostId   = postId,
                         // 30% переглядів — анонімні
                         UserId   = faker.Random.Bool(0.7f) ? faker.PickRandom(FakeUserIds) : null,
-                        ViewedAt = faker.Date.Past(1)
+                        ViewedAt = faker.Date.Past(1).ToUniversalTime()
                     });
                 }
             }
@@ -494,7 +495,7 @@ public class ContentDbSeed
                     {
                         PostId  = postId,
                         UserId  = userId,
-                        SavedAt = faker.Date.Past(1)
+                        SavedAt = faker.Date.Past(1).ToUniversalTime()
                     });
                 }
             }
