@@ -2,7 +2,7 @@
 
 namespace ContentDAL.Repository.Interfaces;
 
-public interface  ITagRepository
+public interface ITagRepository
 {
     Task AddAsync(Tag entity, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
@@ -11,4 +11,6 @@ public interface  ITagRepository
     Task<Tag?> GetByNameAsync(string name, CancellationToken ct = default);
     Task<IEnumerable<Tag>> GetAllAsync(CancellationToken ct = default);
     Task<IEnumerable<Tag>> GetByPostIdAsync(int postId, CancellationToken ct = default);
+    Task AddPostTagAsync(int postId, int tagId, CancellationToken ct = default);
+    Task DeletePostTagsAsync(int postId, CancellationToken ct = default);
 }

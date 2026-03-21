@@ -58,4 +58,19 @@ public class TagRepository : ITagRepository
  
         return await _connection.QueryAsync<Tag>(sql, new { PostId = postId }, transaction: _transaction);
     }
+ 
+    public async Task AddPostTagAsync(int postId, int tagId, CancellationToken ct = default)
+    {
+        var sql = @"INSERT INTO PostTags (PostId, TagId)
+                    VALUES (@PostId, @TagId)
+                    ON CONFLICT (PostId, TagId) DO NOTHING;";
+ 
+        await _connection.ExecuteAsync(sql, new { PostId = postId, TagId = tagId }, transaction: _transaction);
+    }
+ 
+    public async Task DeletePostTagsAsync(int postId, CancellationToken ct = default)
+    {
+        var sql = "DELETE FROM PostTags WHERE PostId = @PostId;";
+        await _connection.ExecuteAsync(sql, new { PostId = postId }, transaction: _transaction);
+    }
 }
