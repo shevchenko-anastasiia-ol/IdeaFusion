@@ -3,6 +3,7 @@ using ContentBLL.DTO.Tag;
 using ContentBLL.Services.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
+using ContentDomain.Exception;
 
 namespace ContentBLL.Services;
 
@@ -39,7 +40,7 @@ public class TagService : ITagService
     {
         var existing = await _uow.TagRepository.GetByNameAsync(dto.Name, ct);
         if (existing is not null)
-            throw new InvalidOperationException($"Тег '{dto.Name}' вже існує.");
+            throw new BusinessConflictException($"Тег '{dto.Name}' вже існує.");
  
         var tag = _mapper.Map<Tag>(dto);
         await _uow.TagRepository.AddAsync(tag, ct);
@@ -50,7 +51,7 @@ public class TagService : ITagService
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         var existing = await _uow.TagRepository.GetByIdAsync(id, ct)
-                       ?? throw new KeyNotFoundException($"Тег з id={id} не знайдено.");
+                       ?? throw new NotFoundException($"Тег з id={id} не знайдено.");
  
         await _uow.TagRepository.DeleteAsync(existing.TagId, ct);
     }

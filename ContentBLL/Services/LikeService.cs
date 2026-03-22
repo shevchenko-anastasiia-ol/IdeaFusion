@@ -3,6 +3,7 @@ using ContentBLL.DTO.Like;
 using ContentBLL.Services.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
+using ContentDomain.Exception;
 
 namespace ContentBLL.Services;
 
@@ -20,11 +21,11 @@ public class LikeService : ILikeService
     public async Task<LikeDto> AddAsync(LikeCreateDto dto, CancellationToken ct = default)
     {
         var post = await _uow.PostRepository.GetByIdAsync(dto.PostId, ct)
-                   ?? throw new KeyNotFoundException($"Пост з id={dto.PostId} не знайдено.");
+                   ?? throw new NotFoundException($"Пост з id={dto.PostId} не знайдено.");
  
         var alreadyLiked = await _uow.LikeRepository.ExistsAsync(dto.PostId, dto.UserId, ct);
         if (alreadyLiked)
-            throw new InvalidOperationException("Користувач вже лайкнув цей пост.");
+            throw new BusinessConflictException("Користувач вже лайкнув цей пост.");
  
         var like = _mapper.Map<Like>(dto);
         like.CreatedAt = DateTime.UtcNow;
@@ -38,7 +39,7 @@ public class LikeService : ILikeService
     {
         var exists = await _uow.LikeRepository.ExistsAsync(postId, userId, ct);
         if (!exists)
-            throw new KeyNotFoundException($"Лайк від userId={userId} на постId={postId} не знайдено.");
+            throw new NotFoundException($"Лайк від userId={userId} на постId={postId} не знайдено.");
  
         await _uow.LikeRepository.DeleteAsync(postId, userId, ct);
     }

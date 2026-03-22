@@ -15,7 +15,6 @@ public class TagController : ControllerBase
         _tagService = tagService;
     }
  
-    // GET: api/tag
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TagDto>>> GetAll(CancellationToken ct)
     {
@@ -23,18 +22,15 @@ public class TagController : ControllerBase
         return Ok(tags);
     }
  
-    // GET: api/tag/{id}
     [HttpGet("{id:int}")]
     public async Task<ActionResult<TagDto>> GetById(int id, CancellationToken ct)
     {
         var tag = await _tagService.GetByIdAsync(id, ct);
         if (tag is null)
             return NotFound(new ProblemDetails { Title = $"Тег з id={id} не знайдено." });
- 
         return Ok(tag);
     }
  
-    // GET: api/tag/by-post/{postId}
     [HttpGet("by-post/{postId:int}")]
     public async Task<ActionResult<IEnumerable<TagDto>>> GetByPost(int postId, CancellationToken ct)
     {
@@ -42,33 +38,17 @@ public class TagController : ControllerBase
         return Ok(tags);
     }
  
-    // POST: api/tag
     [HttpPost]
     public async Task<ActionResult<TagDto>> Create([FromBody] TagCreateDto dto, CancellationToken ct)
     {
-        try
-        {
-            var tag = await _tagService.CreateAsync(dto, ct);
-            return CreatedAtAction(nameof(GetById), new { id = tag.TagId }, tag);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ProblemDetails { Title = ex.Message });
-        }
+        var tag = await _tagService.CreateAsync(dto, ct);
+        return CreatedAtAction(nameof(GetById), new { id = tag.TagId }, tag);
     }
  
-    // DELETE: api/tag/{id}
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        try
-        {
-            await _tagService.DeleteAsync(id, ct);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new ProblemDetails { Title = ex.Message });
-        }
+        await _tagService.DeleteAsync(id, ct);
+        return NoContent();
     }
 }

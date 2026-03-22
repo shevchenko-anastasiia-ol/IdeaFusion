@@ -3,6 +3,7 @@ using ContentBLL.DTO.Comment;
 using ContentBLL.Services.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
+using ContentDomain.Exception;
 
 namespace ContentBLL.Services;
 
@@ -39,16 +40,16 @@ public class CommentService : ICommentService
     {
         // перевіряємо що пост існує
         var post = await _uow.PostRepository.GetByIdAsync(dto.PostId, ct)
-            ?? throw new KeyNotFoundException($"Пост з id={dto.PostId} не знайдено.");
+            ?? throw new NotFoundException($"Пост з id={dto.PostId} не знайдено.");
  
         // якщо це reply — перевіряємо що батьківський коментар існує і належить тому ж посту
         if (dto.ParentCommentId.HasValue)
         {
             var parent = await _uow.CommentRepository.GetByIdAsync(dto.ParentCommentId.Value, ct)
-                ?? throw new KeyNotFoundException($"Батьківський коментар з id={dto.ParentCommentId} не знайдено.");
+                ?? throw new NotFoundException($"Батьківський коментар з id={dto.ParentCommentId} не знайдено.");
  
             if (parent.PostId != dto.PostId)
-                throw new InvalidOperationException("Батьківський коментар належить іншому посту.");
+                throw new BusinessConflictException("Батьківський коментар належить іншому посту.");
         }
  
         var comment = _mapper.Map<Comment>(dto);
@@ -62,7 +63,7 @@ public class CommentService : ICommentService
     public async Task<CommentDto> UpdateAsync(int id, CommentUpdateDto dto, CancellationToken ct = default)
     {
         var existing = await _uow.CommentRepository.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Коментар з id={id} не знайдено.");
+            ?? throw new NotFoundException($"Коментар з id={id} не знайдено.");
  
         _mapper.Map(dto, existing);
         existing.UpdatedAt = DateTime.UtcNow;
@@ -75,7 +76,7 @@ public class CommentService : ICommentService
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         var existing = await _uow.CommentRepository.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Коментар з id={id} не знайдено.");
+            ?? throw new NotFoundException($"Коментар з id={id} не знайдено.");
  
         await _uow.CommentRepository.DeleteAsync(existing.CommentId, ct);
     }

@@ -3,6 +3,7 @@ using ContentBLL.DTO.SavedPost;
 using ContentBLL.Services.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
+using ContentDomain.Exception;
 
 namespace ContentBLL.Services;
 
@@ -20,11 +21,11 @@ public class SavedPostService : ISavedPostService
     public async Task<SavedPostDto> SaveAsync(SavedPostCreateDto dto, CancellationToken ct = default)
     {
         var post = await _uow.PostRepository.GetByIdAsync(dto.PostId, ct)
-                   ?? throw new KeyNotFoundException($"Пост з id={dto.PostId} не знайдено.");
+                   ?? throw new NotFoundException($"Пост з id={dto.PostId} не знайдено.");
  
         var alreadySaved = await _uow.SavedPostRepository.ExistsAsync(dto.PostId, dto.UserId, ct);
         if (alreadySaved)
-            throw new InvalidOperationException("Користувач вже зберіг цей пост.");
+            throw new BusinessConflictException("Користувач вже зберіг цей пост.");
  
         var savedPost = _mapper.Map<SavedPost>(dto);
         savedPost.SavedAt = DateTime.UtcNow;
@@ -41,7 +42,7 @@ public class SavedPostService : ISavedPostService
     {
         var exists = await _uow.SavedPostRepository.ExistsAsync(postId, userId, ct);
         if (!exists)
-            throw new KeyNotFoundException($"Збережений пост від userId={userId} на постId={postId} не знайдено.");
+            throw new NotFoundException($"Збережений пост від userId={userId} на постId={postId} не знайдено.");
  
         await _uow.SavedPostRepository.DeleteAsync(postId, userId, ct);
     }

@@ -3,6 +3,7 @@ using ContentBLL.DTO.Post;
 using ContentBLL.Services.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
+using ContentDomain.Exception;
 
 namespace ContentBLL.Services;
 
@@ -84,7 +85,7 @@ public class PostService : IPostService
     public async Task<PostDto> UpdateAsync(int id, PostUpdateDto dto, CancellationToken ct = default)
     {
         var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Пост з id={id} не знайдено.");
+            ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
  
         _mapper.Map(dto, existing);
         existing.UpdatedAt = DateTime.UtcNow;
@@ -110,7 +111,7 @@ public class PostService : IPostService
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Пост з id={id} не знайдено.");
+            ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
  
         await _uow.PostRepository.DeleteAsync(existing.PostId, ct);
     }
@@ -118,7 +119,7 @@ public class PostService : IPostService
     public async Task ArchiveAsync(int id, CancellationToken ct = default)
     {
         var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Пост з id={id} не знайдено.");
+            ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
  
         await _uow.PostRepository.ArchiveAsync(existing.PostId, ct);
     }
@@ -153,4 +154,3 @@ public class PostService : IPostService
         await _uow.TagRepository.DeletePostTagsAsync(postId, ct);
     }
 }
- 
