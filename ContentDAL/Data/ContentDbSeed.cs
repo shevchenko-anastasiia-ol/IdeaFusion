@@ -45,7 +45,8 @@ public class ContentDbSeed
             var hasLikes = await _context.Likes.AnyAsync();
             var hasViews = await _context.PostViews.AnyAsync();
             var hasSaved = await _context.SavedPosts.AnyAsync();
- 
+            var hasMedia = await _context.PostMedia.AnyAsync();
+            
             _logger.LogInformation(
                 "Current state — Authors: {HasAuthors}, Collaborations: {HasCollaborations}, Tags: {HasTags}, Posts: {HasPosts}, Comments: {HasComments}, " +
                 "Likes: {HasLikes}, Views: {HasViews}, Saved: {HasSaved}",
@@ -96,7 +97,12 @@ public class ContentDbSeed
                 await SeedSavedPostsAsync();
             else
                 _logger.LogInformation("SavedPosts already seeded. Skipping...");
- 
+            
+            if (!hasMedia)
+                await SeedPostMediaAsync();
+            else
+                _logger.LogInformation("PostMedia already seeded. Skipping...");
+            
             var finalAuthors = await _context.PostAuthors.CountAsync();
             var finalCollaborations = await _context.CollaborationSnapshots.CountAsync();
             var finalTags = await _context.Tags.CountAsync();
@@ -239,7 +245,6 @@ public class ContentDbSeed
                     CollaborationSnapshotId = isPersonal ? null : faker.PickRandom(collabSnapshotIds),
                     Title            = faker.Lorem.Sentence(wordCount: faker.Random.Int(3, 8)).TrimEnd('.'),
                     Description      = faker.Lorem.Paragraph(),
-                    MediaUrl         = faker.Random.Bool(0.7f) ? faker.Image.PicsumUrl() : null,
                     ExternalLink     = faker.Random.Bool(0.3f) ? faker.Internet.Url() : null,
                     Status           = faker.Random.WeightedRandom(
                                            new[] { PostStatus.Published, PostStatus.Archived, PostStatus.Draft },
@@ -509,5 +514,37 @@ public class ContentDbSeed
             _logger.LogError(ex, "!!! ERROR seeding saved posts !!!");
             throw;
         }
+    }
+    private async Task SeedPostMediaAsync()
+    {
+        _logger.LogInformation(">>> Seeding post media...");
+
+        var postIds = await _context.Posts.Select(p => p.PostId).ToListAsync();
+        var faker = new Faker();
+
+        var media = new List<PostMedia>();
+
+        foreach (var postId in postIds)
+        {
+            var mediaCount = faker.Random.Int(1, 3);
+
+            for (int i = 0; i < mediaCount; i++)
+            {
+                var fileName = $"{Guid.NewGuid()}.jpg";
+
+                media.Add(new PostMedia
+                {
+                    PostId = postId,
+                    Bucket = "posts",
+                    ObjectName = $"post-{postId}/{fileName}",
+                    ContentType = "image/jpeg"
+                });
+            }
+        }
+
+        await _context.PostMedia.AddRangeAsync(media);
+        var saved = await _context.SaveChangesAsync();
+
+        _logger.LogInformation("<<< Seeded {Count} post media (SaveChanges: {Saved})", media.Count, saved);
     }
 }

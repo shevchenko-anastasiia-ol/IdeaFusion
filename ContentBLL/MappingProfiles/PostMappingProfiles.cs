@@ -8,14 +8,22 @@ public class PostMappingProfiles : Profile
 {
     public PostMappingProfiles()
     {
+        // Мапінг автора
         CreateMap<PostAuthor, AuthorDto>();
- 
+
+        // Мапінг колаборації
         CreateMap<CollaborationSnapshot, CollaborationDto>();
- 
+
+        // Мапінг посту в PostDto
         CreateMap<Post, PostDto>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.Tags,   opt => opt.MapFrom(src => src.PostTags.Select(pt => pt.Tag.Name).ToList()));
- 
+            .ForMember(dest => dest.Status, 
+                       opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.Tags,   
+                       opt => opt.MapFrom(src => src.PostTags.Select(pt => pt.Tag.Name).ToList()))
+            .ForMember(dest => dest.MediaUrls, 
+                       opt => opt.MapFrom(src => src.Media.Select<PostMedia, string>(m => m.ObjectName).ToList()));
+
+        // Мапінг PostCreateDto в Post
         CreateMap<PostCreateDto, Post>()
             .ForMember(dest => dest.PostId,                  opt => opt.Ignore())
             .ForMember(dest => dest.Status,                  opt => opt.MapFrom(_ => PostStatus.Published))
@@ -29,8 +37,10 @@ public class PostMappingProfiles : Profile
             .ForMember(dest => dest.Comments,                opt => opt.Ignore())
             .ForMember(dest => dest.Likes,                   opt => opt.Ignore())
             .ForMember(dest => dest.Views,                   opt => opt.Ignore())
-            .ForMember(dest => dest.SavedPosts,              opt => opt.Ignore());
- 
+            .ForMember(dest => dest.SavedPosts,              opt => opt.Ignore())
+            .ForMember(dest => dest.Media,                   opt => opt.Ignore()); // Media поки що окремо додається
+
+        // Мапінг PostUpdateDto в Post
         CreateMap<PostUpdateDto, Post>()
             .ForMember(dest => dest.PostId,                  opt => opt.Ignore())
             .ForMember(dest => dest.PostAuthorId,            opt => opt.Ignore())
@@ -46,6 +56,7 @@ public class PostMappingProfiles : Profile
             .ForMember(dest => dest.Comments,                opt => opt.Ignore())
             .ForMember(dest => dest.Likes,                   opt => opt.Ignore())
             .ForMember(dest => dest.Views,                   opt => opt.Ignore())
-            .ForMember(dest => dest.SavedPosts,              opt => opt.Ignore());
+            .ForMember(dest => dest.SavedPosts,              opt => opt.Ignore())
+            .ForMember(dest => dest.Media,                   opt => opt.Ignore()); // Media окремо
     }
 }

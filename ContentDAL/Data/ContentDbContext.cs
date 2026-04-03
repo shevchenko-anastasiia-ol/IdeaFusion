@@ -15,6 +15,7 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
     public DbSet<Like> Likes { get; set; }
     public DbSet<PostView> PostViews { get; set; }
     public DbSet<SavedPost> SavedPosts { get; set; }
+    public DbSet<PostMedia> PostMedia { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,9 +76,6 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
  
             entity.Property(p => p.Description)
                 .HasMaxLength(2000);
- 
-            entity.Property(p => p.MediaUrl)
-                .HasMaxLength(500);
  
             entity.Property(p => p.ExternalLink)
                 .HasMaxLength(500);
@@ -246,6 +244,28 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
             entity.HasOne(s => s.Post)
                 .WithMany(p => p.SavedPosts)
                 .HasForeignKey(s => s.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        // ── PostMedia ─────────────────────────────────────────────────────────
+        modelBuilder.Entity<PostMedia>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+        
+            entity.Property(m => m.Bucket)
+                .HasMaxLength(100)
+                .IsRequired();
+        
+            entity.Property(m => m.ObjectName)
+                .HasMaxLength(500)
+                .IsRequired();
+        
+            entity.Property(m => m.ContentType)
+                .HasMaxLength(100)
+                .IsRequired();
+        
+            entity.HasOne(m => m.Post)
+                .WithMany(p => p.Media)
+                .HasForeignKey(m => m.PostId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.ApplyLowercaseNaming();

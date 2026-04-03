@@ -12,6 +12,8 @@ public class UnitOfWork : IUnitOfWork
     private IDbTransaction? _transaction;
     private bool _disposed = false;
     private readonly object _lockObject = new object();
+    private readonly Minio.IMinioClient _minioClient;
+    private readonly string _bucketName;
  
     public IPostRepository PostRepository { get; private set; } = null!;
     public ICommentRepository CommentRepository { get; private set; } = null!;
@@ -20,19 +22,23 @@ public class UnitOfWork : IUnitOfWork
     public ISavedPostRepository SavedPostRepository { get; private set; } = null!;
     public ITagRepository TagRepository { get; private set; } = null!;
  
-    public UnitOfWork(IConnectionFactory connectionFactory)
+    public UnitOfWork(IConnectionFactory connectionFactory,
+        Minio.MinioClient minioClient,
+        string bucketName)
     {
         _connectionFactory = connectionFactory;
+        _minioClient = minioClient;
+        _bucketName = bucketName;
+
         _connection = _connectionFactory.CreateConnection();
- 
         InitializeRepositories();
     }
  
     private void InitializeRepositories()
     {
         if (_connection == null) throw new InvalidOperationException("Connection is null.");
- 
-        PostRepository        = new PostRepository(_connection, _transaction);
+
+        PostRepository = new PostRepository(_connection, _minioClient, _bucketName, _transaction);
         CommentRepository     = new CommentRepository(_connection, _transaction);
         LikeRepository        = new LikeRepository(_connection, _transaction);
         PostViewRepository    = new PostViewRepository(_connection, _transaction);

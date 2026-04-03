@@ -9,7 +9,6 @@ public class Post
  
     public string Title { get; set; } = null!;
     public string? Description { get; set; }
-    public string? MediaUrl { get; set; }
     public string? ExternalLink { get; set; }
  
     public PostStatus Status { get; set; } = PostStatus.Published;
@@ -28,6 +27,7 @@ public class Post
     public ICollection<Like> Likes { get; set; } = new List<Like>();
     public ICollection<PostView> Views { get; set; } = new List<PostView>();
     public ICollection<SavedPost> SavedPosts { get; set; } = new List<SavedPost>();
+    public ICollection<PostMedia> Media { get; set; } = new List<PostMedia>();
 }
 
 public enum PostStatus

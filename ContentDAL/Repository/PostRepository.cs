@@ -2,47 +2,188 @@
 using ContentDAL.Repository.Interfaces;
 using ContentDomain.Entity;
 using Dapper;
+using Microsoft.AspNetCore.Http;
+using Minio;
+using Minio.DataModel.Args;
 
 namespace ContentDAL.Repository;
 
 public class PostRepository : IPostRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IMinioClient _minioClient;
+    private readonly string _bucketName;
     protected readonly IDbTransaction? _transaction;
  
-    public PostRepository(IDbConnection connection, IDbTransaction? transaction = null)
+    public PostRepository(IDbConnection connection, IMinioClient minioClient, string bucketName, IDbTransaction? transaction = null)
     {
         _connection = connection;
         _transaction = transaction;
+        _minioClient = minioClient;
+        _bucketName = bucketName;
     }
- 
-    public async Task AddAsync(Post entity, CancellationToken ct = default)
+    
+    public Task<string> GetMediaUrlAsync(PostMedia media, CancellationToken ct = default)
     {
-        var sql = @"INSERT INTO Posts
-                        (PostAuthorId, CollaborationSnapshotId, Title, Description,
-                         MediaUrl, ExternalLink, Status, CreatedAt, CreatedBy, IsDeleted)
-                    VALUES
-                        (@PostAuthorId, @CollaborationSnapshotId, @Title, @Description,
-                         @MediaUrl, @ExternalLink, @Status, @CreatedAt, @CreatedBy, @IsDeleted)
-                    RETURNING PostId;";
- 
-        entity.PostId = await _connection.ExecuteScalarAsync<int>(sql, entity, transaction: _transaction);
+        var url = $"https://{media.Bucket}.s3.amazonaws.com/{media.ObjectName}";
+        return Task.FromResult(url);
     }
+ 
+    // --- Upload media to MinIO and return public URL ---
+    public async Task<PostMedia> UploadMediaAsync(int postId, IFormFile file, CancellationToken ct = default)
+    {
+        if (file == null || file.Length == 0)
+            throw new ArgumentException("File is empty", nameof(file));
+
+        // Генеруємо унікальне ім'я для MinIO
+        var objectName = $"{Guid.NewGuid()}_{file.FileName}";
+
+        // Завантажуємо у MinIO
+        await _minioClient.PutObjectAsync(new PutObjectArgs()
+                .WithBucket(_bucketName)
+                .WithObject(objectName)
+                .WithStreamData(file.OpenReadStream())
+                .WithObjectSize(file.Length)
+                .WithContentType(file.ContentType),
+            ct);
+
+        // Створюємо PostMedia об'єкт
+        var media = new PostMedia
+        {
+            PostId = postId,
+            ObjectName = objectName,
+            Bucket = _bucketName,
+            ContentType = file.ContentType
+        };
+
+        // Додатково можна зберегти у БД
+        await AddPostMediaAsync(media, ct);
+
+        return media;
+    }
+
+    // Допоміжний метод для збереження у таблицю PostMedia
+        private async Task AddPostMediaAsync(PostMedia media, CancellationToken ct)
+        {
+            var sql = @"INSERT INTO PostMedia (PostId, ObjectName, Bucket, ContentType)
+                    VALUES (@PostId, @ObjectName, @Bucket, @ContentType);";
+
+            await _connection.ExecuteAsync(sql, media, transaction: _transaction);
+        }
+        
+        public async Task DeleteMediaAsync(int postId, CancellationToken ct = default)
+        {
+            var mediaList = await GetMediaByPostIdAsync(postId, ct);
+
+            foreach (var media in mediaList)
+            {
+                await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+                    .WithBucket(media.Bucket)
+                    .WithObject(media.ObjectName));
+            }
+
+            // Видалити записи з БД
+            var sql = "DELETE FROM PostMedia WHERE PostId = @PostId;";
+            await _connection.ExecuteAsync(sql, new { PostId = postId }, transaction: _transaction);
+        }
+        
+        public async Task<IEnumerable<PostMedia>> GetMediaByPostIdAsync(int postId, CancellationToken ct = default)
+        {
+            var sql = @"SELECT Id, PostId, ObjectName, Bucket, ContentType
+                FROM PostMedia
+                WHERE PostId = @PostId;";
+
+            var mediaList = await _connection.QueryAsync<PostMedia>(sql, new { PostId = postId }, transaction: _transaction);
+            return mediaList;
+        }
+    
+        public async Task AddAsync(Post entity, CancellationToken ct = default)
+        {
+            var sql = @"INSERT INTO Posts
+                            (PostAuthorId, CollaborationSnapshotId, Title, Description,
+                             ExternalLink, Status, CreatedAt, CreatedBy, IsDeleted)
+                        VALUES
+                            (@PostAuthorId, @CollaborationSnapshotId, @Title, @Description,
+                             @ExternalLink, @Status, @CreatedAt, @CreatedBy, @IsDeleted)
+                        RETURNING PostId;";
+    
+            entity.PostId = await _connection.ExecuteScalarAsync<int>(sql, entity, transaction: _transaction);
+            // --- Збереження медіа ---
+            foreach (var media in entity.Media)
+            {
+                var sqlMedia = @"INSERT INTO PostMedia
+                                (PostId, Bucket, ObjectName, ContentType)
+                             VALUES
+                                (@PostId, @Bucket, @ObjectName, @ContentType);";
+
+                await _connection.ExecuteAsync(sqlMedia, new
+                {
+                    PostId = entity.PostId,
+                    Bucket = media.Bucket,
+                    ObjectName = media.ObjectName,
+                    ContentType = media.ContentType
+                }, transaction: _transaction);
+            }
+        }
+        
  
     public async Task UpdateAsync(Post entity, CancellationToken ct = default)
+{
+    // 1️⃣ Оновлення основних полів поста
+    var sql = @"UPDATE Posts
+                SET Title       = @Title,
+                    Description = @Description,
+                    ExternalLink= @ExternalLink,
+                    Status      = @Status,
+                    UpdatedAt   = @UpdatedAt,
+                    UpdatedBy   = @UpdatedBy
+                WHERE PostId = @PostId AND IsDeleted = false;";
+
+    await _connection.ExecuteAsync(sql, entity, transaction: _transaction);
+
+    // 2️⃣ Отримати існуючі медіа з БД
+    var existingMedia = (await _connection.QueryAsync<PostMedia>(
+        "SELECT * FROM PostMedia WHERE PostId = @PostId;",
+        new { PostId = entity.PostId },
+        transaction: _transaction)).ToList();
+
+    // 3️⃣ Видалити медіа, яких більше немає в entity.Media
+    var mediaToDelete = existingMedia
+        .Where(em => !entity.Media.Any(m => m.ObjectName == em.ObjectName))
+        .ToList();
+
+    foreach (var media in mediaToDelete)
     {
-        var sql = @"UPDATE Posts
-                    SET Title                  = @Title,
-                        Description            = @Description,
-                        MediaUrl               = @MediaUrl,
-                        ExternalLink           = @ExternalLink,
-                        Status                 = @Status,
-                        UpdatedAt              = @UpdatedAt,
-                        UpdatedBy              = @UpdatedBy
-                    WHERE PostId = @PostId AND IsDeleted = false;";
- 
-        await _connection.ExecuteAsync(sql, entity, transaction: _transaction);
+        await _minioClient.RemoveObjectAsync(new Minio.DataModel.Args.RemoveObjectArgs()
+            .WithBucket(_bucketName)
+            .WithObject(media.ObjectName));
+
+        await _connection.ExecuteAsync(
+            "DELETE FROM PostMedia WHERE Id = @Id;",
+            new { media.Id },
+            transaction: _transaction);
     }
+
+    // 4️⃣ Додати нові медіа
+    var mediaToAdd = entity.Media
+        .Where(m => !existingMedia.Any(em => em.ObjectName == m.ObjectName))
+        .ToList();
+
+    foreach (var media in mediaToAdd)
+    {
+        await _connection.ExecuteAsync(
+            @"INSERT INTO PostMedia (PostId, Bucket, ObjectName, ContentType)
+              VALUES (@PostId, @Bucket, @ObjectName, @ContentType);",
+            new
+            {
+                PostId = entity.PostId,
+                Bucket = media.Bucket,
+                ObjectName = media.ObjectName,
+                ContentType = media.ContentType
+            },
+            transaction: _transaction);
+    }
+}
  
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
@@ -72,19 +213,26 @@ public class PostRepository : IPostRepository
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE p.PostId = @Id AND p.IsDeleted = false;";
  
-        var result = await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
+        var post = (await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
-            (post, author, collab) =>
+            (p, author, collab) =>
             {
-                post.Author        = author;
-                post.Collaboration = collab;
-                return post;
+                p.Author        = author;
+                p.Collaboration = collab;
+                return p;
             },
             new { Id = id },
             transaction: _transaction,
-            splitOn: "PostAuthorId,CollaborationSnapshotId");
+            splitOn: "PostAuthorId,CollaborationSnapshotId")).FirstOrDefault();
  
-        return result.FirstOrDefault();
+        if (post != null)
+        {
+            var mediaSql = @"SELECT * FROM PostMedia WHERE PostId = @PostId;";
+            var media = await _connection.QueryAsync<PostMedia>(mediaSql, new { PostId = id }, transaction: _transaction);
+            post.Media = media.ToList();
+        }
+
+        return post;;
     }
  
     public async Task<IEnumerable<Post>> GetAllAsync(CancellationToken ct = default)
