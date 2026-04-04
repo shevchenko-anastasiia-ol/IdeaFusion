@@ -14,7 +14,7 @@ public class PostRepository : IPostRepository
     private readonly IMinioClient _minioClient;
     private readonly string _bucketName;
     protected readonly IDbTransaction? _transaction;
- 
+
     public PostRepository(IDbConnection connection, IMinioClient minioClient, string bucketName, IDbTransaction? transaction = null)
     {
         _connection = connection;
@@ -22,23 +22,20 @@ public class PostRepository : IPostRepository
         _minioClient = minioClient;
         _bucketName = bucketName;
     }
-    
+
     public Task<string> GetMediaUrlAsync(PostMedia media, CancellationToken ct = default)
     {
         var url = $"https://{media.Bucket}.s3.amazonaws.com/{media.ObjectName}";
         return Task.FromResult(url);
     }
- 
-    // --- Upload media to MinIO and return public URL ---
+
     public async Task<PostMedia> UploadMediaAsync(int postId, IFormFile file, CancellationToken ct = default)
     {
         if (file == null || file.Length == 0)
             throw new ArgumentException("File is empty", nameof(file));
 
-        // Генеруємо унікальне ім'я для MinIO
         var objectName = $"{Guid.NewGuid()}_{file.FileName}";
 
-        // Завантажуємо у MinIO
         await _minioClient.PutObjectAsync(new PutObjectArgs()
                 .WithBucket(_bucketName)
                 .WithObject(objectName)
@@ -47,7 +44,6 @@ public class PostRepository : IPostRepository
                 .WithContentType(file.ContentType),
             ct);
 
-        // Створюємо PostMedia об'єкт
         var media = new PostMedia
         {
             PostId = postId,
@@ -56,155 +52,147 @@ public class PostRepository : IPostRepository
             ContentType = file.ContentType
         };
 
-        // Додатково можна зберегти у БД
         await AddPostMediaAsync(media, ct);
 
         return media;
     }
 
-    // Допоміжний метод для збереження у таблицю PostMedia
-        private async Task AddPostMediaAsync(PostMedia media, CancellationToken ct)
-        {
-            var sql = @"INSERT INTO PostMedia (PostId, ObjectName, Bucket, ContentType)
+    private async Task AddPostMediaAsync(PostMedia media, CancellationToken ct)
+    {
+        var sql = @"INSERT INTO PostMedia (PostId, ObjectName, Bucket, ContentType)
                     VALUES (@PostId, @ObjectName, @Bucket, @ContentType);";
 
-            await _connection.ExecuteAsync(sql, media, transaction: _transaction);
-        }
-        
-        public async Task DeleteMediaAsync(int postId, CancellationToken ct = default)
-        {
-            var mediaList = await GetMediaByPostIdAsync(postId, ct);
+        await _connection.ExecuteAsync(sql, media, transaction: _transaction);
+    }
 
-            foreach (var media in mediaList)
-            {
-                await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
-                    .WithBucket(media.Bucket)
-                    .WithObject(media.ObjectName));
-            }
+    public async Task DeleteMediaAsync(int postId, CancellationToken ct = default)
+    {
+        var mediaList = await GetMediaByPostIdAsync(postId, ct);
 
-            // Видалити записи з БД
-            var sql = "DELETE FROM PostMedia WHERE PostId = @PostId;";
-            await _connection.ExecuteAsync(sql, new { PostId = postId }, transaction: _transaction);
-        }
-        
-        public async Task<IEnumerable<PostMedia>> GetMediaByPostIdAsync(int postId, CancellationToken ct = default)
+        foreach (var media in mediaList)
         {
-            var sql = @"SELECT Id, PostId, ObjectName, Bucket, ContentType
-                FROM PostMedia
-                WHERE PostId = @PostId;";
+            await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+                .WithBucket(media.Bucket)
+                .WithObject(media.ObjectName));
+        }
 
-            var mediaList = await _connection.QueryAsync<PostMedia>(sql, new { PostId = postId }, transaction: _transaction);
-            return mediaList;
-        }
-    
-        public async Task AddAsync(Post entity, CancellationToken ct = default)
+        var sql = "DELETE FROM PostMedia WHERE PostId = @PostId;";
+        await _connection.ExecuteAsync(sql, new { PostId = postId }, transaction: _transaction);
+    }
+
+    public async Task<IEnumerable<PostMedia>> GetMediaByPostIdAsync(int postId, CancellationToken ct = default)
+    {
+        var sql = @"SELECT Id, PostId, ObjectName, Bucket, ContentType
+                    FROM PostMedia
+                    WHERE PostId = @PostId;";
+
+        var mediaList = await _connection.QueryAsync<PostMedia>(sql, new { PostId = postId }, transaction: _transaction);
+        return mediaList;
+    }
+
+    public async Task AddAsync(Post entity, CancellationToken ct = default)
+    {
+        var sql = @"INSERT INTO Posts
+                        (PostAuthorId, CollaborationSnapshotId, Title, Description,
+                         ExternalLink, Status, CreatedAt, CreatedBy, IsDeleted)
+                    VALUES
+                        (@PostAuthorId, @CollaborationSnapshotId, @Title, @Description,
+                         @ExternalLink, @Status, @CreatedAt, @CreatedBy, @IsDeleted)
+                    RETURNING PostId;";
+
+        entity.PostId = await _connection.ExecuteScalarAsync<int>(sql, entity, transaction: _transaction);
+
+        foreach (var media in entity.Media)
         {
-            var sql = @"INSERT INTO Posts
-                            (PostAuthorId, CollaborationSnapshotId, Title, Description,
-                             ExternalLink, Status, CreatedAt, CreatedBy, IsDeleted)
-                        VALUES
-                            (@PostAuthorId, @CollaborationSnapshotId, @Title, @Description,
-                             @ExternalLink, @Status, @CreatedAt, @CreatedBy, @IsDeleted)
-                        RETURNING PostId;";
-    
-            entity.PostId = await _connection.ExecuteScalarAsync<int>(sql, entity, transaction: _transaction);
-            // --- Збереження медіа ---
-            foreach (var media in entity.Media)
-            {
-                var sqlMedia = @"INSERT INTO PostMedia
+            var sqlMedia = @"INSERT INTO PostMedia
                                 (PostId, Bucket, ObjectName, ContentType)
                              VALUES
                                 (@PostId, @Bucket, @ObjectName, @ContentType);";
 
-                await _connection.ExecuteAsync(sqlMedia, new
-                {
-                    PostId = entity.PostId,
-                    Bucket = media.Bucket,
-                    ObjectName = media.ObjectName,
-                    ContentType = media.ContentType
-                }, transaction: _transaction);
-            }
-        }
-        
- 
-    public async Task UpdateAsync(Post entity, CancellationToken ct = default)
-{
-    // 1️⃣ Оновлення основних полів поста
-    var sql = @"UPDATE Posts
-                SET Title       = @Title,
-                    Description = @Description,
-                    ExternalLink= @ExternalLink,
-                    Status      = @Status,
-                    UpdatedAt   = @UpdatedAt,
-                    UpdatedBy   = @UpdatedBy
-                WHERE PostId = @PostId AND IsDeleted = false;";
-
-    await _connection.ExecuteAsync(sql, entity, transaction: _transaction);
-
-    // 2️⃣ Отримати існуючі медіа з БД
-    var existingMedia = (await _connection.QueryAsync<PostMedia>(
-        "SELECT * FROM PostMedia WHERE PostId = @PostId;",
-        new { PostId = entity.PostId },
-        transaction: _transaction)).ToList();
-
-    // 3️⃣ Видалити медіа, яких більше немає в entity.Media
-    var mediaToDelete = existingMedia
-        .Where(em => !entity.Media.Any(m => m.ObjectName == em.ObjectName))
-        .ToList();
-
-    foreach (var media in mediaToDelete)
-    {
-        await _minioClient.RemoveObjectAsync(new Minio.DataModel.Args.RemoveObjectArgs()
-            .WithBucket(_bucketName)
-            .WithObject(media.ObjectName));
-
-        await _connection.ExecuteAsync(
-            "DELETE FROM PostMedia WHERE Id = @Id;",
-            new { media.Id },
-            transaction: _transaction);
-    }
-
-    // 4️⃣ Додати нові медіа
-    var mediaToAdd = entity.Media
-        .Where(m => !existingMedia.Any(em => em.ObjectName == m.ObjectName))
-        .ToList();
-
-    foreach (var media in mediaToAdd)
-    {
-        await _connection.ExecuteAsync(
-            @"INSERT INTO PostMedia (PostId, Bucket, ObjectName, ContentType)
-              VALUES (@PostId, @Bucket, @ObjectName, @ContentType);",
-            new
+            await _connection.ExecuteAsync(sqlMedia, new
             {
                 PostId = entity.PostId,
                 Bucket = media.Bucket,
                 ObjectName = media.ObjectName,
                 ContentType = media.ContentType
-            },
-            transaction: _transaction);
+            }, transaction: _transaction);
+        }
     }
-}
- 
+
+    public async Task UpdateAsync(Post entity, CancellationToken ct = default)
+    {
+        var sql = @"UPDATE Posts
+                    SET Title       = @Title,
+                        Description = @Description,
+                        ExternalLink= @ExternalLink,
+                        Status      = @Status,
+                        UpdatedAt   = @UpdatedAt,
+                        UpdatedBy   = @UpdatedBy
+                    WHERE PostId = @PostId AND IsDeleted = false;";
+
+        await _connection.ExecuteAsync(sql, entity, transaction: _transaction);
+
+        var existingMedia = (await _connection.QueryAsync<PostMedia>(
+            "SELECT * FROM PostMedia WHERE PostId = @PostId;",
+            new { PostId = entity.PostId },
+            transaction: _transaction)).ToList();
+
+        var mediaToDelete = existingMedia
+            .Where(em => !entity.Media.Any(m => m.ObjectName == em.ObjectName))
+            .ToList();
+
+        foreach (var media in mediaToDelete)
+        {
+            await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+                .WithBucket(_bucketName)
+                .WithObject(media.ObjectName));
+
+            await _connection.ExecuteAsync(
+                "DELETE FROM PostMedia WHERE Id = @Id;",
+                new { media.Id },
+                transaction: _transaction);
+        }
+
+        var mediaToAdd = entity.Media
+            .Where(m => !existingMedia.Any(em => em.ObjectName == m.ObjectName))
+            .ToList();
+
+        foreach (var media in mediaToAdd)
+        {
+            await _connection.ExecuteAsync(
+                @"INSERT INTO PostMedia (PostId, Bucket, ObjectName, ContentType)
+                  VALUES (@PostId, @Bucket, @ObjectName, @ContentType);",
+                new
+                {
+                    PostId = entity.PostId,
+                    Bucket = media.Bucket,
+                    ObjectName = media.ObjectName,
+                    ContentType = media.ContentType
+                },
+                transaction: _transaction);
+        }
+    }
+
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         var sql = @"UPDATE Posts
                     SET IsDeleted = true, UpdatedAt = @UpdatedAt
                     WHERE PostId = @Id AND IsDeleted = false;";
- 
+
         await _connection.ExecuteAsync(sql, new { Id = id, UpdatedAt = DateTime.UtcNow }, transaction: _transaction);
     }
- 
+
     public async Task ArchiveAsync(int id, CancellationToken ct = default)
     {
         var sql = @"UPDATE Posts
                     SET Status = @Status, UpdatedAt = @UpdatedAt
                     WHERE PostId = @Id AND IsDeleted = false;";
- 
+
         await _connection.ExecuteAsync(sql,
             new { Id = id, Status = PostStatus.Archived.ToString(), UpdatedAt = DateTime.UtcNow },
             transaction: _transaction);
     }
- 
+
     public async Task<Post?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -212,7 +200,7 @@ public class PostRepository : IPostRepository
                     LEFT JOIN PostAuthors a            ON p.PostAuthorId = a.PostAuthorId
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE p.PostId = @Id AND p.IsDeleted = false;";
- 
+
         var post = (await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
             (p, author, collab) =>
@@ -224,7 +212,7 @@ public class PostRepository : IPostRepository
             new { Id = id },
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId")).FirstOrDefault();
- 
+
         if (post != null)
         {
             var mediaSql = @"SELECT * FROM PostMedia WHERE PostId = @PostId;";
@@ -232,9 +220,9 @@ public class PostRepository : IPostRepository
             post.Media = media.ToList();
         }
 
-        return post;;
+        return post;
     }
- 
+
     public async Task<IEnumerable<Post>> GetAllAsync(CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -243,7 +231,7 @@ public class PostRepository : IPostRepository
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE p.IsDeleted = false
                     ORDER BY p.CreatedAt DESC;";
- 
+
         return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
             (post, author, collab) =>
@@ -255,7 +243,7 @@ public class PostRepository : IPostRepository
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId");
     }
- 
+
     public async Task<IEnumerable<Post>> GetByAuthorAsync(int postAuthorId, CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -264,7 +252,7 @@ public class PostRepository : IPostRepository
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE p.PostAuthorId = @PostAuthorId AND p.IsDeleted = false
                     ORDER BY p.CreatedAt DESC;";
- 
+
         return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
             (post, author, collab) =>
@@ -277,7 +265,7 @@ public class PostRepository : IPostRepository
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId");
     }
- 
+
     public async Task<IEnumerable<Post>> GetByCollaborationAsync(int collaborationSnapshotId, CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -286,7 +274,7 @@ public class PostRepository : IPostRepository
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE p.CollaborationSnapshotId = @CollaborationSnapshotId AND p.IsDeleted = false
                     ORDER BY p.CreatedAt DESC;";
- 
+
         return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
             (post, author, collab) =>
@@ -299,7 +287,7 @@ public class PostRepository : IPostRepository
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId");
     }
- 
+
     public async Task<IEnumerable<Post>> GetByStatusAsync(PostStatus status, CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -308,7 +296,7 @@ public class PostRepository : IPostRepository
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE p.Status = @Status AND p.IsDeleted = false
                     ORDER BY p.CreatedAt DESC;";
- 
+
         return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
             (post, author, collab) =>
@@ -321,7 +309,7 @@ public class PostRepository : IPostRepository
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId");
     }
- 
+
     public async Task<IEnumerable<Post>> GetByTagAsync(int tagId, CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -331,7 +319,7 @@ public class PostRepository : IPostRepository
                     LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
                     WHERE pt.TagId = @TagId AND p.IsDeleted = false
                     ORDER BY p.CreatedAt DESC;";
- 
+
         return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
             sql,
             (post, author, collab) =>

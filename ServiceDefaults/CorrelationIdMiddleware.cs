@@ -24,27 +24,21 @@ public class CorrelationIdMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Check for existing CorrelationId in request header
         var correlationId = context.Request.Headers[CorrelationIdHeader].FirstOrDefault();
 
-        // Generate new GUID if header is missing (first service in the chain)
         if (string.IsNullOrWhiteSpace(correlationId))
         {
             correlationId = Guid.NewGuid().ToString();
             _logger.LogDebug("Generated new CorrelationId: {CorrelationId}", correlationId);
         }
 
-        // Store CorrelationId in HttpContext.Items for use in the request pipeline
         context.Items[CorrelationIdItemKey] = correlationId;
         context.Items[CorrelationIdHeader] = correlationId;
 
-        // Add CorrelationId to response headers so client can use it for support requests
         context.Response.Headers[CorrelationIdHeader] = correlationId;
 
-        // Push CorrelationId to Serilog LogContext for automatic inclusion in all logs
         using (LogContext.PushProperty("CorrelationId", correlationId))
         {
-            // Log request start
             _logger.LogInformation(
                 "Request started. Method: {Method}, Path: {Path}, CorrelationId: {CorrelationId}",
                 context.Request.Method,
@@ -58,13 +52,22 @@ public class CorrelationIdMiddleware
                 await _next(context);
                 stopwatch.Stop();
 
-                // Log request completion
                 _logger.LogInformation(
                     "Request completed. Method: {Method}, Path: {Path}, StatusCode: {StatusCode}, ElapsedMs: {ElapsedMs}, CorrelationId: {CorrelationId}",
                     context.Request.Method,
                     context.Request.Path,
                     context.Response.StatusCode,
                     stopwatch.ElapsedMilliseconds,
+                    correlationId);
+            }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                // Клієнт відключився — не є помилкою, просто ігноруємо
+                stopwatch.Stop();
+                _logger.LogDebug(
+                    "Request cancelled by client. Method: {Method}, Path: {Path}, CorrelationId: {CorrelationId}",
+                    context.Request.Method,
+                    context.Request.Path,
                     correlationId);
             }
             catch (Exception ex)
@@ -95,4 +98,3 @@ public static class CorrelationIdMiddlewareExtensions
         return app.UseMiddleware<CorrelationIdMiddleware>();
     }
 }
-

@@ -21,6 +21,11 @@ public class GlobalExceptionMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Клієнт відключився — не є помилкою, просто ігноруємо
+            context.Response.StatusCode = 499;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception occurred.");
@@ -68,10 +73,10 @@ public class GlobalExceptionMiddleware
             case CustomValidationException customValidation:
                 problemDetails.Status = StatusCodes.Status400BadRequest;
                 problemDetails.Title = "Validation Failed";
-                problemDetails.Extensions["errors"] = customValidation.Errors.Select(e => new 
-                { 
-                    property = e.PropertyName, 
-                    error = e.ErrorMessage 
+                problemDetails.Extensions["errors"] = customValidation.Errors.Select(e => new
+                {
+                    property = e.PropertyName,
+                    error = e.ErrorMessage
                 });
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 break;
@@ -79,10 +84,10 @@ public class GlobalExceptionMiddleware
             case FluentValidation.ValidationException validation:
                 problemDetails.Status = StatusCodes.Status400BadRequest;
                 problemDetails.Title = "Validation Failed";
-                problemDetails.Extensions["errors"] = validation.Errors.Select(e => new 
-                { 
-                    property = e.PropertyName, 
-                    error = e.ErrorMessage 
+                problemDetails.Extensions["errors"] = validation.Errors.Select(e => new
+                {
+                    property = e.PropertyName,
+                    error = e.ErrorMessage
                 });
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 break;
@@ -94,7 +99,7 @@ public class GlobalExceptionMiddleware
                 problemDetails.Extensions["entityId"] = concurrency.EntityId;
                 problemDetails.Extensions["expectedVersion"] = concurrency.ExpectedVersion;
                 problemDetails.Extensions["actualVersion"] = concurrency.ActualVersion;
-                context.Response.StatusCode = 412; // можна 409 або 412
+                context.Response.StatusCode = 412;
                 break;
 
             // MongoDB exceptions

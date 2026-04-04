@@ -87,4 +87,8 @@ var gateway = builder.AddProject<Projects.ApiGateway>("gateway")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
     .WithHttpHealthCheck("/health");
 
+var minio = builder.AddContainer("minio", "minio/minio")
+    .WithArgs("server", "/data")
+    .WithEndpoint(9000, 9000);
+
 builder.Build().Run();
