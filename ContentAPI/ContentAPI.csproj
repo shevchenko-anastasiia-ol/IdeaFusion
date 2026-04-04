@@ -29,6 +29,7 @@
     <ItemGroup>
       <ProjectReference Include="..\ContentBLL\ContentBLL.csproj" />
       <ProjectReference Include="..\ContentDomain\ContentDomain.csproj" />
+      <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

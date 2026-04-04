@@ -1,0 +1,178 @@
+@GatewayBaseUrl = http://localhost:5000
+
+### ============================================
+### 1. HEALTH CHECKS
+### ============================================
+
+GET {{GatewayBaseUrl}}/health
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/alive
+Accept: application/json
+
+
+### ============================================
+### 2. CONTENT SERVICE (PostgreSQL)
+### Entities: collaborationSnapshot, Comment, Interactions, Post, PostAuthor, PostMedia, Tag
+### ============================================
+
+### Posts
+GET {{GatewayBaseUrl}}/api/post
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/post/1
+Accept: application/json
+
+### PostAuthors
+GET {{GatewayBaseUrl}}/api/post-author
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/post-author/1
+Accept: application/json
+
+### PostMedia
+GET {{GatewayBaseUrl}}/api/post-media
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/post-media/1
+Accept: application/json
+
+### Comments
+GET {{GatewayBaseUrl}}/api/comment
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/comment/1
+Accept: application/json
+
+### Interactions
+GET {{GatewayBaseUrl}}/api/interactions
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/interactions/1
+Accept: application/json
+
+### Tags
+GET {{GatewayBaseUrl}}/api/tag
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/tag/1
+Accept: application/json
+
+### CollaborationSnapshots
+GET {{GatewayBaseUrl}}/api/collaboration-snapshot
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/collaboration-snapshot/1
+Accept: application/json
+
+
+### ============================================
+### 3. COLLABORATION SERVICE (MongoDB)
+### Entities: CollaborationRequest, GroupInvitation, Team, TeamPost
+### ============================================
+
+### Teams
+GET {{GatewayBaseUrl}}/api/team
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/team/1
+Accept: application/json
+
+### TeamPosts
+GET {{GatewayBaseUrl}}/api/team-post
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/team-post/1
+Accept: application/json
+
+### CollaborationRequests
+GET {{GatewayBaseUrl}}/api/collaboration-request
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/collaboration-request/1
+Accept: application/json
+
+### GroupInvitations
+GET {{GatewayBaseUrl}}/api/group-invitation
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/group-invitation/1
+Accept: application/json
+
+
+### ============================================
+### 4. AGGREGATOR SERVICE
+### ============================================
+
+GET {{GatewayBaseUrl}}/api/aggregator/post/1/full
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/aggregator/team/1/full
+Accept: application/json
+
+
+### ============================================
+### 5. WRITE OPERATIONS (EXAMPLES)
+### ============================================
+
+### Create Post
+POST {{GatewayBaseUrl}}/api/post
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Test Post",
+  "content": "Some content",
+  "authorId": "author-1",
+  "tags": ["test"]
+}
+
+### Create Comment
+POST {{GatewayBaseUrl}}/api/comment
+Content-Type: application/json
+Accept: application/json
+
+{
+  "postId": "1",
+  "content": "Nice post!",
+  "authorId": "author-1"
+}
+
+### Create Team
+POST {{GatewayBaseUrl}}/api/team
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Test Team",
+  "description": "Team description"
+}
+
+### Create Collaboration Request
+POST {{GatewayBaseUrl}}/api/collaboration-request
+Content-Type: application/json
+Accept: application/json
+
+{
+  "teamId": "1",
+  "userId": "user-1",
+  "message": "I want to join"
+}
+
+
+### ============================================
+### 6. ERROR SCENARIOS
+### ============================================
+
+GET {{GatewayBaseUrl}}/api/post/99999
+Accept: application/json
+
+GET {{GatewayBaseUrl}}/api/invalid
+Accept: application/json
+
+POST {{GatewayBaseUrl}}/api/post
+Content-Type: application/json
+
+{
+  "invalid": "data"
+}

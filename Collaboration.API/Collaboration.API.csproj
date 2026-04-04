@@ -19,6 +19,7 @@
       <ProjectReference Include="..\Collaboration.Application\Collaboration.Application.csproj" />
       <ProjectReference Include="..\Collaboration.Domain\Collaboration.Domain.csproj" />
       <ProjectReference Include="..\Collaboration.Infrastructure\Collaboration.Infrastructure.csproj" />
+      <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

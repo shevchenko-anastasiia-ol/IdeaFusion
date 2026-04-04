@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.2"/>
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>70be0edd-1fed-4a44-b694-42a2bf7382e0</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.2"/>
+        <PackageReference Include="Aspire.Hosting.MongoDB" Version="9.5.2" />
+        <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.2.1" />
+        <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="9.5.2" />
+        <PackageReference Include="Aspire.Hosting.Redis" Version="9.5.2" />
+        <PackageReference Include="DotNet.Testcontainers" Version="1.6.0" />
+        <PackageReference Include="Testcontainers.RabbitMq" Version="4.8.1" />
+        <PackageReference Include="Testcontainers.Redis" Version="4.8.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AggregatorService\AggregatorService.csproj" />
+      <ProjectReference Include="..\ApiGateway\ApiGateway.csproj" />
+      <ProjectReference Include="..\Collaboration.API\Collaboration.API.csproj" />
+      <ProjectReference Include="..\Collaboration.Application\Collaboration.Application.csproj" />
+      <ProjectReference Include="..\Collaboration.Domain\Collaboration.Domain.csproj" />
+      <ProjectReference Include="..\Collaboration.Infrastructure\Collaboration.Infrastructure.csproj" />
+      <ProjectReference Include="..\ContentAPI\ContentAPI.csproj" />
+      <ProjectReference Include="..\ContentBLL\ContentBLL.csproj" />
+      <ProjectReference Include="..\ContentDAL\ContentDAL.csproj" />
+      <ProjectReference Include="..\ContentDomain\ContentDomain.csproj" />
+      <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+    </ItemGroup>
+
+</Project>
