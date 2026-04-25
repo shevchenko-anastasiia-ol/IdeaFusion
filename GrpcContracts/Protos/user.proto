@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+option csharp_namespace = "IdeaFusion.Grpc.Users";
+package users;
+
+service UserGrpcService {
+  rpc GetUserById      (GetUserByIdRequest)   returns (UserResponse);
+  rpc GetUsersByIds    (GetUsersByIdsRequest)  returns (UsersResponse);
+  rpc ValidateToken    (ValidateTokenRequest)  returns (ValidateTokenResponse);
+  rpc CheckUserExists  (CheckUserExistsRequest) returns (CheckUserExistsResponse);
+}
+
+// ── Requests ─────────────────────────────────────────────
+
+message GetUserByIdRequest {
+  string user_id = 1;
+}
+
+message GetUsersByIdsRequest {
+  repeated string user_ids = 1;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message CheckUserExistsRequest {
+  string user_id = 1;
+}
+
+// ── Responses ─────────────────────────────────────────────
+
+message UserResponse {
+  UserDto user = 1;
+}
+
+message UsersResponse {
+  repeated UserDto users = 1;
+}
+
+message ValidateTokenResponse {
+  bool   is_valid  = 1;
+  string user_id   = 2;
+  string user_name = 3;
+  string email     = 4;
+}
+
+message CheckUserExistsResponse {
+  bool exists = 1;
+}
+
+// ── DTOs ──────────────────────────────────────────────────
+
+message UserDto {
+  string user_id    = 1;
+  string user_name  = 2;
+  string email      = 3;
+  string avatar_url = 4;
+  string created_at = 5;
+}

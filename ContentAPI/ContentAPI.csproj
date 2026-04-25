@@ -27,8 +27,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Protobuf Include="..\shared\GrpcContracts\Protos\collaboration_request.proto" GrpcServices="Client" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\ContentBLL\ContentBLL.csproj" />
       <ProjectReference Include="..\ContentDomain\ContentDomain.csproj" />
+      <ProjectReference Include="..\GrpcClients\GrpcClients.csproj" />
       <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 

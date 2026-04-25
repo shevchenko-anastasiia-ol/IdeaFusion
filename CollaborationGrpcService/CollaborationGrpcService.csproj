@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Collaboration.Application\Collaboration.Application.csproj" />
+      <ProjectReference Include="..\Collaboration.Domain\Collaboration.Domain.csproj" />
+      <ProjectReference Include="..\Collaboration.Infrastructure\Collaboration.Infrastructure.csproj" />
+      <ProjectReference Include="..\GrpcContracts\GrpcContracts.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="AutoMapper" Version="16.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\GrpcContracts\Protos\collaboration_request.proto">
+        <Link>Proto\collaboration_request.proto</Link>
+      </Content>
+      <Content Include="..\GrpcContracts\Protos\team.proto">
+        <Link>Proto\team.proto</Link>
+      </Content>
+    </ItemGroup>
+
+</Project>

@@ -9,4 +9,5 @@ public interface ITagService
     Task<IEnumerable<TagDto>> GetByPostIdAsync(int postId, CancellationToken ct = default);
     Task<TagDto> CreateAsync(TagCreateDto dto, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
+    Task<TagDto?> GetByNameAsync(string name, CancellationToken ct = default);
 }

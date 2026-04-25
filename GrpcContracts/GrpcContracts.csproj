@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Protobuf Include="Protos\post.proto" GrpcServices="Both" />
+        <Protobuf Include="Protos\collaboration_request.proto" GrpcServices="Both" />
+        <Protobuf Include="Protos\team.proto" GrpcServices="Both" />
+        <Protobuf Include="Protos\user.proto" GrpcServices="Both" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore" Version="2.62.0" />
+        <PackageReference Include="Google.Protobuf" Version="3.27.0" />
+        <PackageReference Include="Grpc.Tools" Version="2.62.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+</Project>

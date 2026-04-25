@@ -5,20 +5,31 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
+    
+    <PropertyGroup>
+        <NoWarn>NU1605</NoWarn>
+    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="AspNetCore.HealthChecks.MongoDb" Version="9.0.0" />
         <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
         <PackageReference Include="MediatR" Version="14.1.0" />
-        <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14"/>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+        <PackageReference Include="Microsoft.OpenApi" Version="1.6.25" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Protobuf Include="..\shared\GrpcContracts\Protos\collaboration_request.proto" GrpcServices="Server" />
+        <Protobuf Include="..\shared\GrpcContracts\Protos\team.proto" GrpcServices="Server" />
+        <Protobuf Include="..\shared\GrpcContracts\Protos\user.proto" GrpcServices="Client" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Collaboration.Application\Collaboration.Application.csproj" />
       <ProjectReference Include="..\Collaboration.Domain\Collaboration.Domain.csproj" />
       <ProjectReference Include="..\Collaboration.Infrastructure\Collaboration.Infrastructure.csproj" />
+      <ProjectReference Include="..\CollaborationGrpcService\CollaborationGrpcService.csproj" />
+      <ProjectReference Include="..\GrpcClients\GrpcClients.csproj" />
       <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 

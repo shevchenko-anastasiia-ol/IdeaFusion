@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+option csharp_namespace = "IdeaFusion.Grpc.Posts";
+package posts;
+
+service PostGrpcService {
+  rpc GetPostsPaged     (GetPostsPagedRequest) returns (PagedPostsResponse);
+  rpc GetPostById       (GetPostByIdRequest)   returns (PostResponse);
+  rpc GetPostsByAuthor  (GetPostsByAuthorRequest) returns (PagedPostsResponse);
+  rpc GetPostsByTeam    (GetPostsByTeamRequest)   returns (PagedPostsResponse);
+}
+
+// ── Requests ─────────────────────────────────────────────
+
+message GetPostsPagedRequest {
+  int32  page_number     = 1;
+  int32  page_size       = 2;
+  string order_by        = 3;  // "newest" | "popular" | "views"
+  string search_text     = 4;
+  string tag             = 5;
+  string status          = 6;  // "Published" | "Draft" | "Archived" — порожньо = всі
+}
+
+message GetPostByIdRequest {
+  string post_id = 1;
+}
+
+message GetPostsByAuthorRequest {
+  string user_id    = 1;
+  int32  page_number = 2;
+  int32  page_size   = 3;
+  string status      = 4;
+}
+
+message GetPostsByTeamRequest {
+  string team_id    = 1;
+  int32  page_number = 2;
+  int32  page_size   = 3;
+}
+
+// ── Responses ─────────────────────────────────────────────
+
+message PostResponse {
+  PostDto post = 1;
+}
+
+message PagedPostsResponse {
+  repeated PostDto items       = 1;
+  int32            total_count = 2;
+  int32            page_number = 3;
+  int32            page_size   = 4;
+}
+
+// ── DTOs ──────────────────────────────────────────────────
+
+message PostDto {
+  string           post_id        = 1;
+  string           title          = 2;
+  string           description    = 3;
+  string           external_link  = 4;
+  string           status         = 5;
+  PostAuthorDto    author         = 6;   // null якщо пост від команди
+  PostTeamDto      team           = 7;   // null якщо пост від автора
+  repeated string  tags           = 8;
+  repeated MediaDto media         = 9;
+  int32            likes_count    = 10;
+  int32            views_count    = 11;
+  int32            comments_count = 12;
+  string           created_at     = 13;
+  string           updated_at     = 14;
+}
+
+message PostAuthorDto {
+  string user_id    = 1;
+  string user_name  = 2;
+  string avatar_url = 3;
+}
+
+message PostTeamDto {
+  string team_id    = 1;
+  string name       = 2;
+  string avatar_url = 3;
+}
+
+message MediaDto {
+  string object_name   = 1;
+  string bucket        = 2;
+  string content_type  = 3;  // "image/png", "video/mp4"
+}

@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option csharp_namespace = "IdeaFusion.Grpc.CollaborationRequests";
+package collaboration_requests;
+
+service CollaborationRequestGrpcService {
+  rpc GetRequestById        (GetRequestByIdRequest)     returns (CollaborationRequestResponse);
+  rpc GetRequestsByTeam     (GetRequestsByTeamRequest)  returns (CollaborationRequestsResponse);
+  rpc GetRequestsByUser     (GetRequestsByUserRequest)  returns (CollaborationRequestsResponse);
+}
+
+// ── Requests ─────────────────────────────────────────────
+
+message GetRequestByIdRequest {
+  string request_id = 1;
+}
+
+message GetRequestsByTeamRequest {
+  string team_id = 1;
+  string status  = 2;  // "Pending" | "Accepted" | "Rejected" | "Cancelled" — порожньо = всі
+}
+
+message GetRequestsByUserRequest {
+  string user_id = 1;
+  string status  = 2;
+}
+
+// ── Responses ─────────────────────────────────────────────
+
+message CollaborationRequestResponse {
+  CollaborationRequestDto request = 1;
+}
+
+message CollaborationRequestsResponse {
+  repeated CollaborationRequestDto items = 1;
+}
+
+// ── DTOs ──────────────────────────────────────────────────
+
+message CollaborationRequestDto {
+  string request_id   = 1;
+  string team_id      = 2;
+  string from_user_id = 3;
+  string to_user_id   = 4;  // порожньо якщо відкритий запит
+  string role         = 5;
+  string message      = 6;
+  string status       = 7;  // "Pending" | "Accepted" | "Rejected" | "Cancelled"
+  string created_at   = 8;
+  string resolved_at  = 9;
+}

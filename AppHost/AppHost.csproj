@@ -32,6 +32,7 @@
       <ProjectReference Include="..\ContentBLL\ContentBLL.csproj" />
       <ProjectReference Include="..\ContentDAL\ContentDAL.csproj" />
       <ProjectReference Include="..\ContentDomain\ContentDomain.csproj" />
+      <ProjectReference Include="..\IdentityAPI\IdentityAPI.csproj" />
       <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 

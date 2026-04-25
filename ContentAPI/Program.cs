@@ -7,6 +7,10 @@ using ContentDAL.Connection;
 using ContentDAL.Data;
 using ContentDAL.Repository;
 using ContentDAL.Repository.Interfaces;
+using GrpcClients.Interfaces;
+using IdeaFusion.Grpc.CollaborationRequests;
+using IdeaFusion.Grpc.Users;
+using IdeaFusion.GrpcClients.Clients;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Minio;
@@ -16,6 +20,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.Services.AddOpenApi();
+
+builder.Services.AddGrpcClient<UserGrpcService.UserGrpcServiceClient>(o =>
+    {
+        o.Address = new Uri("https+http://identityservice");
+    })
+    .AddServiceDiscovery();
+
+builder.Services.AddGrpcClient<CollaborationRequestGrpcService.CollaborationRequestGrpcServiceClient>(o =>
+    {
+        o.Address = new Uri("https+http://collaborationservice");
+    })
+    .AddServiceDiscovery();
+
+builder.Services.AddScoped<IUserGrpcClient, UserGrpcClient>();
+builder.Services.AddScoped<ICollaborationRequestGrpcClient, CollaborationRequestGrpcClient>();
 
 // MinIO must be registered BEFORE AddDataAccess, because UnitOfWork depends on IMinioClient
 builder.Services.AddMinio(configureClient => configureClient

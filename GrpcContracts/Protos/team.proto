@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+option csharp_namespace = "IdeaFusion.Grpc.Teams";
+package teams;
+
+service TeamGrpcService {
+  rpc GetTeamsPaged   (GetTeamsPagedRequest)  returns (PagedTeamsResponse);
+  rpc GetTeamById     (GetTeamByIdRequest)    returns (TeamResponse);
+  rpc GetTeamsByIds   (GetTeamsByIdsRequest)  returns (TeamsResponse);
+  rpc CheckUserIsMember (CheckUserIsMemberRequest) returns (CheckUserIsMemberResponse);
+}
+
+// ── Requests ─────────────────────────────────────────────
+
+message GetTeamsPagedRequest {
+  int32  page_number  = 1;
+  int32  page_size    = 2;
+  string order_by     = 3;  // "newest" | "members"
+  string search_text  = 4;
+  string category     = 5;
+  string tag          = 6;
+  string status       = 7;  // "Active" | "Searching" | "Completed" — порожньо = всі
+}
+
+message GetTeamByIdRequest {
+  string team_id = 1;
+}
+
+message GetTeamsByIdsRequest {
+  repeated string team_ids = 1;
+}
+
+message CheckUserIsMemberRequest {
+  string team_id = 1;
+  string user_id = 2;
+}
+
+// ── Responses ─────────────────────────────────────────────
+
+message TeamResponse {
+  TeamDto team = 1;
+}
+
+message TeamsResponse {
+  repeated TeamDto teams = 1;
+}
+
+message PagedTeamsResponse {
+  repeated TeamDto items       = 1;
+  int32            total_count = 2;
+  int32            page_number = 3;
+  int32            page_size   = 4;
+}
+
+message CheckUserIsMemberResponse {
+  bool   is_member = 1;
+  string role      = 2;  // "Owner" | "Member" | "" якщо не учасник
+}
+
+// ── DTOs ──────────────────────────────────────────────────
+
+message TeamDto {
+  string                team_id        = 1;
+  string                name           = 2;
+  string                description    = 3;
+  string                category       = 4;
+  repeated string       tags           = 5;
+  string                status         = 6;
+  string                avatar_url     = 7;
+  repeated MemberDto    members        = 8;
+  repeated RequiredRoleDto required_roles = 9;
+  int32                 members_count  = 10;
+  string                created_at     = 11;
+}
+
+message MemberDto {
+  string user_id    = 1;
+  string user_name  = 2;
+  string avatar_url = 3;
+  string role       = 4;
+  string joined_at  = 5;
+}
+
+message RequiredRoleDto {
+  string role        = 1;
+  string description = 2;
+}

@@ -1,23 +1,18 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-        <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Protobuf Include="..\shared\GrpcContracts\Protos\user.proto" GrpcServices="Server" />
+      <Folder Include="Extensions\" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\GrpcContracts\GrpcContracts.csproj" />
       <ProjectReference Include="..\IdentityBLL\IdentityBLL.csproj" />
-      <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

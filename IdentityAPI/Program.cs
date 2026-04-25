@@ -1,3 +1,4 @@
+using IdentityAPI.GrpcServices;
 using IdentityBLL.Configuration;
 using IdentityBLL.Interfaces;
 using IdentityBLL.MappingProfiles;
@@ -40,6 +41,9 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 
 //builder.Services.AddJwtAuthentication(builder.Configuration);
 
+// після builder.Services.AddCorrelationIdForwarding();
+builder.Services.AddGrpcWithObservability(builder.Environment); 
+
 builder.Services.AddAutoMapperWithLogging(typeof(IdentityProfile).Assembly);
 
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
@@ -72,6 +76,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.MapGrpcService<UserGrpcServiceImpl>();
 
 app.UseCorrelationId();
 app.UseRouting();

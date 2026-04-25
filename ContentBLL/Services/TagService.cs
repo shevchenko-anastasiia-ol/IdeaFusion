@@ -55,4 +55,9 @@ public class TagService : ITagService
  
         await _uow.TagRepository.DeleteAsync(existing.TagId, ct);
     }
+    public async Task<TagDto?> GetByNameAsync(string name, CancellationToken ct = default)
+    {
+        var tag = await _uow.TagRepository.GetByNameAsync(name, ct);
+        return tag is null ? null : _mapper.Map<TagDto>(tag);
+    }
 }

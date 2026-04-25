@@ -38,27 +38,40 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq",
 // 3. MICROSERVICES REGISTRATION
 // ============================================
 
+// Identity Service
+var identityService = builder.AddProject<Projects.IdentityAPI>("identityservice")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
+    .WithHttpHealthCheck("/health");
+
+// Collaboration  Service (uses MongoDB)
+var collaborationService = builder.AddProject<Projects.Collaboration_API>("collaborationservice")
+    .WithReference(collaborationDb)
+    .WithReference(redis)
+    .WithReference(rabbitmq)
+    .WithReference(identityService)
+    .WaitFor(mongo)
+    .WaitFor(redis)
+    .WaitFor(rabbitmq)
+    .WaitFor(identityService)
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
+    .WithHttpHealthCheck("/health");
+
 // Content Service (PostgreSQL)
 var contentService = builder.AddProject<Projects.ContentAPI>("contentservice")
     .WithReference(contentDb)
     .WithReference(redis)
     .WithReference(rabbitmq)
+    .WithReference(collaborationService) 
+    .WithReference(identityService) 
     .WaitFor(postgres)
     .WaitFor(redis)
     .WaitFor(rabbitmq)
+    .WaitFor(collaborationService)  
+    .WaitFor(identityService) 
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
     .WithHttpHealthCheck("/health");
 
-// Collaboration  Service (uses MongoDB)
-var collaborationService  = builder.AddProject<Projects.Collaboration_API>("collaborationservice")
-    .WithReference(collaborationDb)
-    .WithReference(redis)
-    .WithReference(rabbitmq)
-    .WaitFor(mongo)
-    .WaitFor(redis)
-    .WaitFor(rabbitmq)
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
-    .WithHttpHealthCheck("/health");
+
 
 // ============================================
 // 4. AGGREGATOR SERVICE
