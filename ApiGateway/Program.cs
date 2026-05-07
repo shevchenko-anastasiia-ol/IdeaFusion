@@ -1,32 +1,54 @@
+using ApiGateway.Extentions;
 using ApiGateway.Middlewares;
-using ApiGateway.Transforms;
+using ServiceDefaults.Extensions;
 using Yarp.ReverseProxy.Transforms;
 using Yarp.ReverseProxy.Transforms.Builder;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add ServiceDefaults for unified logging, tracing, and service discovery
+builder.Services.AddMemoryCache();
 builder.AddServiceDefaults();
+builder.AddOpenTelemetryTracing();
+builder.Services.AddCorrelationIdForwarding();
+builder.Services.AddServiceDiscovery();
 
-// Configure YARP reverse proxy with service discovery
-// This enables YARP to resolve service names (e.g., "http://catalogservice") to actual service URLs
+builder.Services
+    .AddKeycloakAuthentication(builder.Configuration)
+    .AddPermissionAuthorization();
+
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
-    .AddServiceDiscoveryDestinationResolver(); // Enable service discovery for YARP destination resolution
+    .AddServiceDiscoveryDestinationResolver()
+    .AddTransforms(context =>
+    {
+        context.AddRequestTransform(async transformContext =>
+        {
+            var correlationId = transformContext.HttpContext.Items["X-Correlation-Id"]?.ToString();
+            if (!string.IsNullOrEmpty(correlationId))
+            {
+                transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
+                    "X-Correlation-Id", correlationId);
+            }
 
-builder.Services.AddSingleton<ITransformProvider, CorrelationIdTransformProvider>();
+            await ValueTask.CompletedTask;
+        });
+    });
 
-
-
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// Configure middleware pipeline
-// CorrelationId middleware is automatically added by MapDefaultEndpoints()
-app.MapDefaultEndpoints(); // Adds /health and /alive endpoints with ServiceDefaults
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
-// Map YARP reverse proxy
+app.UseGatewayPipeline();
+app.UseCorrelationId();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapReverseProxy();
-
-app.Run();
+app.MapHealthChecks("/health");
+await app.RunAsync();

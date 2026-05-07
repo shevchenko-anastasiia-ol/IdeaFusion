@@ -84,17 +84,3 @@ public class CorrelationIdMiddleware
         }
     }
 }
-
-/// <summary>
-/// Extension methods for adding CorrelationId middleware
-/// </summary>
-public static class CorrelationIdMiddlewareExtensions
-{
-    /// <summary>
-    /// Adds CorrelationId middleware to the application pipeline
-    /// </summary>
-    public static IApplicationBuilder UseCorrelationId(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<CorrelationIdMiddleware>();
-    }
-}

@@ -14,12 +14,16 @@ using IdeaFusion.GrpcClients.Clients;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Minio;
+using ServiceDefaults.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using HealthChecks.NpgSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-
-builder.Services.AddOpenApi();
+builder.AddOpenTelemetryTracing();
+builder.Services.AddCorrelationIdForwarding();
+builder.Services.AddServiceDiscovery();
 
 builder.Services.AddGrpcClient<UserGrpcService.UserGrpcServiceClient>(o =>
     {
@@ -48,10 +52,13 @@ builder.Services.AddMinio(configureClient => configureClient
 builder.Services.AddDataAccess(builder.Configuration);
 builder.Services.AddBusinessLayer(builder.Configuration);
 
-builder.Services.AddControllers();
+builder.Services
+    .AddKeycloakAuthentication(builder.Configuration)
+    .AddPermissionAuthorization();
 
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerWithKeycloak(builder.Configuration, "Content API");
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
@@ -72,9 +79,13 @@ builder.Services.AddSingleton<IConnectionFactory>(sp =>
     return new ConnectionFactory(connStr);
 });
 
-var app = builder.Build();
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString: builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "postgresql",
+        tags: ["db", "ready"]);
 
-app.MapDefaultEndpoints();
+var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -98,51 +109,18 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.UseExceptionHandler(errApp =>
-{
-    errApp.Run(async context =>
-    {
-        context.Response.ContentType = "application/problem+json";
-
-        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
-        var exception = exceptionHandlerPathFeature?.Error;
-
-        int statusCode = exception switch
-        {
-            ContentDomain.Exception.NotFoundException => (int)HttpStatusCode.NotFound,
-            ContentDomain.Exception.ValidationException => (int)HttpStatusCode.BadRequest,
-            ContentDomain.Exception.BusinessConflictException => 409,
-            _ => (int)HttpStatusCode.InternalServerError
-        };
-
-        context.Response.StatusCode = statusCode;
-
-        var problemDetails = new ProblemDetails
-        {
-            Status = statusCode,
-            Title = exception?.Message,
-            Detail = exception?.StackTrace
-        };
-
-        await context.Response.WriteAsJsonAsync(problemDetails);
-    });
-});
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Content API V1");
-        c.RoutePrefix = string.Empty;
-    });
-}
+app.UseSwaggerWithKeycloak();
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
 
+app.UseCorrelationId();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();

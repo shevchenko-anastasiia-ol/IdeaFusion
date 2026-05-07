@@ -18,7 +18,7 @@ builder.AddServiceDefaults();
 builder.AddOpenTelemetryTracing();
 builder.Services.AddCorrelationIdForwarding();
 
-var connectionString = builder.Configuration.GetConnectionString("gamenest-identityservice-db")
+var connectionString = builder.Configuration.GetConnectionString("identityservicedb")
                     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.Configure<JwtSettings>(
@@ -41,7 +41,6 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 
 //builder.Services.AddJwtAuthentication(builder.Configuration);
 
-// після builder.Services.AddCorrelationIdForwarding();
 builder.Services.AddGrpcWithObservability(builder.Environment); 
 
 builder.Services.AddAutoMapperWithLogging(typeof(IdentityProfile).Assembly);
@@ -52,12 +51,12 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerWithAuth("GameNest Identity API");
+//builder.Services.AddSwaggerWithAuth(" Identity API");
 
 builder.Services.AddHealthChecks()
     .AddPostgresHealthCheck(
         configuration: builder.Configuration,
-        connectionName: "gamenest-identityservice-db",
+        connectionName: "identityservicedb",
         serviceName: "identityservice",
         timeoutSeconds: 5);
 

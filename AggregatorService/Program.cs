@@ -1,11 +1,16 @@
 using AggregatorService.Clients;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AggregatorService.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using ServiceDefaults.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add ServiceDefaults for unified logging, tracing, and service discovery
 builder.AddServiceDefaults();
+builder.AddOpenTelemetryTracing();
+builder.Services.AddCorrelationIdForwarding();
+builder.Services.AddServiceDiscovery();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -20,29 +25,42 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpContextAccessor();
 
-// Register typed HttpClients with Aspire service discovery
-// Service names match the logical names defined in AppHost
-// CorrelationId is automatically propagated via CorrelationIdDelegatingHandler from ServiceDefaults
+builder.Services.AddHttpClient("ContentClient", client =>
+{
+    client.BaseAddress = new Uri("http://contentservice");
+}).AddServiceDiscovery();
 
-// ContentService client
-// Aspire automatically resolves "http://contentservice" to the actual service URL
+builder.Services.AddHttpClient("CollaborationClient", client =>
+{
+    client.BaseAddress = new Uri("http://collaborationservice");
+}).AddServiceDiscovery();
+
 builder.Services.AddHttpClient<ContentClient>(client =>
 {
     client.BaseAddress = new Uri("http://contentservice");
-});
+}).AddServiceDiscovery();
 
-// CollaborationService client
-// Aspire automatically resolves "http://collaborationservice" to the actual service URL
 builder.Services.AddHttpClient<CollaborationClient>(client =>
 {
     client.BaseAddress = new Uri("http://collaborationservice");
-});
+}).AddServiceDiscovery();
+
+builder.Services.AddHealthChecks()
+    .AddCheck<ContentServiceHealthCheck>(
+        "content-http",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["http", "downstream", "ready"])
+    .AddCheck<CollaborationServiceHealthCheck>(
+        "collaboration-http",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: ["http", "downstream", "ready"]);
 
 var app = builder.Build();
 
-// CorrelationId middleware is automatically added by MapDefaultEndpoints()
-app.MapDefaultEndpoints(); // Adds /health and /alive endpoints with ServiceDefaults
-
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -53,6 +71,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseCorrelationId();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapHealthChecks("/health");
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
