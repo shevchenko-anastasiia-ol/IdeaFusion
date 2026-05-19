@@ -2,6 +2,8 @@
 using IdentityBLL.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Minio;
+using Minio.DataModel.Args;
 using ServiceDefaults.Extensions;
 
 namespace IdentityAPI.Controllers;
@@ -12,15 +14,21 @@ namespace IdentityAPI.Controllers;
     {
         private readonly IUserService _userService;
         private readonly ITokenService _tokenService;
+        private readonly IMinioClient _minioClient;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IUserService userService,
             ITokenService tokenService,
+            IMinioClient minioClient,
+            IConfiguration configuration,
             ILogger<AuthController> logger)
         {
             _userService = userService;
             _tokenService = tokenService;
+            _minioClient = minioClient;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -132,5 +140,143 @@ namespace IdentityAPI.Controllers;
             _logger.LogInformation("User {UserId} logged out successfully (all tokens revoked).", userId);
 
             return NoContent();
+        }
+
+        /// <summary>
+        /// Update the current user's profile (full name, specialization).
+        /// </summary>
+        [HttpPut("profile")]
+        [Authorize]
+        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto, CancellationToken cancellationToken)
+        {
+            var userId = User.GetUserId();
+            var updated = await _userService.UpdateProfileAsync(userId, dto, cancellationToken);
+            if (updated == null)
+                return NotFound(new { message = "User not found." });
+
+            _logger.LogInformation("User {UserId} updated profile", userId);
+            return Ok(updated);
+        }
+
+        /// <summary>
+        /// Change the current user's password.
+        /// </summary>
+        [HttpPost("change-password")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var userId = User.GetUserId();
+            var result = await _userService.ChangePasswordAsync(userId, dto, cancellationToken);
+            if (!result.Succeeded)
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+            _logger.LogInformation("User {UserId} changed password", userId);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Upload or replace the current user's avatar image.
+        /// </summary>
+        [HttpPost("avatar")]
+        [Authorize]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken cancellationToken)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "No file provided." });
+
+            if (file.Length > 5 * 1024 * 1024)
+                return BadRequest(new { message = "File exceeds 5 MB limit." });
+
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
+            if (!allowedTypes.Contains(file.ContentType.ToLowerInvariant()))
+                return BadRequest(new { message = "Only JPEG, PNG, WebP or GIF images are allowed." });
+
+            var userId = User.GetUserId();
+            const string bucketName = "avatars";
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var objectName = $"{userId}/{Guid.NewGuid()}{ext}";
+
+            var bucketExistsArgs = new BucketExistsArgs().WithBucket(bucketName);
+            bool exists = await _minioClient.BucketExistsAsync(bucketExistsArgs, cancellationToken);
+            if (!exists)
+            {
+                await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName), cancellationToken);
+                var policy = $@"{{""Version"":""2012-10-17"",""Statement"":[{{""Effect"":""Allow"",""Principal"":{{""AWS"":[""*""]}},""Action"":[""s3:GetObject""],""Resource"":[""arn:aws:s3:::{bucketName}/*""]}}]}}";
+                await _minioClient.SetPolicyAsync(new SetPolicyArgs().WithBucket(bucketName).WithPolicy(policy), cancellationToken);
+            }
+
+            using var stream = file.OpenReadStream();
+            var putArgs = new PutObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectName)
+                .WithStreamData(stream)
+                .WithObjectSize(file.Length)
+                .WithContentType(file.ContentType);
+            await _minioClient.PutObjectAsync(putArgs, cancellationToken);
+
+            var endpoint = _configuration["Minio:Endpoint"] ?? "localhost:9000";
+            var avatarUrl = $"http://{endpoint}/{bucketName}/{objectName}";
+
+            await _userService.UpdateAvatarUrlAsync(userId, avatarUrl, cancellationToken);
+            _logger.LogInformation("User {UserId} updated avatar: {AvatarUrl}", userId, avatarUrl);
+
+            return Ok(new { avatarUrl });
+        }
+
+        /// <summary>
+        /// Upload any image file to storage and return its public URL.
+        /// </summary>
+        [HttpPost("upload")]
+        [Authorize]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UploadFile(IFormFile file, CancellationToken cancellationToken)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "No file provided." });
+
+            if (file.Length > 5 * 1024 * 1024)
+                return BadRequest(new { message = "File exceeds 5 MB limit." });
+
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/gif" };
+            if (!allowedTypes.Contains(file.ContentType.ToLowerInvariant()))
+                return BadRequest(new { message = "Only JPEG, PNG, WebP or GIF images are allowed." });
+
+            const string bucketName = "uploads";
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var objectName = $"{Guid.NewGuid()}{ext}";
+
+            var bucketExistsArgs = new BucketExistsArgs().WithBucket(bucketName);
+            bool exists = await _minioClient.BucketExistsAsync(bucketExistsArgs, cancellationToken);
+            if (!exists)
+            {
+                await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName), cancellationToken);
+                var policy = $@"{{""Version"":""2012-10-17"",""Statement"":[{{""Effect"":""Allow"",""Principal"":{{""AWS"":[""*""]}},""Action"":[""s3:GetObject""],""Resource"":[""arn:aws:s3:::{bucketName}/*""]}}]}}";
+                await _minioClient.SetPolicyAsync(new SetPolicyArgs().WithBucket(bucketName).WithPolicy(policy), cancellationToken);
+            }
+
+            using var stream = file.OpenReadStream();
+            var putArgs = new PutObjectArgs()
+                .WithBucket(bucketName)
+                .WithObject(objectName)
+                .WithStreamData(stream)
+                .WithObjectSize(file.Length)
+                .WithContentType(file.ContentType);
+            await _minioClient.PutObjectAsync(putArgs, cancellationToken);
+
+            var endpoint = _configuration["Minio:Endpoint"] ?? "localhost:9000";
+            var url = $"http://{endpoint}/{bucketName}/{objectName}";
+
+            _logger.LogInformation("File uploaded: {Url}", url);
+            return Ok(new { url });
         }
     }

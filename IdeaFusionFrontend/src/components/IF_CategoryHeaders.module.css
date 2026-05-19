@@ -1,0 +1,173 @@
+.categoryHeaders,
+.categoryHeadersChild {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-600);
+  max-width: 100%;
+  z-index: 1;
+}
+.categoryHeaders {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-16) var(--padding-27) var(--padding-18)
+    var(--padding-34);
+  box-sizing: border-box;
+  min-width: var(--min-w-730);
+  text-align: left;
+  font-size: var(--fs-32);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.categoryHeadersChild {
+  width: var(--width-1123);
+  height: var(--height-118);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.categoryItemsParent {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+  flex-shrink: 0;
+}
+.categoryItems {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-1) var(--padding-0) var(--padding-0);
+}
+.h2 {
+  margin: 0;
+  position: relative;
+  z-index: 3;
+}
+.musicCategory {
+  display: flex;
+  align-items: flex-end;
+  gap: 41px;
+  font-size: var(--fs-16);
+  color: var(--color-lightseagreen);
+}
+.rectangleParent {
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslategray-200);
+  border: var(--border-2);
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-12) var(--padding-3);
+  z-index: 2;
+}
+.div,
+.frameChild {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild {
+  height: var(--height-26);
+  width: var(--width-83);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslategray-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.rectangleGroup {
+  height: var(--height-40);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-300);
+  border: var(--border-3);
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-2) var(--padding-12) var(--padding-5) var(--padding-20);
+  z-index: 2;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+}
+.frameItem,
+.h3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-40);
+  width: 130px;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-300);
+  border: var(--border-3);
+  box-sizing: border-box;
+  display: none;
+}
+.h3 {
+  margin: 0;
+  z-index: 1;
+}
+.uiux,
+.uiuxFigmaParent {
+  position: relative;
+  max-width: 100%;
+}
+.uiuxFigmaParent {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+  margin-top: -1px;
+  flex-shrink: 0;
+  font-size: var(--fs-24);
+}
+.uiux {
+  margin: 0;
+  display: inline-block;
+  z-index: 2;
+}
+.designerNeeded {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-15) var(--padding-0) var(--padding-0);
+  color: var(--color-gray-100);
+}
+.h32 {
+  margin: 0;
+  position: relative;
+  z-index: 2;
+}
+@media screen and (max-width: 1200px) {
+  .categoryHeaders {
+    min-width: 100%;
+  }
+}
+@media screen and (max-width: 825px) {
+  .categoryItemsParent {
+    flex-wrap: wrap;
+  }
+  .h2 {
+    font-size: var(--fs-26);
+  }
+  .uiuxFigmaParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .h2 {
+    font-size: var(--fs-19);
+  }
+  .musicCategory {
+    gap: var(--gap-20);
+    flex-wrap: wrap;
+  }
+  .h3,
+  .h32,
+  .uiux {
+    font-size: var(--fs-19);
+  }
+}

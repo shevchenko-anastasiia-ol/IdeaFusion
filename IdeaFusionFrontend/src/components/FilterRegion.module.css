@@ -1,0 +1,190 @@
+.filterRegion,
+.filterRegionChild {
+  background-color: var(--color-gray-600);
+}
+.filterRegion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 41px var(--padding-23) var(--padding-26);
+  gap: 93px;
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.filterRegionChild {
+  width: 124px;
+  height: 1531px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.filterRegionInner {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-1) var(--padding-0) var(--padding-18);
+  flex-shrink: 0;
+}
+.frameChild {
+  width: 59px;
+  position: relative;
+  max-height: 100%;
+  object-fit: cover;
+  z-index: 2;
+}
+.sortSelection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: var(--padding-0) var(--padding-0) 803px;
+  gap: var(--gap-35);
+  flex-shrink: 0;
+}
+.ordering,
+.sortOptions {
+  display: flex;
+  align-items: flex-start;
+}
+.sortOptions {
+  flex-direction: column;
+  gap: var(--gap-28);
+}
+.ordering {
+  padding: var(--padding-0) var(--padding-20);
+}
+.orderingChild {
+  height: 38px;
+  width: var(--width-30);
+  position: relative;
+  z-index: 2;
+}
+.viewSetting {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 17px;
+}
+.displayStyle,
+.displayStyleChild {
+  border-radius: var(--br-20);
+  background-color: var(--color-mediumslateblue-200);
+}
+.displayStyle {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-18) var(--padding-14) var(--padding-19)
+    var(--padding-18);
+  z-index: 2;
+}
+.displayStyleChild {
+  height: var(--height-70);
+  width: var(--width-70);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.displayStyleItem {
+  height: 33px;
+  width: 38px;
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+}
+.orderStyle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-18) var(--padding-0) var(--padding-20);
+}
+.orderStyleChild {
+  height: 35px;
+  width: var(--width-32);
+  position: relative;
+  z-index: 2;
+}
+.ratingStars {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-9) var(--padding-11) var(--padding-15);
+}
+.buttonsettingsIcon {
+  height: 45px;
+  width: 46px;
+  position: relative;
+  border-radius: var(--br-2);
+  z-index: 2;
+}
+.ustawieniaParent {
+  height: var(--height-32);
+  width: var(--width-32);
+  position: relative;
+}
+.ustawienia {
+  top: 0;
+  left: 0;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.frameInner,
+.frameItem,
+.konto,
+.ustawienia {
+  position: absolute;
+  border-radius: var(--br-3);
+  width: var(--width-14_5);
+  height: var(--height-13_9);
+  z-index: 2;
+}
+.frameItem {
+  top: 0.3px;
+  left: 17.5px;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.frameInner,
+.konto {
+  top: 18.1px;
+  left: 17.2px;
+}
+.konto {
+  top: 17.8px;
+  left: 0;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.profilePreview {
+  width: var(--width-70);
+  height: var(--height-70);
+  position: relative;
+  flex-shrink: 0;
+}
+.profilePreviewChild {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-darkorchid);
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+.h3 {
+  margin: 0;
+  position: absolute;
+  top: 20px;
+  left: 11px;
+  display: inline-block;
+  min-width: var(--min-w-44);
+  z-index: 3;
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+}

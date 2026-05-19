@@ -21,6 +21,10 @@ public class AggregatorTeamPostDto
 
     public DateTime PublishedAt { get; set; }
 
+    // Enriched from ContentAPI
+    public List<string> MediaUrls { get; set; } = new();
+    public List<string> Tags { get; set; } = new();
+
     // Audit fields from BaseEntity
     public DateTime CreatedAt { get; set; }
     public string? CreatedBy { get; set; }

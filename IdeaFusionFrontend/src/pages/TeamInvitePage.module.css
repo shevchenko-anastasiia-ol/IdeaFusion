@@ -1,0 +1,648 @@
+.child,
+.div {
+  position: relative;
+}
+.div {
+  width: 100%;
+  height: 1191px;
+  background-color: var(--color-gray-700);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: normal;
+  letter-spacing: normal;
+  text-align: left;
+  font-size: var(--fs-28);
+  color: var(--color-whitesmoke);
+  font-family: var(--font-inter);
+}
+.child {
+  align-self: stretch;
+  height: var(--height-159);
+  background-color: var(--color-gray-500);
+  display: none;
+  flex-shrink: 0;
+}
+.b {
+  max-width: 100%;
+}
+.b,
+.groupIcon,
+.inner,
+.item {
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.item {
+  width: var(--width-70);
+  height: var(--height-70);
+  border-radius: var(--br-20);
+  background-color: var(--color-darkgray-200);
+}
+.groupIcon,
+.inner {
+  width: var(--width-30);
+  height: var(--height-38);
+}
+.groupIcon {
+  width: var(--width-38);
+  height: var(--height-33);
+}
+.child2 {
+  width: var(--width-32);
+  height: var(--height-35);
+}
+.child2,
+.rectangleDiv,
+.rectangleIcon,
+.starIcon {
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.starIcon {
+  width: var(--width-46);
+  height: var(--height-45);
+  border-radius: var(--br-2);
+}
+.rectangleDiv,
+.rectangleIcon {
+  width: var(--width-14_5);
+  border-radius: var(--br-3);
+}
+.rectangleDiv {
+  height: var(--height-13_9);
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.rectangleIcon {
+  max-height: 100%;
+}
+.button {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0);
+  background-color: transparent;
+  font-size: var(--fs-24);
+  font-family: var(--font-inter);
+  color: var(--color-dimgray-100);
+  text-align: left;
+  display: none;
+  min-width: 124px;
+}
+.button,
+.child5,
+.child6,
+.frameParent {
+  position: relative;
+  flex-shrink: 0;
+}
+.child5 {
+  width: var(--width-59);
+  max-height: 100%;
+  object-fit: contain;
+  display: none;
+}
+.child6,
+.frameParent {
+  max-width: 100%;
+}
+.child6 {
+  margin-top: -919px;
+  margin-left: -131px;
+  width: 871px;
+  height: 919px;
+  background-color: var(--color-gainsboro);
+  z-index: 4;
+}
+.frameParent {
+  align-self: stretch;
+  height: 1191px;
+}
+.frameContainer,
+.frameGroup {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+}
+.frameContainer {
+  bottom: 0;
+  width: 1255px;
+}
+.frameChild,
+.rectangleParent {
+  width: var(--width-991);
+  border-radius: var(--br-100);
+  background-color: var(--color-gray-300);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: absolute;
+  top: 177px;
+  left: 264px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-27) 51px 34px;
+  box-sizing: border-box;
+  gap: 24px;
+}
+.frameChild {
+  height: 871px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.content,
+.tabsParent {
+  display: flex;
+  max-width: 100%;
+}
+.content {
+  width: 664px;
+  align-items: flex-start;
+  padding: var(--padding-01) 52px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.tabsParent {
+  flex: 1;
+  align-items: flex-end;
+  gap: 27px;
+}
+.rectangleGroup,
+.tabs {
+  display: flex;
+  align-items: flex-start;
+}
+.tabs {
+  flex-direction: column;
+  padding: var(--padding-01) var(--padding-16) var(--padding-01)
+    var(--padding-01);
+}
+.rectangleGroup {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-4) var(--padding-13) var(--padding-7) var(--padding-20);
+  background-color: var(--color-mediumslateblue-200);
+  border-radius: var(--br-30);
+  z-index: 1;
+}
+.rectangleGroup:hover {
+  background-color: var(--color-mediumslateblue-100);
+}
+.div2,
+.frameItem {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-40);
+  width: 69px;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-200);
+  display: none;
+}
+.div2 {
+  font-size: var(--fs-24);
+  font-family: var(--font-inter);
+  color: var(--color-white);
+  text-align: left;
+  z-index: 1;
+}
+.rectangleContainer {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-4) var(--padding-18) var(--padding-7) var(--padding-20);
+  background-color: var(--color-gray-200);
+  border-radius: var(--br-30);
+  display: flex;
+  align-items: flex-start;
+  z-index: 1;
+}
+.rectangleContainer:hover {
+  background-color: var(--color-dimgray-200);
+}
+.frameInner,
+.h3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameInner {
+  height: var(--height-40);
+  width: 90px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  display: none;
+}
+.h3 {
+  margin: 0;
+  font-size: var(--fs-24);
+  font-weight: 400;
+  font-family: var(--font-inter);
+  color: var(--color-whitesmoke);
+  text-align: left;
+  z-index: 1;
+}
+.frameWrapper,
+.groupDiv {
+  display: flex;
+  align-items: flex-start;
+}
+.frameWrapper {
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--padding-01) var(--padding-01) var(--padding-3);
+  box-sizing: border-box;
+  min-width: 99px;
+}
+.groupDiv {
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  padding: var(--padding-5) var(--padding-14) var(--padding-6) var(--padding-23);
+  z-index: 1;
+}
+.button2,
+.frameChild2 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild2 {
+  height: var(--height-40);
+  width: 151px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  display: none;
+}
+.button2 {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0);
+  background-color: transparent;
+  font-size: var(--fs-24);
+  font-family: var(--font-inter);
+  color: var(--color-whitesmoke);
+  text-align: left;
+  display: inline-block;
+  min-width: 112.7px;
+  z-index: 1;
+}
+.frameDiv,
+.rectangleParent2 {
+  display: flex;
+  align-items: flex-start;
+}
+.frameDiv {
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--padding-01) var(--padding-01) var(--padding-1);
+  box-sizing: border-box;
+  min-width: 99px;
+}
+.rectangleParent2 {
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  padding: var(--padding-4) var(--padding-20) var(--padding-7);
+  z-index: 1;
+}
+.button3,
+.frameChild3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild3 {
+  height: var(--height-40);
+  width: 153px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  display: none;
+}
+.button3 {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0);
+  background-color: transparent;
+  font-size: var(--fs-24);
+  font-family: var(--font-inter);
+  color: var(--color-whitesmoke);
+  text-align: left;
+  display: inline-block;
+  z-index: 1;
+}
+.invitesList {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.frameChild4,
+.groupSection {
+  border-radius: var(--br-20);
+  background-color: var(--color-darkblue-200);
+  max-width: 100%;
+}
+.groupSection {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: var(--padding-4) 21px var(--padding-18) var(--padding-10);
+  box-sizing: border-box;
+  gap: var(--gap-32);
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-20);
+  color: var(--color-darkgray-100);
+  font-family: var(--font-inter);
+}
+.frameChild4 {
+  width: 881px;
+  height: var(--height-179);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.inviteContainer,
+.inviteItem {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+.inviteContainer {
+  align-items: flex-start;
+  gap: var(--gap-6);
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.inviteItem {
+  height: var(--height-70);
+  align-items: flex-end;
+  gap: 10px;
+}
+.inviteItemChild {
+  align-self: stretch;
+  height: 2px;
+  position: relative;
+  border-top: 2px solid var(--color-mediumslateblue-200);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.frameParent2 {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+}
+.newBadgeContainerWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-10) var(--padding-01) var(--padding-01);
+}
+.newBadgeContainer,
+.newBadgeContainerChild {
+  border-radius: var(--br-10);
+  background-color: var(--color-mediumslateblue-200);
+}
+.newBadgeContainer {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-1) var(--padding-14) var(--padding-1) var(--padding-15);
+  z-index: 1;
+}
+.newBadgeContainerChild {
+  height: 22px;
+  width: var(--width-70);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.button4 {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0);
+  background-color: transparent;
+  position: relative;
+  font-size: var(--fs-16);
+  font-weight: 500;
+  font-family: var(--font-inter);
+  color: var(--color-white);
+  text-align: left;
+  display: inline-block;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.requestMessage {
+  width: 638px;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-01) var(--padding-9);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.div3 {
+  flex: 1;
+  position: relative;
+  font-weight: 300;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.actionsContainerWrapper {
+  width: 290px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-01) var(--padding-15);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  font-size: var(--fs-16);
+  color: var(--color-gray-100);
+}
+.actionsContainer {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+}
+.actionsApprove,
+.actionsApproveChild {
+  border-radius: var(--br-8);
+  background-color: var(--color-mediumslateblue-200);
+}
+.actionsApprove {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-3) var(--padding-14);
+  z-index: 1;
+}
+.actionsApproveChild {
+  height: var(--height-25);
+  width: 108px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-3) var(--padding-01) var(--padding-01);
+}
+.div4 {
+  position: relative;
+  font-weight: 500;
+  z-index: 1;
+}
+.invitesListInner {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-01) var(--padding-01) var(--padding-6);
+  box-sizing: border-box;
+  max-width: 100%;
+  text-align: left;
+  font-size: var(--fs-20);
+  color: var(--color-darkgray-100);
+  font-family: var(--font-inter);
+}
+.frameChild5,
+.rectangleParent3 {
+  border-radius: var(--br-20);
+  background-color: var(--color-darkslategray);
+  max-width: 100%;
+}
+.rectangleParent3 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: var(--padding-14) 36px var(--padding-22) var(--padding-10);
+  box-sizing: border-box;
+  gap: 30px;
+  z-index: 1;
+}
+.frameChild5 {
+  width: 882px;
+  height: var(--height-179);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.inviteContainerTwo {
+  align-self: stretch;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.inviteContainerTwo,
+.inviteItemTwo,
+.requestMessageTwo {
+  display: flex;
+  align-items: flex-start;
+}
+.inviteItemTwo {
+  flex-direction: column;
+  gap: var(--gap-4);
+  max-width: 100%;
+}
+.requestMessageTwo {
+  padding: var(--padding-01) var(--padding-01) var(--padding-01)
+    var(--padding-4);
+}
+.ost {
+  position: relative;
+  font-weight: 300;
+  z-index: 1;
+}
+.actionsApproveTwoParent {
+  width: 260px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+  flex-shrink: 0;
+  font-size: var(--fs-16);
+  color: var(--color-gray-100);
+}
+.actionsApproveTwo {
+  width: 108px;
+  border-radius: var(--br-8);
+  background-color: var(--color-mediumslateblue-200);
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-2) var(--padding-13) var(--padding-4);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.container,
+.frameSection {
+  display: flex;
+  flex-direction: column;
+}
+.container {
+  align-items: flex-start;
+  padding: var(--padding-2) var(--padding-01) var(--padding-01);
+}
+.frameSection {
+  align-self: stretch;
+  align-items: flex-end;
+  gap: 7px;
+  max-width: 100%;
+}
+@media screen and (max-width: 750px) {
+  .div {
+    height: auto;
+  }
+  .frameContainer,
+  .frameGroup,
+  .frameParent {
+    height: auto;
+    min-height: var(--min-h-1191);
+  }
+  .tabsParent {
+    flex-wrap: wrap;
+  }
+  .frameDiv,
+  .frameWrapper {
+    flex: 1;
+  }
+  .inviteItem {
+    height: auto;
+  }
+  .frameParent2 {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .b {
+    font-size: var(--fs-22);
+  }
+  .button,
+  .button2,
+  .button3,
+  .div2,
+  .h3 {
+    font-size: var(--fs-19);
+  }
+  .div3 {
+    font-size: var(--fs-16);
+  }
+  .actionsContainer {
+    flex-wrap: wrap;
+  }
+  .ost {
+    font-size: var(--fs-16);
+  }
+}

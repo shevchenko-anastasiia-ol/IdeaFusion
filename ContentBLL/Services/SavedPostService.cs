@@ -55,6 +55,25 @@ public class SavedPostService : ISavedPostService
     public async Task<IEnumerable<SavedPostDto>> GetByUserIdAsync(int userId, CancellationToken ct = default)
     {
         var saved = await _uow.SavedPostRepository.GetByUserIdAsync(userId, ct);
-        return _mapper.Map<IEnumerable<SavedPostDto>>(saved);
+        var result = new List<SavedPostDto>();
+        foreach (var s in saved)
+        {
+            var dto = new SavedPostDto
+            {
+                SavedPostId = s.SavedPostId,
+                UserId = s.UserId,
+                SavedAt = s.SavedAt,
+                PostId = s.PostId,
+                PostTitle = s.Post?.Title ?? string.Empty,
+            };
+            var mediaList = await _uow.PostRepository.GetMediaByPostIdAsync(s.PostId, ct);
+            foreach (var media in mediaList)
+                dto.PostMediaUrls.Add(await _uow.PostRepository.GetMediaUrlAsync(media, ct));
+            result.Add(dto);
+        }
+        return result;
     }
+
+    public Task<int> CountByPostAsync(int postId, CancellationToken ct = default)
+        => _uow.SavedPostRepository.CountByPostAsync(postId, ct);
 }

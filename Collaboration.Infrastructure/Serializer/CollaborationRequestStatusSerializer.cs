@@ -1,4 +1,5 @@
 ﻿using Collaboration.Domain.Entities;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
@@ -8,10 +9,14 @@ public class CollaborationRequestStatusSerializer : SerializerBase<Collaboration
 {
     public override CollaborationRequestStatus Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
-        var value = context.Reader.ReadString();
-        return Enum.Parse<CollaborationRequestStatus>(value);
+        var bsonType = context.Reader.CurrentBsonType;
+        if (bsonType == BsonType.Int32)
+            return (CollaborationRequestStatus)context.Reader.ReadInt32();
+        if (bsonType == BsonType.Int64)
+            return (CollaborationRequestStatus)(int)context.Reader.ReadInt64();
+        return Enum.Parse<CollaborationRequestStatus>(context.Reader.ReadString());
     }
- 
+
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, CollaborationRequestStatus value)
     {
         context.Writer.WriteString(value.ToString());

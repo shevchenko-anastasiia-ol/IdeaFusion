@@ -1,6 +1,7 @@
 using Collaboration.API;
 using Collaboration.API.Controllers;
 using Collaboration.API.Middleware;
+using Collaboration.API.Services;
 using Collaboration.Application.Behaviors;
 using Collaboration.Application.Queries.CollaborationRequest;
 using Collaboration.Domain.Interfaces;
@@ -35,11 +36,13 @@ builder.Services.AddServiceDiscovery();
 
 builder.Services.AddGrpcClient<UserGrpcService.UserGrpcServiceClient>(o =>
     {
-        o.Address = new Uri("https+http://identityservice");
+        var address = builder.Configuration["Grpc__IdentityService"] ?? "https://identityservice";
+        o.Address = new Uri(address);
     })
     .AddServiceDiscovery();
 
 builder.Services.AddScoped<IUserGrpcClient, UserGrpcClient>();
+builder.Services.AddScoped<Collaboration.Application.Interfaces.Services.IUserSnapshotService, GrpcUserSnapshotService>();
 
 // --- MongoDB ---
 var aspireConn = builder.Configuration.GetConnectionString("collaboration-db")
@@ -123,7 +126,12 @@ builder.Services.AddValidatorsFromAssembly(typeof(BaseApiController).Assembly);
 builder.Services.AddMemoryCache();
 
 // --- Controllers ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 // --- Swagger ---
 builder.Services.AddEndpointsApiExplorer();

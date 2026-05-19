@@ -1,0 +1,224 @@
+.frameChild,
+.rectangleParent {
+  width: 100%;
+  background-color: var(--color-gray-600);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-16) var(--padding-10) var(--padding-27);
+  box-sizing: border-box;
+  gap: var(--gap-36);
+  text-align: left;
+  font-size: var(--fs-15);
+  color: var(--color-whitesmoke);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: 124px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.adminDetails,
+.adminDetailsWrapper {
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+}
+.adminDetailsWrapper {
+  flex-direction: column;
+  padding: var(--padding-3) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.adminDetails {
+  align-self: stretch;
+  gap: 38px;
+}
+.infoContainer,
+.infoContainerParent {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+}
+.infoContainerParent {
+  gap: 45.5px;
+  max-width: 100%;
+}
+.infoContainer {
+  flex-direction: column;
+  gap: var(--gap-1);
+  min-width: 189px;
+}
+.div {
+  position: relative;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 1;
+}
+.moderatorsideafusioncom380Wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-17);
+  color: var(--color-gray-100);
+}
+.modSeparator {
+  height: 79px;
+  width: var(--width-1);
+  position: relative;
+  border-right: var(--border-11);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.platformOwner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap-5);
+  min-width: 183px;
+}
+.div2 {
+  position: relative;
+  font-weight: 600;
+  z-index: 1;
+}
+.instagramAnasteishenWrapper {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-0) var(--padding-0) var(--padding-20);
+  color: var(--color-gray-100);
+}
+.instagramAnasteishen {
+  position: relative;
+  font-weight: 300;
+  z-index: 1;
+}
+.supportDetails {
+  height: var(--height-78);
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-28) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  gap: var(--gap-32);
+  flex-shrink: 0;
+}
+.parent,
+.supportDetailsInner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.supportDetailsInner {
+  padding: var(--padding-3) var(--padding-0) var(--padding-0);
+}
+.parent {
+  gap: var(--gap-6);
+}
+.supportideafusioncom38066Wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-0) var(--padding-0) var(--padding-13);
+  color: var(--color-gray-100);
+}
+.serviceSeparator {
+  align-self: stretch;
+  width: var(--width-1);
+  position: relative;
+  border-right: var(--border-11);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.fusionFooterWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 7.8px var(--padding-0) var(--padding-0);
+  flex-shrink: 0;
+  font-size: var(--fs-24);
+  color: var(--color-midnightblue);
+}
+.fusionFooter {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  gap: 11.7px;
+}
+.fusionFooterChild {
+  width: 58.6px;
+  position: relative;
+  max-height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.brandInfo,
+.ideafusionParent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.brandInfo {
+  flex: 1;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) 4.4px;
+}
+.ideafusionParent {
+  align-self: stretch;
+  gap: 2.8px;
+}
+.ideafusion {
+  margin: 0;
+  width: 152.3px;
+  position: relative;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  z-index: 1;
+}
+.fusion {
+  color: var(--color-mediumslateblue-200);
+}
+.fusionLogoIcon {
+  align-self: stretch;
+  height: var(--height-1);
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.creativeCollaborationPlatfor {
+  align-self: stretch;
+  position: relative;
+  font-size: var(--fs-8);
+  color: var(--color-lightslategray);
+  z-index: 1;
+}
+@media screen and (max-width: 1225px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 750px) {
+  .adminDetails {
+    flex-wrap: wrap;
+  }
+  .infoContainerParent {
+    flex-wrap: wrap;
+    min-width: 100%;
+  }
+  .modSeparator {
+    width: 100%;
+    height: var(--height-1);
+  }
+}
+@media screen and (max-width: 450px) {
+  .ideafusion {
+    font-size: var(--fs-19);
+  }
+}

@@ -1,0 +1,123 @@
+.frameChild,
+.rectangleParent {
+  width: var(--width-1314);
+  background-color: var(--color-gray-900);
+  border: var(--border-3);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.rectangleParent {
+  position: absolute;
+  top: 161px;
+  left: 126px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--padding-20) var(--padding-20) var(--padding-21)
+    var(--padding-45);
+  gap: var(--gap-20);
+  min-height: 86px;
+  text-align: left;
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: 86px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.frameParent {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-38);
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.wrapper {
+  display: flex;
+  align-items: center;
+}
+.statusLabel {
+  margin: 0;
+  font-size: var(--fs-20) !important;
+  font-family: var(--font-inter) !important;
+  font-weight: 300 !important;
+  color: var(--color-dimgray-100);
+  white-space: nowrap;
+  z-index: 1;
+}
+.statusOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-23);
+  flex-wrap: wrap;
+}
+.btn,
+.btnActive,
+.btnAlt {
+  cursor: pointer;
+  border: 0;
+  border-radius: var(--br-30);
+  padding: 8px 20px;
+  font-size: var(--fs-20);
+  font-family: var(--font-inter);
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 1;
+  transition: opacity 0.15s;
+}
+.btn,
+.btnAlt {
+  background-color: var(--color-gray-400);
+  color: var(--color-whitesmoke);
+}
+.btn:hover,
+.btnAlt:hover {
+  opacity: 0.8;
+}
+.btnActive {
+  background-color: var(--color-mediumslateblue-200);
+  color: var(--color-white);
+}
+.btnActive:hover {
+  opacity: 0.85;
+}
+.container {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-align: right;
+}
+.h34 {
+  margin: 0;
+  font-size: var(--fs-20) !important;
+  font-family: var(--font-inter) !important;
+  font-weight: 400 !important;
+  color: var(--color-dimgray-100);
+  white-space: nowrap;
+  z-index: 2;
+}
+@media screen and (max-width: 1050px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 750px) {
+  .frameParent {
+    flex-wrap: wrap;
+  }
+  .statusOptions {
+    min-width: 100%;
+  }
+}
+@media screen and (max-width: 450px) {
+  .statusLabel,
+  .btn,
+  .btnActive,
+  .btnAlt,
+  .h34 {
+    font-size: var(--fs-16) !important;
+  }
+}
+

@@ -1,0 +1,181 @@
+.rectangleParent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-gray-500);
+  width: 124px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 62px var(--padding-27) 70px;
+  box-sizing: border-box;
+  gap: var(--gap-72);
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild,
+.frameItem {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild {
+  width: 124px;
+  height: 2633px;
+  background-color: var(--color-gray-500);
+  display: none;
+}
+.frameItem {
+  width: 59px;
+  max-height: 100%;
+  object-fit: contain;
+  z-index: 2;
+}
+.roleManagement {
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-13) 1882px var(--padding-11);
+  flex-shrink: 0;
+}
+.primaryRole,
+.roleContainer,
+.roleManagement {
+  display: flex;
+  align-items: flex-start;
+}
+.roleContainer {
+  flex-direction: column;
+  gap: 46px;
+}
+.primaryRole {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0) var(--padding-11) var(--padding-0) var(--padding-5);
+  background-color: transparent;
+}
+.primaryRoleChild {
+  height: var(--height-38);
+  width: var(--width-30);
+  position: relative;
+  z-index: 2;
+}
+.frameParent,
+.frameWrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.frameParent {
+  flex-direction: column;
+  gap: 35.5px;
+}
+.frameWrapper {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0) var(--padding-5) var(--padding-0) var(--padding-3);
+  background-color: transparent;
+}
+.frameInner {
+  height: 33px;
+  width: 38px;
+  position: relative;
+  z-index: 2;
+}
+.frameContainer {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0) var(--padding-9) var(--padding-0) var(--padding-5);
+  background-color: transparent;
+  display: flex;
+  align-items: flex-start;
+}
+.groupIcon {
+  height: 35px;
+  width: var(--width-32);
+  position: relative;
+  z-index: 2;
+}
+.starRatingIcon {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-01);
+  background-color: transparent;
+  width: 46px;
+  height: 45px;
+  position: relative;
+  border-radius: var(--br-2);
+  z-index: 2;
+}
+.rectangleGroup {
+  height: var(--height-32);
+  width: var(--width-32);
+  position: relative;
+}
+.rectangleDiv {
+  top: 0;
+  left: 0;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.frameChild2,
+.frameChild3,
+.rectangleDiv,
+.rectangleIcon {
+  position: absolute;
+  border-radius: var(--br-3);
+  width: var(--width-14_5);
+  height: var(--height-13_9);
+  z-index: 2;
+}
+.frameChild2 {
+  top: 0.3px;
+  left: 17.5px;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.frameChild3,
+.rectangleIcon {
+  top: 18.1px;
+  left: 17.2px;
+}
+.frameChild3 {
+  top: 17.8px;
+  left: 0;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.ellipseParent {
+  align-self: stretch;
+  height: 70px;
+  position: relative;
+  flex-shrink: 0;
+}
+.ellipseDiv,
+.h3 {
+  position: absolute;
+}
+.ellipseDiv {
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-darkorchid);
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+.h3 {
+  margin: 0;
+  top: 20px;
+  left: 11px;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  min-width: var(--min-w-44);
+  z-index: 3;
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+}

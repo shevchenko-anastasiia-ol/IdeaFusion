@@ -26,9 +26,12 @@ public class PostFullDetailsDto
     [JsonPropertyName("viewsCount")]
     public int ViewsCount { get; set; }
  
+    [JsonPropertyName("savedCount")]
+    public int SavedCount { get; set; }
+
     [JsonPropertyName("isLikedByCurrentUser")]
     public bool IsLikedByCurrentUser { get; set; }
- 
+
     [JsonPropertyName("isSavedByCurrentUser")]
     public bool IsSavedByCurrentUser { get; set; }
  

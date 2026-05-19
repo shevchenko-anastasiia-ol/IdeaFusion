@@ -11,6 +11,7 @@ public class AggregatorTeamDto
     public string Category { get; set; } = null!;
     public string Status { get; set; } = null!;
  
+    public string? AvatarUrl { get; set; }
     public List<string> Tags { get; set; } = new();
     public List<AggregatorTeamMemberDto> Members { get; set; } = new();
     public List<AggregatorRequiredRoleDto> RequiredRoles { get; set; } = new();

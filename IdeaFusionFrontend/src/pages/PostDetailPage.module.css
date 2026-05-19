@@ -1,0 +1,455 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #111111;
+  font-family: var(--font-inter, "Inter", sans-serif);
+  position: relative;
+  overflow-x: hidden;
+  align-items: flex-start;
+}
+
+.content {
+  margin-left: 124px;
+  width: calc(100% - 124px);
+  padding: 28px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
+  box-sizing: border-box;
+}
+
+/* Хедер 
+.header {
+  background-color: #1a1a1a;
+  padding: 18px 40px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+}*/
+
+.back {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 0 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+  margin-bottom: 4px;
+}
+.back:hover { color: #fff; }
+
+.main {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  align-items: flex-start;
+  flex: 1;
+  width: 100%;
+}
+
+/* ── Ліва колонка (пост) — темніший фон ── */
+.postCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 32px 40px 60px 40px;
+  background-color: #111111;
+  box-sizing: border-box;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.authorAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #7c5cfc;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.authorName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.authorMeta {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+}
+.tags {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+}
+.cover {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  background-color: #00c9a7;
+}
+.desc {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.7;
+  margin: 0;
+}
+.hashtags {
+  font-size: 13px;
+  color: #7c5cfc;
+  margin: 0;
+}
+.linksTitle {
+  font-size: 15px;
+  color: #ccc;
+  font-weight: 500;
+  margin: 0;
+}
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.link {
+  display: block;
+  background-color: #252525;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: #7c5cfc;
+  font-size: 13px;
+  text-decoration: none;
+  transition: border-color 0.2s;
+}
+.link:hover { border-color: #7c5cfc; }
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a2a;
+}
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 14px;
+}
+.statBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #888;
+  font-size: 14px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.statBtn:hover { color: #ccc; }
+.statIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* ── Права колонка (коментарі) — світліший фон, закріплена праворуч ── */
+.commentsCol {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px 32px 0 32px;
+  background-color: #1e1e1e;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+.commentsTitle {
+  font-size: 17px;
+  color: #ccc;
+  font-weight: 500;
+  margin: 0;
+}
+.commentsList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.comment {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.nested {
+  margin-left: 32px;
+}
+.commentAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.commentBody {
+  flex: 1;
+  background-color: #252525;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.commentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.commentName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+.commentTime {
+  font-size: 11px;
+  color: #666;
+}
+.commentText {
+  font-size: 13px;
+  color: #bbb;
+  line-height: 1.6;
+  margin: 0 0 6px 0;
+}
+.replyBtn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+.replyBtn:hover { color: #7c5cfc; }
+
+.inputRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding-bottom: 24px;
+  flex-shrink: 0;
+}
+.myAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #7c5cfc;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.inputWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.input {
+  width: 100%;
+  background-color: #252525;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #ccc;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.input:focus { border-color: #7c5cfc; }
+.input::placeholder { color: #555; }
+.sendBtn {
+  align-self: flex-end;
+  background-color: #333;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 13px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.sendBtn:hover {
+  background-color: #7c5cfc;
+  border-color: #7c5cfc;
+  color: #fff;
+}
+/* ── Автор + іконка редагування ── */
+.authorRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.editBtn {
+  background-color: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  color: #666;
+  cursor: pointer;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.editBtn:hover {
+  color: #fff;
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.mediaGallery {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Carousel ── */
+.carousel {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #1a1a1a;
+}
+.carouselTrack {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carouselMedia {
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  object-fit: contain;
+  display: block;
+  background-color: #111;
+}
+.carouselBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  color: #fff;
+  font-size: 32px;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  z-index: 2;
+  padding: 0;
+}
+.carouselBtn:hover { background: rgba(124, 92, 252, 0.75); }
+.carouselBtnPrev { left: 12px; }
+.carouselBtnNext { right: 12px; }
+.carouselDots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+.carouselDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+.carouselDotActive {
+  background: #7c5cfc;
+  transform: scale(1.3);
+}
+
+.audio {
+  width: 100%;
+  border-radius: 12px;
+  background-color: #1e1e1e;
+  accent-color: #7c5cfc;
+}
+
+.pdfLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: #7c5cfc;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pdfLink:hover {
+  border-color: #7c5cfc;
+  background-color: #252525;
+}
+.pdfIcon { font-size: 24px; }

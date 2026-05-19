@@ -1,0 +1,33 @@
+.frameParent,
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.frameParent {
+  align-self: stretch;
+  flex-direction: column;
+  text-align: left;
+  font-size: var(--fs-16);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.wrapper {
+  padding: var(--padding-0) var(--padding-15);
+}
+.div {
+  position: relative;
+  font-weight: 300;
+  z-index: 2;
+}
+.frameChild {
+  border: 0;
+  outline: 0;
+  width: 100%;
+  background-color: var(--color-gray-200);
+  align-self: stretch;
+  height: var(--height-52);
+  position: relative;
+  border-radius: var(--br-30);
+  min-width: var(--min-w-250);
+  z-index: 1;
+}

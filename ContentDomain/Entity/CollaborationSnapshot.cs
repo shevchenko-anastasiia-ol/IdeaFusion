@@ -6,7 +6,10 @@ public class CollaborationSnapshot
  
     /// <summary>Id колаборації з CollaborationService</summary>
     public int CollaborationId { get; set; }
- 
+
+    /// <summary>MongoDB ObjectId of the team in CollaborationService</summary>
+    public string? ExternalId { get; set; }
+
     public string Name { get; set; } = null!;
     public string? AvatarUrl { get; set; }
  

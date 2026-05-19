@@ -1,0 +1,461 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #131313;
+  font-family: var(--font-inter, "Inter", sans-serif);
+  position: relative;
+}
+.content {
+  margin-left: 124px;
+  width: calc(100% - 124px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* ── Хедер сторінки ── */
+.pageHeader {
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #222;
+  padding: 12px 40px;
+}
+.pageTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+/* ── Профіль команди ── */
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 40px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #222;
+}
+.profileAvatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background-color: #ff6b6b;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.profileInfo { flex: 1; }
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.profileName {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.profileTag {
+  font-size: 13px;
+  padding: 3px 14px;
+  border-radius: 30px;
+  background: rgba(124,92,252,0.2);
+  border: 1px solid #7c5cfc;
+  color: #a48fff;
+}
+.profileSub {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+}
+.editPhotoBtn {
+  background-color: #7c5cfc;
+  border: none;
+  border-radius: 30px;
+  color: #fff;
+  font-size: 15px;
+  padding: 10px 24px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.editPhotoBtn:hover { background-color: #6a4de0; }
+
+/* ── Двоколонковий layout ── */
+.main {
+  display: flex;
+  gap: 20px;
+  padding: 24px 40px;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+.leftCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.rightCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ── Картка ── */
+.card {
+  background-color: #1e1e1e;
+  border-radius: 20px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cardTitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: #ccc;
+  margin: 0;
+}
+
+/* ── Поля форми ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fieldLabel {
+  font-size: 12px;
+  color: #666;
+}
+.input {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #ccc;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.input:focus { border-color: #7c5cfc; }
+.textarea {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #ccc;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  line-height: 1.6;
+  transition: border-color 0.2s;
+}
+.textarea:focus { border-color: #7c5cfc; }
+.saveBtn {
+  background-color: #7c5cfc;
+  border: none;
+  border-radius: 30px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: stretch;
+}
+.saveBtn:hover { background-color: #6a4de0; }
+
+/* ── Заявки ── */
+.requestsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #888;
+}
+.badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #7c5cfc;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.requestCard {
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.requestNew { background-color: rgba(124,92,252,0.15); border: 1px solid #7c5cfc; }
+.requestOld { background-color: rgba(63,204,160,0.1); border: 1px solid #3fcca0; }
+.requestTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.requestAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.requestName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+.requestTime {
+  font-size: 12px;
+  color: #888;
+}
+.newBadge {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 30px;
+  background: rgba(124,92,252,0.3);
+  border: 1px solid #7c5cfc;
+  color: #a48fff;
+}
+.requestText {
+  font-size: 13px;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.5;
+}
+.requestActions {
+  display: flex;
+  gap: 10px;
+}
+.acceptBtn {
+  background-color: #7c5cfc;
+  border: none;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 18px;
+  cursor: pointer;
+}
+.rejectBtn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.rejectBtn:hover { color: #fff; }
+
+/* ── Учасники ── */
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.memberRow:hover { background-color: #252525; }
+.memberAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.memberInfo { flex: 1; }
+.memberName {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.memberRole {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+.leaderBadge {
+  font-size: 12px;
+  padding: 3px 14px;
+  border-radius: 30px;
+  background: rgba(124,92,252,0.2);
+  border: 1px solid #7c5cfc;
+  color: #a48fff;
+}
+.memberBtns {
+  display: flex;
+  gap: 8px;
+}
+.changeRoleBtn {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 20px;
+  color: #888;
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.changeRoleBtn:hover { border-color: #7c5cfc; color: #a48fff; }
+.removeBtn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.removeBtn:hover { color: #e05555; }
+
+/* ── Необхідні ролі ── */
+.rolesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.roleItem {
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  color: #ccc;
+}
+.addRoleBtn {
+  background: none;
+  border: 1px dashed #333;
+  border-radius: 12px;
+  color: #666;
+  font-size: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, color 0.2s;
+}
+.addRoleBtn:hover { border-color: #7c5cfc; color: #a48fff; }
+
+/* ── Портфоліо ── */
+.portfolioSection {
+  padding: 0 40px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.portfolioHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.portfolioTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filterBtn {
+  background-color: #2a2a2a;
+  border: none;
+  border-radius: 30px;
+  color: #aaa;
+  font-size: 14px;
+  padding: 6px 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.filterBtn:hover { background-color: #333; }
+.filterActive {
+  background-color: #7c5cfc;
+  color: #fff;
+}
+.portfolioGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.portfolioCard {
+  border-radius: 20px;
+  background-color: #1e1e1e;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.portfolioCard:hover { transform: translateY(-2px); }
+.cardPlate {
+  width: 100%;
+  height: 140px;
+}
+.cardBody {
+  padding: 10px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cardRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cardTitle2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+.cardTag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 30px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cardAuthor {
+  font-size: 12px;
+  color: #888;
+}

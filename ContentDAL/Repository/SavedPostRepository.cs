@@ -42,14 +42,26 @@ public class SavedPostRepository : ISavedPostRepository
         return count > 0;
     }
  
+    public async Task<int> CountByPostAsync(int postId, CancellationToken ct = default)
+    {
+        var sql = "SELECT COUNT(1) FROM SavedPosts WHERE PostId = @PostId;";
+        return await _connection.ExecuteScalarAsync<int>(sql, new { PostId = postId }, transaction: _transaction);
+    }
+
     public async Task<IEnumerable<SavedPost>> GetByUserIdAsync(int userId, CancellationToken ct = default)
     {
-        var sql = @"SELECT sp.*, p.*
+        // Explicit column list avoids the duplicate "PostId" name that causes Dapper's splitOn
+        // to split too early (leaving SavedPost.PostId = 0). Split on "PostAuthorId" instead —
+        // it only exists in Posts, so it unambiguously marks the start of the Post mapping.
+        var sql = @"SELECT sp.SavedPostId, sp.PostId, sp.UserId, sp.SavedAt,
+                           p.PostAuthorId, p.CollaborationSnapshotId, p.Title,
+                           p.Description, p.ExternalLink, p.Status,
+                           p.CreatedBy, p.CreatedAt, p.UpdatedBy, p.UpdatedAt, p.IsDeleted
                     FROM SavedPosts sp
                     INNER JOIN Posts p ON sp.PostId = p.PostId
                     WHERE sp.UserId = @UserId AND p.IsDeleted = false
                     ORDER BY sp.SavedAt DESC;";
- 
+
         return await _connection.QueryAsync<SavedPost, Post, SavedPost>(
             sql,
             (saved, post) =>
@@ -59,6 +71,6 @@ public class SavedPostRepository : ISavedPostRepository
             },
             new { UserId = userId },
             transaction: _transaction,
-            splitOn: "PostId");
+            splitOn: "PostAuthorId");
     }
 }

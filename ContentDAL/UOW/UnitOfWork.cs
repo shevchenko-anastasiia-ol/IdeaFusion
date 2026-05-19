@@ -16,6 +16,7 @@ public class UnitOfWork : IUnitOfWork
     private readonly object _lockObject = new object();
     private readonly IMinioClient _minioClient;
     private readonly string _bucketName;
+    private readonly string _minioEndpoint;
 
     public IPostRepository PostRepository { get; private set; } = null!;
     public ICommentRepository CommentRepository { get; private set; } = null!;
@@ -32,6 +33,7 @@ public class UnitOfWork : IUnitOfWork
         _connectionFactory = connectionFactory;
         _minioClient = minioClient;
         _bucketName = configuration["Minio:BucketName"] ?? "content";
+        _minioEndpoint = configuration["Minio:Endpoint"] ?? "localhost:9000";
 
         _connection = _connectionFactory.CreateConnection();
         InitializeRepositories();
@@ -41,7 +43,7 @@ public class UnitOfWork : IUnitOfWork
     {
         if (_connection == null) throw new InvalidOperationException("Connection is null.");
 
-        PostRepository     = new PostRepository(_connection, _minioClient, _bucketName, _transaction);
+        PostRepository     = new PostRepository(_connection, _minioClient, _bucketName, _minioEndpoint, _transaction);
         CommentRepository  = new CommentRepository(_connection, _transaction);
         LikeRepository     = new LikeRepository(_connection, _transaction);
         PostViewRepository = new PostViewRepository(_connection, _transaction);

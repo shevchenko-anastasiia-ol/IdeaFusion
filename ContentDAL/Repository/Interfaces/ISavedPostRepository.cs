@@ -9,4 +9,5 @@ public interface  ISavedPostRepository
  
     Task<bool> ExistsAsync(int postId, int userId, CancellationToken ct = default);
     Task<IEnumerable<SavedPost>> GetByUserIdAsync(int userId, CancellationToken ct = default);
+    Task<int> CountByPostAsync(int postId, CancellationToken ct = default);
 }

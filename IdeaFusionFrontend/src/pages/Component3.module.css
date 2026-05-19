@@ -1,0 +1,329 @@
+.page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--color-gray-1000);
+  display: flex;
+  flex-direction: row;
+  font-family: var(--font-inter);
+}
+
+/* sticky sidebar */
+.page > :first-child {
+  position: sticky !important;
+  top: 0;
+  height: 100vh;
+  flex-shrink: 0;
+}
+
+/* area to the right of the sidebar */
+.body {
+  margin-left: 124px;
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Main content (teams list) ── */
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 28px 48px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mainHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mainTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-whitesmoke);
+}
+
+.newTeamBtn {
+  background: var(--color-mediumslateblue-200);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-inter);
+  transition: opacity 0.15s;
+}
+.newTeamBtn:hover { opacity: 0.85; }
+
+/* ── Status filters ── */
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: var(--font-inter);
+  cursor: pointer;
+  background: none;
+  border: 1px solid #333;
+  color: #999;
+  transition: all 0.15s;
+}
+.filterBtn:hover { border-color: #7c5cfc; color: #fff; }
+.filterBtnActive {
+  background: #7c5cfc;
+  border-color: #7c5cfc;
+  color: #fff;
+}
+
+/* ── Teams list ── */
+.teamsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emptyMsg {
+  color: #555;
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+/* ── Team card ── */
+.teamCard {
+  background: #181818;
+  border-radius: 18px;
+  border: 1px solid #222;
+  padding: 18px 22px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.teamCard:hover { background: #1e1e1e; }
+
+.teamAccent {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.teamInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.teamNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.teamName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.statusBadge {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 30px;
+  white-space: nowrap;
+}
+
+.teamTags {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.teamMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: #555;
+}
+
+/* ── Right sidebar (requests) ── */
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 32px 24px 48px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sidebarSection {
+  background: #111;
+  border-radius: 20px;
+  border: 1px solid #1e1e1e;
+  padding: 20px;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sidebarTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #7c5cfc;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewAllBtn {
+  background: none;
+  border: none;
+  color: #7c5cfc;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-inter);
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.viewAllBtn:hover { color: #a48fff; }
+
+/* ── Invitation card (sidebar) ── */
+.invCard {
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+}
+.invCardNew {
+  background: rgba(124,92,252,0.07);
+  border-color: rgba(124,92,252,0.3);
+}
+.invCardOther {
+  background: #181818;
+  border-color: #222;
+}
+
+.invTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.invAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.invMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.invTeam {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invTime {
+  font-size: 11px;
+  color: #666;
+}
+
+.invRole {
+  font-size: 11px;
+  color: #a48fff;
+  margin-bottom: 8px;
+}
+
+.invActions {
+  display: flex;
+  gap: 6px;
+}
+
+.acceptBtn {
+  background: #3fcca0;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: var(--font-inter);
+}
+
+.declineBtn {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 12px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-family: var(--font-inter);
+}
+
+.noInvitations {
+  color: #555;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 0;
+}
+
+@media screen and (max-width: 1100px) {
+  .sidebar { width: 280px; }
+}
+@media screen and (max-width: 900px) {
+  .body { flex-direction: column; }
+  .sidebar { width: 100%; padding: 0 32px 32px; }
+}

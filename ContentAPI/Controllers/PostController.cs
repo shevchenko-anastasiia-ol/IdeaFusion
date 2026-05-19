@@ -38,6 +38,13 @@ public class PostController : ControllerBase
         return Ok(posts);
     }
  
+    [HttpGet("by-userid/{userId:int}")]
+    public async Task<ActionResult<IEnumerable<PostDto>>> GetByUserId(int userId, CancellationToken ct)
+    {
+        var posts = await _postService.GetByUserIdAsync(userId, ct);
+        return Ok(posts);
+    }
+
     [HttpGet("by-collaboration/{collaborationSnapshotId:int}")]
     public async Task<ActionResult<IEnumerable<PostDto>>> GetByCollaboration(int collaborationSnapshotId, CancellationToken ct)
     {
@@ -53,14 +60,14 @@ public class PostController : ControllerBase
     }
  
     [HttpPost]
-    public async Task<ActionResult<PostDto>> Create([FromBody] PostCreateDto dto, CancellationToken ct)
+    public async Task<ActionResult<PostDto>> Create([FromForm] PostCreateDto dto, CancellationToken ct)
     {
         var post = await _postService.CreateAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = post.PostId }, post);
     }
  
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<PostDto>> Update(int id, [FromBody] PostUpdateDto dto, CancellationToken ct)
+    public async Task<ActionResult<PostDto>> Update(int id, [FromForm] PostUpdateDto dto, CancellationToken ct)
     {
         var updated = await _postService.UpdateAsync(id, dto, ct);
         return Ok(updated);

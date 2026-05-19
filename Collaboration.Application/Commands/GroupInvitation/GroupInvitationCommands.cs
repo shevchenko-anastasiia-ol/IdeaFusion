@@ -16,6 +16,8 @@ public class AcceptGroupInvitationCommand : ICommand<Domain.Entities.GroupInvita
 {
     public string InvitationId { get; init; } = default!;
     public string UserId { get; init; } = default!;
+    public string Username { get; init; } = default!;
+    public string? AvatarUrl { get; init; }
 }
  
 public class DeclineGroupInvitationCommand : ICommand<Domain.Entities.GroupInvitation>

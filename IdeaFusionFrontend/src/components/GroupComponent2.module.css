@@ -1,0 +1,207 @@
+.frameChild,
+.rectangleParent {
+  width: var(--width-872);
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-600);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: absolute;
+  top: 316px;
+  left: 156px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-20) var(--padding-21)
+    var(--padding-24);
+  box-sizing: border-box;
+  gap: var(--gap-11);
+  text-align: left;
+  font-size: var(--fs-32);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: var(--height-249);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.dividerOneWrapper {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-0) var(--padding-8);
+  flex-shrink: 0;
+}
+.dividerOne,
+.dividerOneWrapper,
+.teamContainerWrapper {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.dividerOne {
+  align-self: stretch;
+  flex: 1;
+  position: relative;
+  border-top: 3px solid var(--color-mediumslateblue-200);
+  z-index: 1;
+}
+.teamContainerWrapper {
+  width: 813px;
+  padding: var(--padding-0) var(--padding-14);
+  flex-shrink: 0;
+}
+.parent,
+.teamContainer,
+.teamContainerWrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.teamContainer {
+  flex: 1;
+  flex-direction: column;
+  gap: var(--gap-2);
+  max-width: 100%;
+}
+.parent {
+  align-self: stretch;
+  justify-content: space-between;
+  gap: var(--gap-20);
+}
+.h1 {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+.frameWrapper,
+.rectangleGroup {
+  display: flex;
+  align-items: flex-start;
+}
+.frameWrapper {
+  flex-direction: column;
+  padding: var(--padding-4) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-24);
+}
+.rectangleGroup {
+  height: var(--height-40);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-300);
+  border: var(--border-5);
+  box-sizing: border-box;
+  padding: var(--padding-2) var(--padding-12) var(--padding-5) var(--padding-20);
+  z-index: 1;
+}
+.frameItem,
+.h3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-40);
+  width: 130px;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-300);
+  border: var(--border-5);
+  box-sizing: border-box;
+  display: none;
+}
+.h3 {
+  margin: 0;
+  z-index: 1;
+}
+.uiuxFigmaParent {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+  max-width: 100%;
+  font-size: var(--fs-24);
+}
+.uiux {
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.frameContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-19) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-16);
+  color: var(--color-lightseagreen);
+}
+.rectangleContainer {
+  height: var(--height-26);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslategray-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-12) var(--padding-3);
+  z-index: 1;
+}
+.div,
+.frameInner {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameInner {
+  height: var(--height-26);
+  width: var(--width-83);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslategray-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.participantsListWrapper,
+.publicationCount {
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.participantsListWrapper {
+  width: 424px;
+  padding: var(--padding-0) var(--padding-14) var(--padding-5);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.publicationCount {
+  align-self: stretch;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-39);
+  font-size: var(--fs-24);
+}
+.h32 {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+@media screen and (max-width: 750px) {
+  .h1 {
+    font-size: var(--fs-26);
+  }
+  .uiuxFigmaParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .parent {
+    flex-wrap: wrap;
+  }
+  .h1,
+  .h3,
+  .h32,
+  .uiux {
+    font-size: var(--fs-19);
+  }
+}

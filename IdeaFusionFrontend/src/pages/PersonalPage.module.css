@@ -1,0 +1,269 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #131313;
+    font-family: var(--font-inter, "Inter", sans-serif);
+    position: relative;
+  }
+  .content {
+    margin-left: 124px;
+    width: calc(100% - 124px);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  
+  /* ── Хедер ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #222;
+  }
+  .headerTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+  .exitBtn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 15px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .exitBtn:hover { color: #fff; }
+  
+  /* ── Профіль ── */
+  .profileCard {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 40px;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #222;
+  }
+  .profileAvatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background-color: #7c5cfc;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .profileInfo { flex: 1; }
+  .profileName {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 4px;
+  }
+  .profileSub {
+    font-size: 14px;
+    color: #888;
+    margin: 0;
+  }
+  .editPhotoBtn {
+    background-color: #7c5cfc;
+    border: none;
+    border-radius: 30px;
+    color: #fff;
+    font-size: 15px;
+    padding: 10px 24px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .editPhotoBtn:hover { background-color: #6a4de0; }
+  
+  /* ── Форми ── */
+  .formsRow {
+    display: flex;
+    gap: 20px;
+    padding: 24px 40px;
+    box-sizing: border-box;
+  }
+  
+  /* ── Картка ── */
+  .card {
+    flex: 1;
+    background-color: #1e1e1e;
+    border-radius: 20px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .cardTitle {
+    font-size: 17px;
+    font-weight: 600;
+    color: #ccc;
+    margin: 0;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .fieldLabel {
+    font-size: 12px;
+    color: #666;
+  }
+  .input {
+    width: 100%;
+    background-color: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #ccc;
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .input:focus { border-color: #7c5cfc; }
+  .input::placeholder { color: #555; }
+  .saveBtn {
+    background-color: #7c5cfc;
+    border: none;
+    border-radius: 30px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 4px;
+  }
+  .saveBtn:hover { background-color: #6a4de0; }
+  
+  /* ── Портфоліо ── */
+  .portfolioSection {
+    padding: 0 40px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .portfolioHeader {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .portfolioTitle {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filterBtn {
+    background-color: #2a2a2a;
+    border: none;
+    border-radius: 30px;
+    color: #aaa;
+    font-size: 14px;
+    padding: 6px 18px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .filterBtn:hover { background-color: #333; }
+  .filterActive {
+    background-color: #7c5cfc;
+    color: #fff;
+  }
+  .portfolioGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .portfolioCard {
+    border-radius: 20px;
+    background-color: #1e1e1e;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .portfolioCard:hover { transform: translateY(-2px); }
+  .cardPlate {
+    width: 100%;
+    height: 130px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 10px 12px 0;
+    box-sizing: border-box;
+  }
+  .cardEditBtn {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    padding: 5px 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+  }
+  .portfolioCard:hover .cardEditBtn { opacity: 1; }
+  .cardEditBtn:hover { background: rgba(124, 92, 252, 0.7); border-color: #7c5cfc; }
+  .colabTag {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    border-radius: 30px;
+    background-color: rgba(124,92,252,0.55);
+    border: 1px solid #7c5cfc;
+    padding: 0 10px;
+    font-size: 11px;
+    color: #fff;
+  }
+  .cardBody {
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cardRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .cardTitle2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+  }
+  .cardTag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 30px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .cardAuthor {
+    font-size: 12px;
+    color: #888;
+  }

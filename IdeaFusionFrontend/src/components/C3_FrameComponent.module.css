@@ -1,0 +1,138 @@
+.frameParent {
+  position: absolute;
+  height: 100%;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 124px;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild,
+.rectangleParent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-gray-400);
+  width: 100%;
+  height: 100%;
+}
+.rectangleParent {
+  z-index: 3;
+}
+.frameChild {
+  display: none;
+}
+.avatarOuter {
+  position: absolute;
+  top: 1048px;
+  left: 26px;
+  width: var(--width-70);
+  height: var(--height-70);
+}
+.avatarMini {
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-darkorchid);
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+}
+.avatarMini,
+.frameItem,
+.h3 {
+  position: absolute;
+}
+.h3 {
+  margin: 0;
+  top: 20px;
+  left: 11px;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  min-width: 44px;
+  z-index: 5;
+}
+.frameItem {
+  top: 49px;
+  left: 32px;
+  width: 59px;
+  height: 59px;
+  object-fit: contain;
+  z-index: 4;
+}
+.frameInner {
+  top: 193px;
+  left: 43px;
+  width: var(--width-30);
+  height: 38px;
+}
+.frameChild2,
+.frameInner,
+.groupIcon {
+  position: absolute;
+  z-index: 4;
+}
+.groupIcon {
+  top: 277px;
+  left: 41px;
+  width: 38px;
+  height: 33px;
+}
+.frameChild2 {
+  top: 346px;
+  left: 43px;
+  width: var(--width-32);
+  height: 35px;
+}
+.decorationStarIcon {
+  position: absolute;
+  top: 416px;
+  left: 38px;
+  border-radius: var(--br-2);
+  width: 46px;
+  height: 45px;
+  z-index: 4;
+}
+.adBackground {
+  top: 507px;
+  left: 43px;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.adBackground,
+.adBackground2,
+.adBackground3,
+.adBackgroundIcon {
+  position: absolute;
+  border-radius: var(--br-3);
+  width: var(--width-14_5);
+  height: var(--height-13_9);
+  z-index: 4;
+}
+.adBackground2 {
+  top: 507.3px;
+  left: 60.5px;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.adBackground3,
+.adBackgroundIcon {
+  top: 525.1px;
+  left: 60.2px;
+}
+.adBackground3 {
+  top: 524.8px;
+  left: 43px;
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+}

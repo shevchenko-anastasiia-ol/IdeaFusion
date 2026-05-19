@@ -25,11 +25,13 @@ public static class DAL_DI
 
         services.AddScoped<IConnectionFactory>(_ => new ConnectionFactory(connectionString!));
 
+        var minioEndpoint = configuration["Minio:Endpoint"] ?? "localhost:9000";
+
         services.AddScoped<IPostRepository>(sp =>
         {
             var connection = sp.GetRequiredService<IDbConnection>();
             var minioClient = sp.GetRequiredService<Minio.IMinioClient>();
-            return new PostRepository(connection, minioClient, bucketName);
+            return new PostRepository(connection, minioClient, bucketName, minioEndpoint);
         });
 
         services.AddScoped<ICommentRepository, CommentRepository>();

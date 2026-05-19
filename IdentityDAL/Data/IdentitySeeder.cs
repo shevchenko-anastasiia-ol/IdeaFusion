@@ -39,37 +39,6 @@ public class IdentitySeeder
             }
         }
 
-        // 🔹 ADMIN
-        var adminId = Guid.Parse("99999999-9999-9999-9999-999999999999");
-        var adminEmail = "admin@admin.com";
-
-        var admin = await userManager.FindByEmailAsync(adminEmail);
-
-        if (admin == null)
-        {
-            admin = new ApplicationUser
-            {
-                Id = adminId,
-                UserName = "Admin",
-                Email = adminEmail,
-                EmailConfirmed = true,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var result = await userManager.CreateAsync(admin, "Admin@1234");
-
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(admin, "Admin");
-                logger.LogInformation("Created admin user: {Email}", adminEmail);
-            }
-            else
-            {
-                logger.LogWarning("Failed to create admin: {Errors}",
-                    string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-        }
-
         // 🔹 TEST USERS
         var testUsers = new List<(Guid Id, string Email, string Username)>
         {
@@ -106,5 +75,37 @@ public class IdentitySeeder
                     string.Join(", ", result.Errors.Select(e => e.Description)));
             }
         }
+
+        // 🔹 ADMIN
+        var adminId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var adminEmail = "admin@admin.com";
+
+        var admin = await userManager.FindByEmailAsync(adminEmail);
+
+        if (admin == null)
+        {
+            admin = new ApplicationUser
+            {
+                Id = adminId,
+                UserName = "Admin",
+                Email = adminEmail,
+                EmailConfirmed = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var result = await userManager.CreateAsync(admin, "Admin@1234");
+
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(admin, "Admin");
+                logger.LogInformation("Created admin user: {Email}", adminEmail);
+            }
+            else
+            {
+                logger.LogWarning("Failed to create admin: {Errors}",
+                    string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+        }
+
     }
 }

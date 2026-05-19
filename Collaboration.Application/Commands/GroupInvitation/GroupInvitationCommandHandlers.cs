@@ -1,6 +1,7 @@
 ﻿using Collaboration.Application.Interfaces.Commands;
 using Collaboration.Domain.Exceptions;
 using Collaboration.Domain.Interfaces;
+using Collaboration.Domain.ValueOfObjects;
 using MediatR;
 
 namespace Collaboration.Application.Commands.GroupInvitation;
@@ -70,8 +71,18 @@ public class AcceptGroupInvitationCommandHandler
         if (invitation.InvitedUserId != request.UserId)
             throw new DomainException("Only the invited user can accept the invitation.");
  
+        var team = await _teamRepository.GetByIdAsync(invitation.TeamId, cancellationToken)
+            ?? throw new DomainException($"Team '{invitation.TeamId}' not found.");
+
         invitation.Accept(request.UserId);
-        await _invitationRepository.UpdateAsync(invitation, cancellationToken);
+
+        var userSnapshot = new UserSnapshot(request.UserId, request.Username, request.AvatarUrl);
+        team.AddMember(userSnapshot, invitation.Role);
+
+        await Task.WhenAll(
+            _invitationRepository.UpdateAsync(invitation, cancellationToken),
+            _teamRepository.UpdateAsync(team, cancellationToken));
+
         return invitation;
     }
 }

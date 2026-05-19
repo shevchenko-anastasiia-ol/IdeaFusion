@@ -11,6 +11,11 @@ public class DatabaseSeeder : IDataSeeder
     private readonly MongoDbContext _context;
     private readonly ILogger<DatabaseSeeder> _logger;
  
+    // Real Identity users (Guid IDs from IdentitySeeder)
+    private static readonly UserSnapshot AnnaUser  = new("22222222-2222-2222-2222-222222222222", "AnnoGray",   null);
+    private static readonly UserSnapshot VladUser  = new("44444444-4444-4444-4444-444444444444", "VladBibber", null);
+    private static readonly UserSnapshot EmilyUser = new("66666666-6666-6666-6666-666666666666", "EmilyFox",   null);
+
     // Системний snapshot для seed-даних
     private static readonly UserSnapshot SystemUser = new("system", "System", null);
  
@@ -39,7 +44,10 @@ public class DatabaseSeeder : IDataSeeder
             await SeedCollaborationRequestsAsync(cancellationToken);
             await SeedGroupInvitationsAsync(cancellationToken);
             await SeedTeamPostsAsync(cancellationToken);
- 
+            await SeedRealUserTeamsAsync(cancellationToken);
+            await SeedRealUserInvitationsAsync(cancellationToken);
+            await SeedRealUserCollaborationRequestsAsync(cancellationToken);
+
             _logger.LogInformation("=== Database seeding completed successfully ===");
         }
         catch (Exception ex)
@@ -323,11 +331,160 @@ public class DatabaseSeeder : IDataSeeder
             var exists = await _context.TeamPosts
                 .Find(p => p.TeamId == post.TeamId && p.PostId == post.PostId)
                 .AnyAsync(cancellationToken);
- 
+
             if (!exists)
             {
                 await _context.TeamPosts.InsertOneAsync(post, cancellationToken: cancellationToken);
                 _logger.LogInformation("Inserted team post {PostId} for team {TeamId}", post.PostId, post.TeamId);
+            }
+        }
+    }
+
+    // ── Real-user teams ──────────────────────────────────────────────────────
+
+    private async Task SeedRealUserTeamsAsync(CancellationToken cancellationToken)
+    {
+        var realTeams = new List<Team>
+        {
+            new Team(
+                name: "UX Collective",
+                description: "Команда UI/UX дизайнерів для спільних проєктів — від мобільних застосунків до веб-продуктів.",
+                category: "Design",
+                tags: ["design", "ui-ux", "figma", "branding"],
+                owner: AnnaUser
+            ),
+            new Team(
+                name: "Digital Sound Lab",
+                description: "Студія електронної та цифрової музики для запису, продюсування та колаборацій.",
+                category: "Music",
+                tags: ["music", "digital", "production", "sound"],
+                owner: VladUser
+            ),
+            new Team(
+                name: "PixelCraft Studio",
+                description: "3D-арт та анімація для ігор, кіно та цифрового мистецтва.",
+                category: "Animation",
+                tags: ["3d", "animation", "art", "gamedev"],
+                owner: EmilyUser
+            ),
+        };
+
+        realTeams[0].AddRequiredRole("Motion Designer", "After Effects або Lottie", "system");
+        realTeams[1].AddRequiredRole("Mixing Engineer", "Зведення треків, досвід з Ableton", "system");
+        realTeams[2].AddRequiredRole("Concept Artist", "2D-концепти для ігрового світу", "system");
+        realTeams[2].AddRequiredRole("Rigger",         "Rigging персонажів у Blender", "system");
+        realTeams[2].SetStatus(TeamStatus.Active, "system");
+
+        foreach (var team in realTeams)
+        {
+            var exists = await _context.Teams
+                .Find(t => t.Name == team.Name && !t.IsDeleted)
+                .AnyAsync(cancellationToken);
+
+            if (!exists)
+            {
+                await _context.Teams.InsertOneAsync(team, cancellationToken: cancellationToken);
+                _logger.LogInformation("RealDataSeeder: inserted team '{Name}'", team.Name);
+            }
+        }
+    }
+
+    // ── Real-user collaboration requests ────────────────────────────────────
+
+    private async Task SeedRealUserCollaborationRequestsAsync(CancellationToken cancellationToken)
+    {
+        // Anna → Soundwave Collective (owned by system, not by Anna)
+        // Anna → Motion & Design Lab
+        // Vlad → Indie Game Dev Crew
+        // Vlad → PixelCraft Studio (owned by Emily)
+        // Emily → UX Collective (owned by Anna)
+        // Emily → Open Source Writers
+        var targets = new[]
+        {
+            ("Soundwave Collective",  AnnaUser,  "Keyboardist",     "Граю на клавішних 6 років, є студійний досвід запису.",          (string?)null),
+            ("Motion & Design Lab",   AnnaUser,  "Motion Designer", "Знаю After Effects та Lottie, є портфоліо анімованих брендингів.", null),
+            ("Indie Game Dev Crew",   VladUser,  "Sound Designer",  "Займаюсь звукодизайном для ігор, маю власний DAW-стек.",           null),
+            ("PixelCraft Studio",     VladUser,  "Concept Artist",  "Малюю концепти персонажів для ігор уже 4 роки.",                  EmilyUser.UserId),
+            ("UX Collective",         EmilyUser, "Motion Designer", "Спеціалізуюсь на UI-анімаціях у Figma та Lottie.",                 AnnaUser.UserId),
+            ("Open Source Writers",   EmilyUser, "Illustrator",     "Ілюстратор з досвідом оформлення книг та коміксів.",              null),
+        };
+
+        foreach (var (teamName, fromUser, role, message, toUserId) in targets)
+        {
+            var team = await _context.Teams
+                .Find(t => t.Name == teamName && !t.IsDeleted)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (team == null)
+            {
+                _logger.LogWarning("RealDataSeeder: team '{Name}' not found — skipping collaboration request", teamName);
+                continue;
+            }
+
+            var alreadyExists = await _context.CollaborationRequests
+                .Find(r => r.TeamId == team.Id && r.FromUserId == fromUser.UserId && r.Role == role)
+                .AnyAsync(cancellationToken);
+
+            if (!alreadyExists)
+            {
+                var req = new CollaborationRequest(
+                    teamId: team.Id,
+                    fromUserId: fromUser.UserId,
+                    role: role,
+                    message: message,
+                    toUserId: toUserId,
+                    fromUsername: fromUser.Username,
+                    fromAvatarUrl: fromUser.AvatarUrl);
+
+                await _context.CollaborationRequests.InsertOneAsync(req, cancellationToken: cancellationToken);
+                _logger.LogInformation("RealDataSeeder: collaboration request from {UserId} to '{Team}' as {Role}",
+                    fromUser.UserId, teamName, role);
+            }
+        }
+    }
+
+    // ── Real-user invitations ────────────────────────────────────────────────
+
+    private async Task SeedRealUserInvitationsAsync(CancellationToken cancellationToken)
+    {
+        // Invite real users to existing system-seeded teams
+        var targets = new[]
+        {
+            ("Indie Game Dev Crew",    AnnaUser.UserId,  "UI/UX Designer",   "Вашу роботу бачили — дуже потрібен UI-дизайнер для нашого проєкту!", 14),
+            ("Soundwave Collective",   VladUser.UserId,  "Keyboardist",      "Слухали ваші треки — будемо раді мати вас у команді!",               10),
+            ("Motion & Design Lab",    EmilyUser.UserId, "3D Artist",        "Ваша анімація ідеально підходить до стилю нашого проєкту.",           7),
+            ("Visual Stories",         AnnaUser.UserId,  "Brand Designer",   "Шукаємо дизайнера для оформлення нашого нового проєкту.",            10),
+            ("Indie Game Dev Crew",    EmilyUser.UserId, "3D Artist",        "3D-артист дуже потрібен — у нас вже готовий концепт персонажа.",       14),
+        };
+
+        foreach (var (teamName, invitedId, role, message, days) in targets)
+        {
+            var team = await _context.Teams
+                .Find(t => t.Name == teamName && !t.IsDeleted)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (team == null)
+            {
+                _logger.LogWarning("RealDataSeeder: team '{Name}' not found — skipping invitation", teamName);
+                continue;
+            }
+
+            var alreadyExists = await _context.GroupInvitations
+                .Find(i => i.TeamId == team.Id && i.InvitedUserId == invitedId && i.Role == role)
+                .AnyAsync(cancellationToken);
+
+            if (!alreadyExists)
+            {
+                var inv = new GroupInvitation(
+                    teamId: team.Id,
+                    invitedUserId: invitedId,
+                    invitedByUserId: "system",
+                    role: role,
+                    message: message,
+                    expirationDays: days);
+
+                await _context.GroupInvitations.InsertOneAsync(inv, cancellationToken: cancellationToken);
+                _logger.LogInformation("RealDataSeeder: invited user {UserId} to '{Team}' as {Role}", invitedId, teamName, role);
             }
         }
     }

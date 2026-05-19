@@ -1,0 +1,222 @@
+.frameChild,
+.rectangleParent {
+  height: 124px;
+  width: 1315px;
+  background-color: var(--color-gray-600);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: absolute;
+  top: 2509px;
+  left: 124px;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--padding-16) var(--padding-10) var(--padding-27);
+  box-sizing: border-box;
+  gap: var(--gap-32);
+  z-index: 2;
+  text-align: left;
+  font-size: var(--fs-15);
+  color: var(--color-whitesmoke);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.assistanceStack,
+.assistanceStackWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.assistanceStackWrapper {
+  width: 305px;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-14) var(--padding-22) var(--padding-0);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.assistanceStack {
+  gap: var(--gap-1);
+}
+.div {
+  position: relative;
+  font-weight: 600;
+  z-index: 1;
+}
+.lineWrapper,
+.supportAddresses {
+  display: flex;
+  align-items: flex-start;
+}
+.supportAddresses {
+  padding: var(--padding-0) var(--padding-17);
+  color: var(--color-gray-100);
+}
+.lineWrapper {
+  height: 78px;
+  flex-direction: column;
+  padding: var(--padding-0) var(--padding-13) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.frameItem {
+  width: var(--width-1);
+  flex: 1;
+  position: relative;
+  border-right: var(--border-3);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.creatorDetails {
+  height: 78px;
+  padding: var(--padding-0) var(--padding-4) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  gap: 38px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.creatorDetails,
+.ownerInformation,
+.ownershipInfo {
+  display: flex;
+  align-items: flex-start;
+}
+.ownerInformation {
+  flex-direction: column;
+  gap: var(--gap-5);
+}
+.ownershipInfo {
+  padding: var(--padding-0) var(--padding-0) var(--padding-0) var(--padding-20);
+  color: var(--color-gray-100);
+}
+.instagramAnasteishen {
+  height: var(--height-36);
+  position: relative;
+  font-weight: 300;
+  display: inline-block;
+  z-index: 1;
+}
+.creatorDetailsChild {
+  align-self: stretch;
+  width: var(--width-1);
+  position: relative;
+  border-right: var(--border-3);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.frameWrapper,
+.parent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.frameWrapper {
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-18);
+  flex-shrink: 0;
+}
+.parent {
+  gap: var(--gap-6);
+}
+.supportideafusioncom38066Wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-0) var(--padding-0) var(--padding-13);
+  color: var(--color-gray-100);
+}
+.lineContainer,
+.siteCreator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.lineContainer {
+  align-self: stretch;
+  padding: var(--padding-0) var(--padding-32) var(--padding-3) var(--padding-0);
+}
+.siteCreator {
+  padding: var(--padding-0) var(--padding-0) 14.6px;
+  font-size: var(--fs-24);
+  color: var(--color-midnightblue);
+}
+.platformFooter {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  gap: 11.7px;
+}
+.platformFooterChild {
+  width: 58.6px;
+  position: relative;
+  max-height: 100%;
+  object-fit: cover;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.platformFooterInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) 4.4px;
+}
+.designIdentity,
+.designIdentityParent {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.designIdentityParent {
+  gap: 3.7px;
+  flex-shrink: 0;
+}
+.designIdentity {
+  padding: var(--padding-0) var(--padding-0) var(--padding-1);
+  gap: 0.8px;
+}
+.ideafusion {
+  margin: 0;
+  width: 152.3px;
+  position: relative;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  z-index: 1;
+}
+.fusion {
+  color: var(--color-mediumslateblue-200);
+}
+.brandSignIcon,
+.creativeCollaborationPlatfor {
+  align-self: stretch;
+  position: relative;
+  z-index: 1;
+}
+.brandSignIcon {
+  height: var(--height-1);
+  max-width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.creativeCollaborationPlatfor {
+  font-size: var(--fs-8);
+  color: var(--color-lightslategray);
+}
+@media screen and (max-width: 1225px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .ideafusion {
+    font-size: var(--fs-19);
+  }
+}

@@ -1,0 +1,173 @@
+.memberProfiles,
+.memberProfilesChild {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  max-width: 100%;
+}
+.memberProfiles {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  padding: var(--padding-13) var(--padding-14) var(--padding-12)
+    var(--padding-17);
+  box-sizing: border-box;
+  gap: 128px;
+  z-index: 2;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.memberProfilesChild {
+  height: var(--height-85);
+  width: var(--width-601);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.frameParent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-12);
+  flex-shrink: 0;
+}
+.ellipseParent {
+  height: var(--height-60);
+  width: var(--width-60);
+  position: relative;
+}
+.frameChild,
+.h3 {
+  position: absolute;
+}
+.frameChild {
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-goldenrod-100);
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+}
+.h3 {
+  margin: 0;
+  top: 17px;
+  left: 9px;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  min-width: var(--min-w-41);
+  z-index: 4;
+}
+.frameWrapper {
+  flex-direction: column;
+  padding: var(--padding-6) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-20);
+  color: var(--color-whitesmoke);
+}
+.frameGroup,
+.frameWrapper,
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.frameGroup {
+  flex-direction: column;
+}
+.wrapper {
+  padding: var(--padding-0) var(--padding-0) var(--padding-0);
+}
+.div,
+.h32 {
+  position: relative;
+  flex-shrink: 0;
+}
+.h32 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+  font-family: inherit;
+  z-index: 3;
+}
+.div {
+  font-size: var(--fs-16);
+  font-weight: 300;
+  color: var(--color-gray-100);
+  z-index: 4;
+}
+.memberProfilesInner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-16);
+  box-sizing: border-box;
+  min-width: var(--min-w-157);
+  flex-shrink: 0;
+  font-size: var(--fs-15);
+  color: var(--color-dimgray-100);
+}
+.deletionControlsParent {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-21);
+}
+.deletionControls {
+  height: var(--height-25);
+  flex: 1;
+  border-radius: var(--br-30);
+  border: var(--border-1);
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-2) var(--padding-11) var(--padding-1) var(--padding-12);
+  z-index: 3;
+}
+.deletionControlsChild,
+.div2 {
+  position: relative;
+  flex-shrink: 0;
+}
+.deletionControlsChild {
+  height: var(--height-25);
+  width: var(--width-123);
+  border-radius: var(--br-30);
+  border: var(--border-1);
+  box-sizing: border-box;
+  display: none;
+}
+.div2 {
+  z-index: 4;
+}
+.deletionControls2,
+.deletionControlsItem {
+  height: var(--height-25);
+  border-radius: var(--br-30);
+  border: var(--border-3);
+  box-sizing: border-box;
+}
+.deletionControls2 {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-2) var(--padding-12) var(--padding-1);
+  z-index: 3;
+}
+.deletionControlsItem {
+  width: var(--width-97);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+  .h32 {
+    font-size: var(--fs-16);
+  }
+}

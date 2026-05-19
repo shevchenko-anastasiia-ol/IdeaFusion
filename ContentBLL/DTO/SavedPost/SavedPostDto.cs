@@ -8,5 +8,5 @@ public class SavedPostDto
  
     public int PostId { get; set; }
     public string PostTitle { get; set; } = null!;
-    public string? PostMediaUrl { get; set; }
+    public List<string> PostMediaUrls { get; set; } = new();
 }

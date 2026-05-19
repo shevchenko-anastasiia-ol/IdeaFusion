@@ -12,6 +12,7 @@ public class CreateTeamCommand : ICommand<Domain.Entities.Team>
     public string UserId { get; init; } = default!;
     public string Username { get; init; } = default!;
     public string? AvatarUrl { get; init; }
+    public string? TeamAvatarUrl { get; init; }
 }
  
 public class UpdateTeamCommand : ICommand<Domain.Entities.Team>
@@ -59,5 +60,12 @@ public class AddRequiredRoleCommand : ICommand<Domain.Entities.Team>
     public string TeamId { get; init; } = default!;
     public string Role { get; init; } = default!;
     public string? Description { get; init; }
+    public string UserId { get; init; } = default!;
+}
+
+public class SetTeamAvatarUrlCommand : ICommand<Domain.Entities.Team>
+{
+    public string TeamId { get; init; } = default!;
+    public string? AvatarUrl { get; init; }
     public string UserId { get; init; } = default!;
 }

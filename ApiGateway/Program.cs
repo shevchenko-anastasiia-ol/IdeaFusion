@@ -7,6 +7,11 @@ using Yarp.ReverseProxy.Transforms.Builder;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
+});
+
 builder.Services.AddMemoryCache();
 builder.AddServiceDefaults();
 builder.AddOpenTelemetryTracing();
@@ -37,6 +42,15 @@ builder.Services.AddReverseProxy()
 
 builder.Services.AddHealthChecks();
 
+builder.Services.AddCors(options => {
+    options.AddPolicy("Frontend", policy => {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -46,9 +60,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseGatewayPipeline();
 app.UseCorrelationId();
+app.UseCors("Frontend");
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapReverseProxy();
 app.MapHealthChecks("/health");
-await app.RunAsync();
+await app.RunAsync();   

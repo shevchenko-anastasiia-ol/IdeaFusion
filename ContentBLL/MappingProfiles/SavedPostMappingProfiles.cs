@@ -11,13 +11,10 @@ public class SavedPostMappingProfiles : Profile
     {
         // Мапінг SavedPost -> SavedPostDto
         CreateMap<SavedPost, SavedPostDto>()
-            .ForMember(dest => dest.PostTitle, 
+            .ForMember(dest => dest.PostTitle,
                 opt => opt.MapFrom(src => src.Post.Title))
-            // Дістаємо перший медіафайл, якщо він є, і беремо ObjectName
-            .ForMember(dest => dest.PostMediaUrl, 
-                opt => opt.MapFrom(src => src.Post.Media.Any() 
-                    ? src.Post.Media.First().ObjectName 
-                    : null));
+            .ForMember(dest => dest.PostMediaUrls,
+                opt => opt.Ignore());
 
         // Мапінг SavedPostCreateDto -> SavedPost
         CreateMap<SavedPostCreateDto, SavedPost>()

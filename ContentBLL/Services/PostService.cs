@@ -27,10 +27,10 @@ public class PostService : IPostService
         var dto = _mapper.Map<PostDto>(post);
         dto.Tags = tags.Select(t => t.Name).ToList();
 
-        // Додаємо Media URLs
-        dto.MediaUrls = post.Media
-            .Select(m => $"https://{m.Bucket}.s3.amazonaws.com/{m.ObjectName}") // або як формується URL у вас
-            .ToList();
+        var mediaUrls = new List<string>();
+        foreach (var m in post.Media)
+            mediaUrls.Add(await _uow.PostRepository.GetMediaUrlAsync(m));
+        dto.MediaUrls = mediaUrls;
         
         return dto;
     }
@@ -63,6 +63,14 @@ public class PostService : IPostService
     {
         var post = _mapper.Map<Post>(dto);
         post.CreatedAt = DateTime.UtcNow;
+
+        // Resolve the real PostAuthorId (FK to PostAuthors.PostAuthorId)
+        if (dto.PostAuthorId.HasValue)
+        {
+            var authorName = dto.AuthorUsername ?? dto.CreatedBy ?? "user";
+            post.PostAuthorId = await _uow.PostRepository.EnsurePostAuthorByUserIdAsync(
+                dto.PostAuthorId.Value, authorName, dto.AuthorAvatarUrl, ct);
+        }
 
         await _uow.BeginTransactionAsync(ct);
         try
@@ -110,7 +118,7 @@ public class PostService : IPostService
             await InsertPostTagsAsync(id, dto.TagIds, ct);
 
             // Оновлення медіа: видалити непотрібне, додати нове
-            if (dto.NewMediaFiles != null)
+            if (dto.NewMediaFiles != null && dto.NewMediaFiles.Count > 0)
             {
                 await _uow.PostRepository.DeleteMediaAsync(id, ct);
                 foreach (var mediaFile in dto.NewMediaFiles)
@@ -160,11 +168,10 @@ public class PostService : IPostService
             var tags = await _uow.TagRepository.GetByPostIdAsync(post.PostId, ct);
             var dto = _mapper.Map<PostDto>(post);
             dto.Tags = tags.Select(t => t.Name).ToList();
+            var mediaList = await _uow.PostRepository.GetMediaByPostIdAsync(post.PostId, ct);
             dto.MediaUrls = new List<string>();
-            foreach (var media in post.Media)
-            {
+            foreach (var media in mediaList)
                 dto.MediaUrls.Add(await _uow.PostRepository.GetMediaUrlAsync(media, ct));
-            }
             result.Add(dto);
         }
         return result;
@@ -175,6 +182,15 @@ public class PostService : IPostService
         foreach (var tagId in tagIds.Distinct())
             await _uow.TagRepository.AddPostTagAsync(postId, tagId, ct);
     }
+
+    public async Task<IEnumerable<PostDto>> GetByUserIdAsync(int userId, CancellationToken ct = default)
+    {
+        var posts = await _uow.PostRepository.GetByUserIdAsync(userId, ct);
+        return await MapPostsWithTagsAndMediaAsync(posts, ct);
+    }
+
+    public Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
+        => _uow.PostRepository.EnsurePostAuthorAsync(userName, avatarUrl, ct);
 
     private async Task DeletePostTagsAsync(int postId, CancellationToken ct)
     {

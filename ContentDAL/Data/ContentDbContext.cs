@@ -34,7 +34,10 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
  
             entity.Property(c => c.AvatarUrl)
                 .HasMaxLength(500);
- 
+
+            entity.Property(c => c.ExternalId)
+                .HasMaxLength(100);
+
             entity.Property(c => c.SyncedAt)
                 .HasColumnType("timestamp with time zone")
                 .HasDefaultValueSql("now()");

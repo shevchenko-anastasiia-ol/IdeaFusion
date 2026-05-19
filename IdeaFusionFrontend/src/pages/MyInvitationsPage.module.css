@@ -1,0 +1,221 @@
+.page {
+    min-height: 100vh;
+    background-color: #131313;
+    font-family: var(--font-inter, "Inter", sans-serif);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .content {
+    margin-left: 124px;
+    width: calc(100% - 124px);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #131313;
+    box-sizing: border-box;
+  }
+  
+  /* ── Хедер ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #222;
+    box-sizing: border-box;
+  }
+  .headerTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+  .backBtn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 15px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .backBtn:hover { color: #fff; }
+  
+  /* ── Основний контент ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 40px 40px;
+    box-sizing: border-box;
+    gap: 20px;
+  }
+  
+  /* ── Фільтри ── */
+  .filters {
+    display: flex;
+    gap: 8px;
+    align-self: flex-start;
+  }
+  .filterBtn {
+    background-color: #2a2a2a;
+    border: none;
+    border-radius: 30px;
+    color: #aaa;
+    font-size: 14px;
+    padding: 8px 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .filterBtn:hover { background-color: #333; }
+  .filterActive {
+    background-color: #7c5cfc;
+    color: #fff;
+  }
+  
+  /* ── Список ── */
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 700px;
+  }
+  
+  /* ── Картка ── */
+  .card {
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cardNew {
+    background-color: rgba(124, 92, 252, 0.15);
+    border: 1px solid rgba(124, 92, 252, 0.4);
+  }
+  .cardRejected {
+    background-color: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    opacity: 0.7;
+  }
+  .cardAccepted {
+    background-color: #1e1e1e;
+    border: 1px solid #2a2a2a;
+  }
+  
+  .cardTop {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .meta {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .nameRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .time {
+    font-size: 12px;
+    color: #666;
+  }
+  .newBadge {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 30px;
+    background: rgba(124,92,252,0.3);
+    border: 1px solid #7c5cfc;
+    color: #a48fff;
+  }
+  .rejectedBadge {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 30px;
+    background: rgba(255,107,107,0.15);
+    border: 1px solid #ff6b6b;
+    color: #ff6b6b;
+  }
+  .acceptedBadge {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 30px;
+    background: rgba(63,204,160,0.15);
+    border: 1px solid #3fcca0;
+    color: #3fcca0;
+  }
+  
+  .text {
+    font-size: 14px;
+    color: #bbb;
+    margin: 0;
+    line-height: 1.5;
+  }
+  
+  /* ── Команда ── */
+  .teamRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .teamLabel {
+    color: #666;
+  }
+  .teamName {
+    color: #7c5cfc;
+    font-weight: 500;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 10px;
+  }
+  .acceptBtn {
+    background-color: #7c5cfc;
+    border: none;
+    border-radius: 20px;
+    color: #fff;
+    font-size: 13px;
+    padding: 6px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .acceptBtn:hover { background-color: #6a4de0; }
+  .rejectBtn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .rejectBtn:hover { color: #ff6b6b; }
+  
+  .actionLabel {
+    font-size: 13px;
+    font-weight: 500;
+  }

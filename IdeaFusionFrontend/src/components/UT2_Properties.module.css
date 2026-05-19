@@ -1,0 +1,159 @@
+.properties {
+  position: absolute;
+  height: 100%;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--width-124);
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.ellipseParent {
+  top: 1162px;
+  left: 33px;
+  width: var(--width-70);
+  height: var(--height-70);
+  flex-shrink: 0;
+}
+.ellipseParent,
+.frameChild,
+.h3 {
+  position: absolute;
+}
+.frameChild {
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background-color: var(--color-darkorchid);
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+.h3 {
+  margin: 0;
+  top: 20px;
+  left: 11px;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  min-width: 44px;
+  z-index: 3;
+}
+.frameItem,
+.rectangleParent {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.rectangleParent {
+  width: var(--width-124);
+  height: var(--height-1299);
+  flex-shrink: 0;
+}
+.frameItem {
+  background-color: var(--color-gray-400);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.frameChild2,
+.frameInner,
+.groupIcon,
+.starShapeIcon {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-01);
+  background-color: transparent;
+  position: absolute;
+  top: 193px;
+  left: 43px;
+  width: var(--width-30);
+  height: var(--height-38);
+  z-index: 2;
+}
+.frameChild2,
+.groupIcon,
+.starShapeIcon {
+  top: 277px;
+  left: 41px;
+  width: var(--width-38);
+  height: var(--height-33);
+}
+.frameChild2,
+.starShapeIcon {
+  top: 346px;
+  left: 43px;
+  width: var(--width-32);
+  height: var(--height-35);
+}
+.starShapeIcon {
+  top: 416px;
+  left: 38px;
+  border-radius: var(--br-2);
+  width: var(--width-46);
+  height: var(--height-45);
+}
+.rectangleButton {
+  border: var(--border-1);
+  position: absolute;
+  top: 507px;
+  left: 43px;
+  box-sizing: border-box;
+  z-index: 2;
+}
+.frameChild3,
+.rectangleButton,
+.rectangleIcon {
+  cursor: pointer;
+  padding: var(--padding-01);
+  background-color: transparent;
+  border-radius: var(--br-3);
+  width: var(--width-14_5);
+  height: var(--height-13_9);
+}
+.frameChild3 {
+  border: var(--border-1);
+  position: absolute;
+  top: 507.3px;
+  left: 60.5px;
+  box-sizing: border-box;
+  z-index: 2;
+}
+.rectangleIcon {
+  border: 0;
+  top: 525.1px;
+  left: 60.2px;
+}
+.frameChild4,
+.frameChild5,
+.rectangleIcon {
+  position: absolute;
+  z-index: 2;
+}
+.frameChild4 {
+  cursor: pointer;
+  border: var(--border-1);
+  padding: var(--padding-01);
+  background-color: transparent;
+  top: 524.8px;
+  left: 43px;
+  border-radius: var(--br-3);
+  box-sizing: border-box;
+  width: var(--width-14_5);
+  height: var(--height-13_9);
+}
+.frameChild5 {
+  top: 41px;
+  left: 30px;
+  width: 59px;
+  height: 59px;
+  object-fit: contain;
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+}

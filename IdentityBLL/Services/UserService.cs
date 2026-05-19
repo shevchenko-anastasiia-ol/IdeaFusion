@@ -121,4 +121,45 @@ public class UserService : IUserService
 
             return await _userManager.RemoveFromRoleAsync(user, roleName);
         }
+
+        public async Task UpdateAvatarUrlAsync(Guid userId, string avatarUrl, CancellationToken cancellationToken = default)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null) return;
+            user.AvatarUrl = avatarUrl;
+            await _userManager.UpdateAsync(user);
+        }
+
+        public async Task<UserDto?> UpdateProfileAsync(Guid userId, UpdateProfileDto dto, CancellationToken cancellationToken = default)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null) return null;
+
+            user.FullName = dto.FullName?.Trim();
+            user.Specialization = dto.Specialization?.Trim();
+
+            await _userManager.UpdateAsync(user);
+
+            var userDto = _mapper.Map<UserDto>(user);
+            userDto.Roles = await _userManager.GetRolesAsync(user);
+            return userDto;
+        }
+
+        public async Task<IdentityResult> ChangePasswordAsync(Guid userId, ChangePasswordDto dto, CancellationToken cancellationToken = default)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+
+            return await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+        }
+
+        public async Task<IdentityResult> DeleteUserAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return IdentityResult.Failed(new IdentityError { Code = "UserNotFound", Description = "User not found." });
+
+            return await _userManager.DeleteAsync(user);
+        }
     }

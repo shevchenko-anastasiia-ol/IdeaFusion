@@ -1,0 +1,592 @@
+/* ── Обгортка всього блоку портфоліо ── */
+.frameChild,
+.rectangleParent {
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-400);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-23) var(--padding-20) var(--padding-29);
+  box-sizing: border-box;
+  gap: var(--gap-9);
+  text-align: left;
+  font-size: var(--fs-28);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: 1246px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+
+/* ── Заголовок ── */
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-40) var(--padding-5);
+  flex-shrink: 0;
+}
+.h2 {
+  margin: 0;
+  position: relative;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  z-index: 1;
+}
+
+/* ── Фільтри ── */
+.filterContainerParent {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: var(--padding-0) var(--padding-2) var(--padding-22) var(--padding-0);
+  box-sizing: border-box;
+  gap: var(--gap-16);
+  max-width: 100%;
+  flex-shrink: 0;
+  font-size: var(--fs-24);
+}
+.filterContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-4) var(--padding-7) var(--padding-0) var(--padding-0);
+  flex-shrink: 0;
+}
+.rectangleGroup {
+  display: flex;
+  align-items: flex-start;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-200);
+  padding: var(--padding-4) var(--padding-13) var(--padding-7) var(--padding-20);
+  z-index: 1;
+}
+.frameItem {
+  height: var(--height-40);
+  width: 69px;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-200);
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+.h3 {
+  margin: 0;
+  position: relative;
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.designFilterContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-3) var(--padding-0) var(--padding-0);
+  flex-shrink: 0;
+  color: var(--color-whitesmoke);
+}
+.frameInner,
+.rectangleContainer {
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-300);
+}
+.rectangleContainer {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-4) var(--padding-13) var(--padding-7) var(--padding-20);
+  z-index: 1;
+}
+.frameInner {
+  height: var(--height-40);
+  width: 121px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.h32 {
+  margin: 0;
+  position: relative;
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  display: inline-block;
+  min-width: 88px;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.groupButton {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-5) var(--padding-11) var(--padding-6) var(--padding-16);
+  background-color: var(--color-gray-300);
+  border-radius: var(--br-30);
+  display: flex;
+  align-items: flex-start;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.groupButton:hover,
+.rectangleParent2:hover,
+.rectangleParent3:hover {
+  background-color: var(--color-dimgray-200);
+}
+.rectangleDiv {
+  height: var(--height-40);
+  width: 115px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-300);
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+.div {
+  font-size: var(--fs-24);
+  font-family: var(--font-inter);
+  color: var(--color-whitesmoke);
+  text-align: left;
+  z-index: 1;
+  position: relative;
+  flex-shrink: 0;
+}
+.artFilterContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-5) var(--padding-0) var(--padding-0);
+  flex-shrink: 0;
+}
+.rectangleParent2 {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-5) var(--padding-16) var(--padding-6);
+  background-color: var(--color-gray-300);
+  border-radius: var(--br-30);
+  display: flex;
+  align-items: flex-start;
+  z-index: 1;
+}
+.frameChild2 {
+  height: var(--height-40);
+  width: var(--width-75);
+  position: relative;
+  display: none;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-300);
+  flex-shrink: 0;
+}
+.frameChild3,
+.rectangleParent3 {
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-300);
+  flex-shrink: 0;
+}
+.rectangleParent3 {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-4) var(--padding-13) var(--padding-7) var(--padding-20);
+  display: flex;
+  align-items: flex-start;
+  z-index: 1;
+}
+.frameChild3 {
+  height: var(--height-40);
+  width: 135px;
+  position: relative;
+  display: none;
+}
+
+/* ── Ряди карток ── */
+.frameParent,
+.showcaseContainer,
+.frameParent2,
+.frameParent3 {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+  max-width: 100%;
+  text-align: left;
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameParent > *,
+.showcaseContainer > *,
+.frameParent2 > *,
+.frameParent3 > * {
+  flex: 1;
+  min-width: 0;
+}
+.frameSection {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+  padding: 0 var(--padding-12) 0 var(--padding-4);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  text-align: left;
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+
+/* ══════════════════════════════════════════
+   КАРТКИ — загальна структура
+   ══════════════════════════════════════════ */
+
+.groupDiv {
+  flex: 1;
+  border-radius: 24px;
+  background-color: var(--color-gray-200);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.parent {
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  background-color: var(--color-gray-200);
+  overflow: hidden;
+  flex: 1;
+}
+
+/* Приховані дублікати */
+.b,
+.rectangleParent4,
+.frameDiv,
+.div6,
+.frameChild8,
+.frameChild9,
+.frameChild10,
+.frameChild12,
+.frameChild13,
+.frameChild15,
+.frameChild19,
+.frameChild21 {
+  display: none;
+}
+
+/* ── Плашки зверху карток ── */
+.rectangleParent6 {
+  align-self: stretch;
+  height: 164px;
+  border-radius: 24px 24px 0 0;
+  background-color: #3fcca0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
+  z-index: 1;
+  box-sizing: border-box;
+}
+/* Ряд 2 ліва: фіолетова */
+.rectangleParent9 {
+  align-self: stretch;
+  height: 164px;
+  border-radius: 24px 24px 0 0;
+  background-color: #7c5cfc;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+/* Ряд 3 права: блакитна */
+.rectangleParent12 {
+  align-self: stretch;
+  height: 164px;
+  border-radius: 24px 24px 0 0;
+  background-color: #5bc8f5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+/* Ряд 4 права: жовта */
+.rectangleParent16 {
+  align-self: stretch;
+  height: 164px;
+  border-radius: 24px 24px 0 0;
+  background-color: #f5c842;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* ── Бейдж «Колаборація» ── */
+.collaborationDetails {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  border-radius: 30px;
+  background-color: rgba(124, 92, 252, 0.55);
+  border: 1px solid #7c5cfc;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #fff;
+  font-family: var(--font-inter);
+  white-space: nowrap;
+  z-index: 2;
+}
+.collaborationDetailsChild {
+  display: none;
+}
+.div7 {
+  font-size: 12px;
+  line-height: 1;
+  z-index: 1;
+}
+
+/* ── Контент під плашкою ── */
+.frameWrapper {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 12px 14px 14px;
+  box-sizing: border-box;
+}
+.moodDescriptionParent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.moodDescription {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.b2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+.moodDescriptionInner {
+  flex-shrink: 0;
+}
+
+/* Тег «Музика» */
+.rectangleParent7 {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  border-radius: 30px;
+  background-color: rgba(63, 204, 160, 0.2);
+  border: 1px solid #3fcca0;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #3fcca0;
+  white-space: nowrap;
+}
+.div8 {
+  font-size: 12px;
+  z-index: 1;
+  line-height: 1;
+}
+
+/* ← ВИПРАВЛЕНО: колір підпису команди = колір імені користувача */
+.soundCrafters {
+  font-size: 13px;
+  font-weight: 300;
+  color: #aaa;
+}
+
+/* ── rectangleParent8 ── */
+.rectangleParent8 {
+  flex: 1;
+  border-radius: 24px;
+  background-color: var(--color-gray-200);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.frameContainer {
+  align-self: stretch;
+  padding: 12px 12px 14px 14px;
+  box-sizing: border-box;
+}
+.frameGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Тег «Анімація» */
+.frameWrapper2 {
+  flex-shrink: 0;
+}
+.rectangleParent10 {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  border-radius: 30px;
+  background-color: rgba(255, 107, 107, 0.2);
+  border: 1px solid #ff6b6b;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #ff6b6b;
+  white-space: nowrap;
+}
+
+/* Ряд 3 */
+.frameWrapper3 {
+  align-self: stretch;
+  padding: 12px 12px 14px 14px;
+  box-sizing: border-box;
+}
+.levelContainersParent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.levelContainers {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.b4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+.levelContainersInner {
+  flex-shrink: 0;
+}
+.frameWrapper6 {
+  flex-shrink: 0;
+}
+.rectangleParent18 {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  border-radius: 30px;
+  background-color: rgba(124, 92, 252, 0.2);
+  border: 1px solid #7c5cfc;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #a48fff;
+  white-space: nowrap;
+}
+
+/* ── Адаптивність ── */
+@media screen and (max-width: 750px) {
+  .filterContainerParent,
+  .frameParent,
+  .showcaseContainer,
+  .frameParent2,
+  .frameParent3 {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .h2 { font-size: var(--fs-22); }
+  .div, .h3, .h32 { font-size: var(--fs-19); }
+}
+
+/* ── Уніфіковані картки ── */
+.cardRow2 {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+}
+.cardRow2 > * {
+  flex: 1;
+  min-width: 0;
+}
+.card {
+  border-radius: 24px;
+  background-color: var(--color-gray-200);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.cardPlate {
+  width: 100%;
+  height: 164px;
+  border-radius: 24px 24px 0 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px 12px 0;
+  box-sizing: border-box;
+}
+.colabBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  border-radius: 30px;
+  background-color: rgba(124, 92, 252, 0.55);
+  border: 1px solid #7c5cfc;
+  padding: 0 10px;
+  font-size: 12px;
+  color: #fff;
+  font-family: var(--font-inter);
+  white-space: nowrap;
+}
+.cardBody {
+  padding: 12px 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+.cardRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+.cardTag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  border-radius: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cardAuthor {
+  font-size: 13px;
+  font-weight: 300;
+  color: #aaa;
+}

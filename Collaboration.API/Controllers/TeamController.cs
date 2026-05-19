@@ -150,14 +150,11 @@ public class TeamController : BaseApiController
  
     // DELETE: api/team/{id}
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id, [FromBody] DeleteTeamCommand command, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
         try
         {
-            if (command.TeamId != id)
-                return BadRequest(new { message = "ID mismatch." });
- 
-            await _mediator.Send(command, cancellationToken);
+            await _mediator.Send(new DeleteTeamCommand { TeamId = id, UserId = string.Empty }, cancellationToken);
             return NoContent();
         }
         catch (Exception ex) { return HandleException(ex); }
@@ -203,7 +200,22 @@ public class TeamController : BaseApiController
         {
             if (command.TeamId != id)
                 return BadRequest(new { message = "ID mismatch." });
- 
+
+            var team = await _mediator.Send(command, cancellationToken);
+            return Ok(team);
+        }
+        catch (Exception ex) { return HandleException(ex); }
+    }
+
+    // PATCH: api/team/{id}/avatar-url
+    [HttpPatch("{id}/avatar-url")]
+    public async Task<IActionResult> SetAvatarUrl(string id, [FromBody] SetTeamAvatarUrlCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (command.TeamId != id)
+                return BadRequest(new { message = "ID mismatch." });
+
             var team = await _mediator.Send(command, cancellationToken);
             return Ok(team);
         }

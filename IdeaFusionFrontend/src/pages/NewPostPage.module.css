@@ -1,0 +1,348 @@
+/* ── Layout ── */
+.page {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+  background-color: #111111;
+  font-family: var(--font-inter, "Inter", sans-serif);
+  overflow-x: hidden;
+}
+
+.rightCol {
+  flex: 1;
+  margin-left: 124px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 40px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f0f0f0;
+}
+
+.cancelBtn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cancelBtn:hover { color: #fff; }
+
+/* ── Form area ── */
+.formArea {
+  flex: 1;
+  padding: 28px 36px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Card ── */
+.card {
+  background-color: #1a1a1a;
+  border-radius: 20px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mediaCard {
+  flex: 1;
+  background-color: #1a1a1a;
+  border-radius: 20px;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cardLabel {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: #e8e8e8;
+}
+
+/* ── Fields ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 300;
+  color: #666;
+}
+
+.input,
+.textarea {
+  background-color: #242424;
+  border: none;
+  border-radius: 30px;
+  padding: 12px 20px;
+  color: #e8e8e8;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 300;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.input:focus,
+.textarea:focus {
+  outline: 1.5px solid #7c5cfc;
+}
+.textarea {
+  resize: none;
+  border-radius: 16px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 200;
+  color: #555;
+}
+
+/* ── Bottom row ── */
+.bottomRow {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.leftCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ── Publisher options ── */
+.publisherOptions {
+  display: flex;
+  gap: 14px;
+}
+
+.publisherOption,
+.publisherOptionAlt {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.publisherOption {
+  background-color: #1e1830;
+  border: 1.5px solid #7c5cfc;
+}
+
+.publisherOptionAlt {
+  background-color: #242424;
+  border: 1.5px solid transparent;
+}
+.publisherOptionAlt:hover {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+.publisherTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e8e8e8;
+}
+.publisherSub {
+  font-size: 13px;
+  font-weight: 300;
+  color: #666;
+}
+
+/* ── Team dropdown ── */
+.teamDropdownWrapper {
+  position: relative;
+}
+
+.teamDropdownTrigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #242424;
+  border: 1.5px solid #7c5cfc;
+  border-radius: 30px;
+  padding: 12px 20px;
+  color: #e8e8e8;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 300;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, background-color 0.15s;
+  box-sizing: border-box;
+}
+.teamDropdownTrigger:hover {
+  background-color: #2a2a2a;
+}
+
+.dropdownArrow {
+  font-size: 16px;
+  color: #7c5cfc;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.dropdownArrowOpen {
+  transform: rotate(180deg);
+}
+
+.teamDropdownList {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background-color: #1e1e1e;
+  border: 1.5px solid #333;
+  border-radius: 16px;
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.teamDropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 300;
+  color: #ccc;
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s;
+}
+.teamDropdownItem:hover {
+  background-color: #2a2a2a;
+  color: #fff;
+}
+.teamDropdownItemActive {
+  background-color: #1e1830;
+  color: #a78bfa;
+}
+.teamDropdownItemActive:hover {
+  background-color: #261f40;
+}
+
+.checkmark {
+  font-size: 13px;
+  color: #7c5cfc;
+}
+
+/* ── Dropzone ── */
+.dropzone {
+  flex: 1;
+  background-color: #242424;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  min-height: 220px;
+  text-align: center;
+  cursor: pointer;
+}
+.dropzone:hover { background-color: #2a2a2a; }
+
+.dropzoneText {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 200;
+  color: #555;
+  line-height: 1.7;
+}
+
+/* ── Action buttons ── */
+.actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.publishBtn {
+  padding: 14px 64px;
+  border-radius: 30px;
+  font-size: 17px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+
+.publishBtn {
+  background-color: #7c5cfc;
+  color: #fff;
+  border: none;
+}
+.publishBtn:hover { background-color: #6a4de0; }
+.publishBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+/* ── Теги ── */
+.tagsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tagBtn {
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 30px;
+  color: #aaa;
+  font-size: 13px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.tagBtn:hover { border-color: #7c5cfc; color: #c4b2ff; }
+.tagBtnActive {
+  background-color: rgba(124,92,252,0.2);
+  border: 1px solid #7c5cfc;
+  border-radius: 30px;
+  color: #c4b2ff;
+  font-size: 13px;
+  padding: 5px 14px;
+  cursor: pointer;
+}

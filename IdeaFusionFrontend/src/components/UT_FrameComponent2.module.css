@@ -1,0 +1,200 @@
+.frameChild,
+.rectangleParent {
+  width: var(--width-643);
+  border-radius: var(--br-501);
+  background-color: var(--color-gray-400);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: absolute;
+  top: 403px;
+  left: 773px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-19) var(--padding-19) var(--padding-32);
+  box-sizing: border-box;
+  gap: var(--gap-12);
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: 545px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.membersContainer {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) 33px;
+  flex-shrink: 0;
+}
+.h3 {
+  margin: 0;
+  position: relative;
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  z-index: 2;
+}
+.membersProfile {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.memberProfiles,
+.memberProfilesChild {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  max-width: 100%;
+}
+.memberProfiles {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  padding: var(--padding-13) var(--padding-14) var(--padding-12)
+    var(--padding-17);
+  box-sizing: border-box;
+  gap: 226px;
+  z-index: 2;
+}
+.memberProfilesChild {
+  height: var(--height-85);
+  width: var(--width-601);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.rectangleGroup,
+.rolesManagement {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+}
+.rolesManagement {
+  width: var(--width-97);
+  flex-direction: column;
+  padding: var(--padding-6) var(--padding-0) var(--padding-0);
+  flex-shrink: 0;
+  font-size: var(--fs-15);
+}
+.rectangleGroup {
+  height: var(--height-25);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-400);
+  border: var(--border-2);
+  padding: var(--padding-2) var(--padding-27) var(--padding-1) var(--padding-28);
+  z-index: 3;
+}
+.div,
+.frameItem {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-25);
+  width: var(--width-97);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-400);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.memberProfiles2 {
+  align-self: stretch;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-11) var(--padding-17) var(--padding-13);
+  box-sizing: border-box;
+  gap: var(--gap-12);
+  max-width: 100%;
+  z-index: 2;
+  font-size: var(--fs-16);
+  color: var(--color-gray-100);
+}
+.ellipseWrapper,
+.frameParent {
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.frameParent {
+  width: var(--width-60);
+  padding: var(--padding-0) var(--padding-15) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+}
+.ellipseWrapper {
+  flex: 1;
+  flex-direction: column;
+  padding: var(--padding-1) var(--padding-0) var(--padding-0);
+}
+.button,
+.frameInner {
+  cursor: pointer;
+  padding: var(--padding-01);
+  background-color: transparent;
+  position: relative;
+}
+.frameInner {
+  border: 0 dashed var(--color-dimgray-100);
+  align-self: stretch;
+  height: 61px;
+  border-radius: var(--br-50);
+  box-sizing: border-box;
+  z-index: 3;
+}
+.button {
+  border: 0;
+  font-size: var(--fs-48);
+  font-weight: 200;
+  font-family: var(--font-inter);
+  color: var(--color-dimgray-100);
+  text-align: left;
+  display: inline-block;
+  z-index: 4;
+  margin-left: -46px;
+  flex-shrink: 0;
+}
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-20) var(--padding-0) var(--padding-0);
+  flex-shrink: 0;
+}
+.div2 {
+  position: relative;
+  font-weight: 300;
+  z-index: 3;
+}
+@media screen and (max-width: 750px) {
+  .button {
+    font-size: 38px;
+  }
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+  .memberProfiles2 {
+    flex-wrap: wrap;
+  }
+  .button {
+    font-size: var(--fs-29);
+  }
+}

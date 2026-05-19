@@ -1,0 +1,194 @@
+.rectangleParent {
+  position: absolute;
+  top: 887px;
+  left: 152px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-600);
+  width: var(--width-872);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-17) var(--padding-21)
+    var(--padding-24);
+  box-sizing: border-box;
+  gap: 17.5px;
+  max-width: 100%;
+  text-align: left;
+  font-size: var(--fs-32);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.completedDivider,
+.frameChild {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild {
+  width: var(--width-872);
+  height: var(--height-249);
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-600);
+  display: none;
+  max-width: 100%;
+}
+.completedDivider {
+  align-self: stretch;
+  height: var(--height-3);
+  border-top: 3px solid var(--color-salmon-100);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.completedProjectDetails {
+  width: 817px;
+  padding: var(--padding-0) var(--padding-14);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.completedProjectDetails,
+.completedProjectInfo,
+.timeTravelersLabel {
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+}
+.completedProjectInfo {
+  flex: 1;
+  flex-direction: column;
+  gap: 2.5px;
+}
+.timeTravelersLabel {
+  align-self: stretch;
+  justify-content: space-between;
+  gap: var(--gap-20);
+}
+.h2 {
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.rectangleGroup,
+.statusBlock {
+  display: flex;
+  align-items: flex-start;
+}
+.statusBlock {
+  flex-direction: column;
+  padding: var(--padding-4) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-24);
+}
+.rectangleGroup {
+  height: var(--height-40);
+  border-radius: var(--br-30);
+  background-color: var(--color-salmon-200);
+  border: var(--border-4);
+  box-sizing: border-box;
+  padding: var(--padding-3) var(--padding-10) var(--padding-4) var(--padding-11);
+  z-index: 1;
+}
+.frameItem,
+.h3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-40);
+  width: 153px;
+  border-radius: var(--br-30);
+  background-color: var(--color-salmon-200);
+  border: var(--border-4);
+  box-sizing: border-box;
+  display: none;
+}
+.h3 {
+  margin: 0;
+  z-index: 1;
+}
+.skillsDescription {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+  max-width: 100%;
+  font-size: var(--fs-24);
+}
+.ost {
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.artBlock,
+.rectangleContainer {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+}
+.artBlock {
+  width: var(--width-78);
+  flex-direction: column;
+  padding: var(--padding-23) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-15);
+  color: var(--color-mediumpurple);
+}
+.rectangleContainer {
+  height: var(--height-30);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslateblue-200);
+  border: var(--border-2);
+  padding: var(--padding-3) var(--padding-23) var(--padding-5) var(--padding-28);
+  z-index: 1;
+}
+.div,
+.frameInner {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameInner {
+  height: var(--height-30);
+  width: var(--width-78);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslateblue-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.publicationNumbers {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-39);
+  flex-shrink: 0;
+  font-size: var(--fs-24);
+}
+.h32 {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+@media screen and (max-width: 750px) {
+  .timeTravelersLabel {
+    flex-wrap: wrap;
+  }
+  .h2 {
+    font-size: var(--fs-26);
+  }
+  .skillsDescription {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .h2,
+  .h3,
+  .h32,
+  .ost {
+    font-size: var(--fs-19);
+  }
+}

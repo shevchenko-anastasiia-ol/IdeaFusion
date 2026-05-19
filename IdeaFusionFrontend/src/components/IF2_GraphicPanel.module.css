@@ -1,0 +1,150 @@
+.graphicPanel,
+.graphicPanelChild {
+  background-color: var(--color-gray-500);
+}
+.graphicPanel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 59px var(--padding-22) 1404px 38px;
+  gap: var(--gap-46);
+  z-index: 1;
+}
+.graphicPanelChild {
+  width: var(--width-124);
+  height: 1943px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.segmentPanel {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-0) var(--padding-29) var(--padding-5);
+  flex-shrink: 0;
+}
+.segmentPanelChild {
+  width: 59px;
+  position: relative;
+  max-height: 100%;
+  object-fit: contain;
+  z-index: 2;
+}
+.controlBlock,
+.previewZone {
+  display: flex;
+  align-items: flex-start;
+}
+.previewZone {
+  flex-direction: column;
+  gap: var(--gap-46);
+  flex-shrink: 0;
+}
+.controlBlock {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0) var(--padding-11) var(--padding-0) var(--padding-5);
+  background-color: transparent;
+}
+.controlBlockChild {
+  height: 38px;
+  width: var(--width-30);
+  position: relative;
+  z-index: 2;
+}
+.profileDetails,
+.starRating {
+  display: flex;
+  align-items: flex-start;
+}
+.starRating {
+  flex-direction: column;
+  gap: 35.5px;
+}
+.profileDetails {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0) var(--padding-5) var(--padding-0) var(--padding-3);
+  background-color: transparent;
+}
+.profileDetailsChild {
+  height: 33px;
+  width: 38px;
+  position: relative;
+  z-index: 2;
+}
+.starRatingInner {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-0) var(--padding-9) var(--padding-0) var(--padding-5);
+  background-color: transparent;
+  display: flex;
+  align-items: flex-start;
+}
+.frameChild {
+  height: 35px;
+  width: var(--width-32);
+  position: relative;
+  z-index: 2;
+}
+.highlightBar,
+.starRatingChild {
+  cursor: pointer;
+  border: 0;
+  background-color: transparent;
+}
+.starRatingChild {
+  padding: var(--padding-01);
+  width: 46px;
+  height: 45px;
+  position: relative;
+  border-radius: var(--br-2);
+  z-index: 2;
+}
+.highlightBar {
+  padding: var(--padding-0) var(--padding-5);
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.rectangleParent {
+  height: var(--height-32);
+  width: var(--width-32);
+  position: relative;
+}
+.frameItem {
+  top: 0;
+  left: 0;
+  border: var(--border-6);
+  box-sizing: border-box;
+}
+.frameInner,
+.frameItem,
+.rectangleDiv,
+.rectangleIcon {
+  position: absolute;
+  border-radius: var(--br-3);
+  width: var(--width-14_5);
+  height: var(--height-13_9);
+  z-index: 2;
+}
+.frameInner {
+  top: 0.3px;
+  left: 17.5px;
+  border: var(--border-6);
+  box-sizing: border-box;
+}
+.rectangleDiv,
+.rectangleIcon {
+  top: 18.1px;
+  left: 17.2px;
+}
+.rectangleDiv {
+  top: 17.8px;
+  left: 0;
+  border: var(--border-6);
+  box-sizing: border-box;
+}

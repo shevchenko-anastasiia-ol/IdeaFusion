@@ -1,0 +1,219 @@
+.frameChild,
+.rectangleParent {
+  width: var(--width-1315);
+  background-color: var(--color-gray-700);
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.rectangleParent {
+  margin: 0 !important;
+  position: absolute;
+  right: -4px;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--padding-16) var(--padding-10) var(--padding-27);
+  box-sizing: border-box;
+  gap: var(--gap-32);
+  text-align: left;
+  font-size: var(--fs-15);
+  color: var(--color-whitesmoke);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: 124px;
+  position: relative;
+  display: none;
+}
+.frameWrapper,
+.parent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.frameWrapper {
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-14) var(--padding-22) var(--padding-0);
+  flex-shrink: 0;
+}
+.parent {
+  gap: var(--gap-1);
+}
+.div {
+  position: relative;
+  font-weight: 600;
+  z-index: 1;
+}
+.moderatorsideafusioncom380Wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-17);
+  color: var(--color-gray-100);
+}
+.lineWrapper {
+  height: var(--height-78);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-13) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.frameItem {
+  width: var(--width-1);
+  flex: 1;
+  position: relative;
+  border-right: var(--border-11);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.frameParent {
+  height: var(--height-78);
+  padding: var(--padding-0) var(--padding-4) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  gap: 38px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.frameParent,
+.group,
+.ownerDetails {
+  display: flex;
+  align-items: flex-start;
+}
+.group {
+  flex-direction: column;
+  gap: var(--gap-5);
+}
+.ownerDetails {
+  padding: var(--padding-0) var(--padding-0) var(--padding-0) var(--padding-20);
+  color: var(--color-gray-100);
+}
+.instagramAnasteishen {
+  position: relative;
+  font-weight: 300;
+  z-index: 1;
+}
+.frameInner {
+  align-self: stretch;
+  width: var(--width-1);
+  position: relative;
+  border-right: var(--border-11);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.container,
+.frameContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.frameContainer {
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-18);
+  flex-shrink: 0;
+}
+.container {
+  gap: var(--gap-6);
+}
+.supportideafusioncom38066Wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-0) var(--padding-0) var(--padding-13);
+  color: var(--color-gray-100);
+}
+.lineContainer,
+.platformInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.lineContainer {
+  height: 81px;
+  padding: var(--padding-0) var(--padding-32) var(--padding-3) var(--padding-0);
+  box-sizing: border-box;
+}
+.platformInfo {
+  padding: var(--padding-0) var(--padding-0) 14.6px;
+  font-size: var(--fs-24);
+  color: var(--color-midnightblue);
+}
+.frameGroup {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  gap: 11.7px;
+}
+.groupIcon {
+  width: 58.6px;
+  position: relative;
+  max-height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+.logoDetails,
+.logoDetailsWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.logoDetailsWrapper {
+  flex: 1;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) 4.4px;
+}
+.logoDetails {
+  align-self: stretch;
+  gap: 2.8px;
+}
+.ideafusion {
+  margin: 0;
+  width: 152.3px;
+  position: relative;
+  display: inline-block;
+  z-index: 1;
+}
+.fusion {
+  color: var(--color-mediumslateblue-200);
+}
+.creativeCollaborationPlatfor,
+.vectorIcon {
+  align-self: stretch;
+  position: relative;
+  z-index: 1;
+}
+.vectorIcon {
+  height: var(--height-1);
+  max-width: 100%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.creativeCollaborationPlatfor {
+  font-size: var(--fs-8);
+  color: var(--color-lightslategray);
+}
+@media screen and (max-width: 1410px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 1200px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 825px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+  }
+  .ideafusion {
+    font-size: var(--fs-19);
+  }
+}

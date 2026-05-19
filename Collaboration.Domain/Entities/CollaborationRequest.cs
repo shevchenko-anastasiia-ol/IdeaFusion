@@ -20,7 +20,15 @@ public class CollaborationRequest : BaseEntity
  
     [BsonElement("fromUserId")]
     public string FromUserId { get; private set; } = string.Empty;
- 
+
+    [BsonElement("fromUsername")]
+    [BsonIgnoreIfNull]
+    public string? FromUsername { get; private set; }
+
+    [BsonElement("fromAvatarUrl")]
+    [BsonIgnoreIfNull]
+    public string? FromAvatarUrl { get; private set; }
+
     [BsonElement("toUserId")]
     [BsonIgnoreIfNull]
     public string? ToUserId { get; private set; }
@@ -40,17 +48,21 @@ public class CollaborationRequest : BaseEntity
     [BsonIgnoreIfNull]
     public DateTime? ResolvedAt { get; private set; }
  
+    [BsonConstructor]
     private CollaborationRequest() { }
  
-    public CollaborationRequest(string teamId, string fromUserId, string role, string? message, string? toUserId = null)
+    public CollaborationRequest(string teamId, string fromUserId, string role, string? message,
+        string? toUserId = null, string? fromUsername = null, string? fromAvatarUrl = null)
     {
         if (string.IsNullOrWhiteSpace(teamId))
             throw new DomainException("TeamId cannot be empty.");
         if (string.IsNullOrWhiteSpace(role))
             throw new DomainException("Role cannot be empty.");
- 
+
         TeamId = teamId;
         FromUserId = fromUserId;
+        FromUsername = string.IsNullOrWhiteSpace(fromUsername) ? null : fromUsername.Trim();
+        FromAvatarUrl = string.IsNullOrWhiteSpace(fromAvatarUrl) ? null : fromAvatarUrl.Trim();
         ToUserId = toUserId;
         Role = role.Trim();
         Message = message?.Trim();

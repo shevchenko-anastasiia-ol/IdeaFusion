@@ -6,6 +6,8 @@ public class CreateCollaborationRequestCommand : ICommand<Domain.Entities.Collab
 {
     public string TeamId { get; init; } = default!;
     public string FromUserId { get; init; } = default!;
+    public string? FromUsername { get; init; }
+    public string? FromAvatarUrl { get; init; }
     public string Role { get; init; } = default!;
     public string? Message { get; init; }
     public string? ToUserId { get; init; }

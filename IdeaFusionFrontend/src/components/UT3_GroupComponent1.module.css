@@ -1,0 +1,193 @@
+.rectangleParent {
+  align-self: stretch;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-500);
+  border: var(--border-1);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-12) var(--padding-10) 21px;
+  gap: 13px;
+  max-width: 100%;
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-dimgray-100);
+  font-family: var(--font-inter);
+}
+.frameChild,
+.frameParent {
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.frameChild {
+  width: 882px;
+  height: var(--height-179);
+  position: relative;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-500);
+  border: var(--border-1);
+  box-sizing: border-box;
+  display: none;
+}
+.frameParent {
+  align-self: stretch;
+  flex-direction: column;
+  gap: var(--gap-2);
+}
+.frameContainer,
+.frameGroup,
+.frameParent {
+  display: flex;
+  align-items: flex-start;
+}
+.frameGroup {
+  align-self: stretch;
+  justify-content: space-between;
+  gap: var(--gap-20);
+}
+.frameContainer {
+  gap: var(--gap-12);
+}
+.moreInfoParent {
+  height: var(--height-60);
+  width: var(--width-60);
+  position: relative;
+}
+.h3,
+.moreInfo {
+  position: absolute;
+}
+.moreInfo {
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-gray-200);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.h3 {
+  margin: 0;
+  top: 15px;
+  left: 14px;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-block;
+  min-width: 34px;
+  z-index: 2;
+}
+.frameWrapper {
+  flex-direction: column;
+  padding: var(--padding-6) var(--padding-01) var(--padding-01);
+  font-size: var(--fs-20);
+  color: var(--color-gray-100);
+}
+.frameDiv,
+.frameWrapper,
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.frameDiv {
+  flex-direction: column;
+}
+.wrapper {
+  padding: var(--padding-01) var(--padding-01) var(--padding-01);
+}
+.div,
+.h32 {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.h32 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
+  font-family: inherit;
+}
+.div {
+  font-size: var(--fs-16);
+  font-weight: 300;
+}
+.frameWrapper2 {
+  width: var(--width-80);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-8) var(--padding-01) var(--padding-01);
+  box-sizing: border-box;
+  font-size: var(--fs-11);
+  color: var(--color-white);
+}
+.careerParent {
+  align-self: stretch;
+  height: var(--height-20);
+  position: relative;
+}
+.career,
+.div2 {
+  position: absolute;
+}
+.career {
+  top: 0;
+  left: 0;
+  border-radius: var(--br-30);
+  background-color: var(--color-salmon-300);
+  border: 1px solid var(--color-salmon-100);
+  box-sizing: border-box;
+  width: 70.4px;
+  height: var(--height-20);
+  z-index: 1;
+}
+.div2 {
+  top: 3px;
+  left: 8px;
+  z-index: 2;
+}
+.combinedProposal {
+  width: 647px;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-01) var(--padding-4);
+  box-sizing: border-box;
+  max-width: 100%;
+  font-size: var(--fs-20);
+  color: var(--color-darkgray-100);
+}
+.div3 {
+  flex: 1;
+  position: relative;
+  font-weight: 300;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.container {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-01) var(--padding-9);
+  flex-shrink: 0;
+  font-size: var(--fs-16);
+  color: var(--color-salmon-100);
+}
+.div4 {
+  position: relative;
+  font-weight: 500;
+  z-index: 1;
+}
+@media screen and (max-width: 450px) {
+  .frameGroup {
+    flex-wrap: wrap;
+  }
+  .h3 {
+    font-size: var(--fs-19);
+  }
+  .div3,
+  .h32 {
+    font-size: var(--fs-16);
+  }
+}

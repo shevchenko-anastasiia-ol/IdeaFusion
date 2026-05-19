@@ -9,7 +9,7 @@ public class PostUpdateDto
     public string? ExternalLink { get; set; }
 
     // Нові файли для завантаження
-    public List<IFormFile>? NewMediaFiles { get; set; } = new();
+    public List<IFormFile>? NewMediaFiles { get; set; }
 
     // Ідентифікатори тегів
     public List<int> TagIds { get; set; } = new();

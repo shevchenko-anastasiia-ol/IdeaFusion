@@ -25,6 +25,9 @@ public class PostWithEngagementDto
  
     [JsonPropertyName("isSavedByCurrentUser")]
     public bool IsSavedByCurrentUser { get; set; }
- 
+
+    [JsonPropertyName("savedCount")]
+    public int SavedCount { get; set; }
+
     public bool IsValid() => Post != null;
 }

@@ -1,0 +1,73 @@
+.searchBar,
+.searchBarChild {
+  background-color: var(--color-gray-700);
+  max-width: 100%;
+}
+.searchBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  padding: 12px 46px 12px 40px;
+  box-sizing: border-box;
+  gap: 0;
+  row-gap: var(--gap-20);
+  text-align: left;
+  font-size: 18px;
+  color: var(--color-whitesmoke);
+  font-family: var(--font-inter);
+}
+.searchBarChild {
+  height: 159px;
+  width: 1440px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.searchContainer {
+  width: 135px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 5.1px var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.h2 {
+  margin: 0;
+  align-self: stretch;
+  position: relative;
+  z-index: 1;
+}
+.searchBarItem {
+  border: 0;
+  background-color: transparent;
+  flex: 1;
+  font-family: var(--font-inter);
+  font-size: 14px;
+  color: var(--color-dimgray-100);
+  min-width: 300px;
+  max-width: 100%;
+  z-index: 2;
+  flex-shrink: 0;
+}
+@media screen and (max-width: 750px) {
+  .searchBar {
+    padding-left: 74px;
+    padding-right: var(--padding-23);
+    box-sizing: border-box;
+  }
+}
+@media screen and (max-width: 450px) {
+  .searchBar {
+    padding-left: var(--padding-20);
+    box-sizing: border-box;
+  }
+  .h2 {
+    font-size: var(--fs-22);
+  }
+}

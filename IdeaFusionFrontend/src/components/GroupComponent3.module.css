@@ -1,0 +1,304 @@
+.rectangleParent {
+  position: absolute;
+  top: 602px;
+  left: 156px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-600);
+  width: var(--width-872);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-17) var(--padding-21)
+    var(--padding-24);
+  box-sizing: border-box;
+  gap: var(--gap-17);
+  max-width: 100%;
+  text-align: left;
+  font-size: var(--fs-32);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild,
+.searchDivider {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild {
+  width: var(--width-872);
+  height: var(--height-249);
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-600);
+  display: none;
+  max-width: 100%;
+}
+.searchDivider {
+  align-self: stretch;
+  height: var(--height-3);
+  border-top: 3px solid var(--color-mediumaquamarine-200);
+  box-sizing: border-box;
+  transform: rotate(0.1deg);
+  z-index: 1;
+}
+.searchContent,
+.searchItem {
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+}
+.searchContent {
+  width: 813px;
+  padding: var(--padding-0) var(--padding-14);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.searchItem {
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+}
+.searchInfo,
+.teamNameAndTags {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+}
+.searchInfo {
+  flex-direction: column;
+  gap: var(--gap-2);
+  max-width: 100%;
+}
+.teamNameAndTags {
+  justify-content: space-between;
+  gap: var(--gap-20);
+}
+.h2 {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+.lookingDesign,
+.rectangleGroup {
+  display: flex;
+  align-items: flex-start;
+}
+.lookingDesign {
+  flex-direction: column;
+  padding: var(--padding-4) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-24);
+}
+.rectangleGroup {
+  height: var(--height-40);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumaquamarine-300);
+  border: var(--border-7);
+  box-sizing: border-box;
+  padding: var(--padding-3) var(--padding-16) var(--padding-4);
+  z-index: 1;
+}
+.frameItem,
+.h3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-40);
+  width: 142px;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumaquamarine-300);
+  border: var(--border-7);
+  box-sizing: border-box;
+  display: none;
+}
+.h3 {
+  margin: 0;
+  z-index: 1;
+}
+.teamNameAndTags2 {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-20);
+  max-width: 100%;
+  font-size: var(--fs-24);
+}
+.illustrator {
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.rectangleContainer,
+.teamNameAndTagsInner {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+}
+.teamNameAndTagsInner {
+  width: var(--width-78);
+  flex-direction: column;
+  padding: var(--padding-19) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-15);
+  color: var(--color-mediumpurple);
+}
+.rectangleContainer {
+  height: var(--height-30);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslateblue-200);
+  border: var(--border-2);
+  padding: var(--padding-3) var(--padding-11) var(--padding-4) var(--padding-12);
+  z-index: 1;
+}
+.div,
+.frameInner {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameInner {
+  height: var(--height-30);
+  width: var(--width-78);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslateblue-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.participantsBlock,
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.participantsBlock {
+  gap: var(--gap-9);
+  max-width: 100%;
+  font-size: var(--fs-24);
+}
+.wrapper {
+  flex-direction: column;
+  padding: var(--padding-15) var(--padding-12) var(--padding-0) var(--padding-0);
+}
+.h32 {
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  min-width: var(--min-w-111);
+  z-index: 1;
+}
+.participantsAvatars {
+  width: 129px;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-9);
+}
+.firstParticipant {
+  height: var(--height-60);
+  flex: 1;
+  position: relative;
+}
+.dmAvatar,
+.h33 {
+  position: absolute;
+}
+.dmAvatar {
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-darkblue-200);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.h33 {
+  margin: 0;
+  top: 16px;
+  left: 10px;
+  display: inline-block;
+  min-width: var(--min-w-44);
+  z-index: 2;
+}
+.secondParticipant {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-3) var(--padding-0) var(--padding-0);
+  color: var(--color-mediumaquamarine-200);
+}
+.unknownAvatar {
+  align-self: stretch;
+  height: var(--height-60);
+  position: relative;
+}
+.unknownAvatarChild {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  border: 0 dashed var(--color-mediumaquamarine-200);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.unknownInitials {
+  margin: 0;
+  position: absolute;
+  top: 15px;
+  left: 23px;
+  display: inline-block;
+  min-width: var(--min-w-16);
+  z-index: 2;
+}
+.lookingForDesigner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-23) var(--padding-0) var(--padding-0);
+  font-size: var(--fs-16);
+  color: var(--color-mediumaquamarine-200);
+}
+.div2 {
+  position: relative;
+  font-weight: 300;
+  z-index: 1;
+}
+.countPublicationsBlock {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-39);
+  flex-shrink: 0;
+  font-size: var(--fs-24);
+}
+.h34 {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+@media screen and (max-width: 750px) {
+  .teamNameAndTags {
+    flex-wrap: wrap;
+  }
+  .h2 {
+    font-size: var(--fs-26);
+  }
+  .participantsBlock,
+  .teamNameAndTags2 {
+    flex-wrap: wrap;
+  }
+}
+@media screen and (max-width: 450px) {
+  .h2,
+  .h32,
+  .h33,
+  .h34,
+  .illustrator,
+  .unknownInitials {
+    font-size: var(--fs-19);
+  }
+}

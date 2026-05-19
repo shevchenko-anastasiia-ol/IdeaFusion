@@ -1,0 +1,297 @@
+.page {
+  min-height: 100vh;
+  background-color: #131313;
+  font-family: var(--font-inter, "Inter", sans-serif);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ── Хедер ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30px 40px 30px 160px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #222;
+}
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 124px;
+}
+.logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+.headerTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.cancelBtn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.cancelBtn:hover { color: #fff; }
+
+/* ── Сайдбар ── */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 100vh;
+  background-color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  z-index: 10;
+}
+.sideIcon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sideIcon svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Основний контент ── */
+.main {
+  flex: 1;
+  margin-left: 124px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 40px 80px;
+  box-sizing: border-box;
+}
+
+/* ── Картка форми ── */
+.card {
+  width: 100%;
+  max-width: 740px;
+  background-color: #1e1e1e;
+  border-radius: 24px;
+  padding: 36px 40px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+.cardTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+/* ── Секції ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.label {
+  font-size: 14px;
+  color: #888;
+}
+
+/* ── Отримувач ── */
+.recipient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #2a2a2a;
+  border-radius: 14px;
+  padding: 12px 16px;
+  width: fit-content;
+}
+.recipientAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.recipientName {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.recipientRole {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+.removeBtn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 0;
+  transition: color 0.2s;
+}
+.removeBtn:hover { color: #fff; }
+
+/* ── Список команд ── */
+.teamList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background-color: #2a2a2a;
+}
+.teamRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #333;
+  transition: background 0.15s;
+}
+.teamRow:last-child { border-bottom: none; }
+.teamRow:hover { background-color: #303030; }
+.teamRowActive {
+  background-color: rgba(124, 92, 252, 0.12);
+}
+.teamAccent {
+  width: 4px;
+  height: 44px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.teamInfo {
+  flex: 1;
+  min-width: 0;
+}
+.teamTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.teamName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.teamBadge {
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 30px;
+  white-space: nowrap;
+}
+.teamCount {
+  font-size: 12px;
+  color: #666;
+  margin-left: auto;
+}
+.teamSub {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+}
+.radio {
+  width: 20px;
+  height: 20px;
+  accent-color: #7c5cfc;
+  flex-shrink: 0;
+}
+
+/* ── Select ── */
+.select {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #ccc;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 7L11 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  transition: border-color 0.2s;
+}
+.select:focus { border-color: #7c5cfc; }
+
+/* ── Input ── */
+.input {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #ccc;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.input:focus { border-color: #7c5cfc; }
+
+/* ── Textarea ── */
+.textarea {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.textarea:focus { border-color: #7c5cfc; }
+
+/* ── Кнопка надіслати ── */
+.submitBtn {
+  align-self: center;
+  background-color: #7c5cfc;
+  border: none;
+  border-radius: 30px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+  padding: 14px 60px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+.submitBtn:hover { background-color: #6a4de0; }

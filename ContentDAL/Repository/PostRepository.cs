@@ -13,19 +13,21 @@ public class PostRepository : IPostRepository
     private readonly IDbConnection _connection;
     private readonly IMinioClient _minioClient;
     private readonly string _bucketName;
+    private readonly string _endpoint;
     protected readonly IDbTransaction? _transaction;
 
-    public PostRepository(IDbConnection connection, IMinioClient minioClient, string bucketName, IDbTransaction? transaction = null)
+    public PostRepository(IDbConnection connection, IMinioClient minioClient, string bucketName, string endpoint, IDbTransaction? transaction = null)
     {
         _connection = connection;
         _transaction = transaction;
         _minioClient = minioClient;
         _bucketName = bucketName;
+        _endpoint = endpoint.TrimEnd('/');
     }
 
     public Task<string> GetMediaUrlAsync(PostMedia media, CancellationToken ct = default)
     {
-        var url = $"https://{media.Bucket}.s3.amazonaws.com/{media.ObjectName}";
+        var url = $"http://{_endpoint}/{media.Bucket}/{media.ObjectName}";
         return Task.FromResult(url);
     }
 
@@ -34,14 +36,26 @@ public class PostRepository : IPostRepository
         if (file == null || file.Length == 0)
             throw new ArgumentException("File is empty", nameof(file));
 
+        var bucketExists = await _minioClient.BucketExistsAsync(
+            new BucketExistsArgs().WithBucket(_bucketName), ct);
+        if (!bucketExists)
+        {
+            await _minioClient.MakeBucketAsync(
+                new MakeBucketArgs().WithBucket(_bucketName), ct);
+            var policy = $$"""{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::{{_bucketName}}/*"]}]}""";
+            await _minioClient.SetPolicyAsync(
+                new SetPolicyArgs().WithBucket(_bucketName).WithPolicy(policy), ct);
+        }
+
         var objectName = $"{Guid.NewGuid()}_{file.FileName}";
+        var contentType = string.IsNullOrEmpty(file.ContentType) ? "application/octet-stream" : file.ContentType;
 
         await _minioClient.PutObjectAsync(new PutObjectArgs()
                 .WithBucket(_bucketName)
                 .WithObject(objectName)
                 .WithStreamData(file.OpenReadStream())
                 .WithObjectSize(file.Length)
-                .WithContentType(file.ContentType),
+                .WithContentType(contentType),
             ct);
 
         var media = new PostMedia
@@ -49,7 +63,7 @@ public class PostRepository : IPostRepository
             PostId = postId,
             ObjectName = objectName,
             Bucket = _bucketName,
-            ContentType = file.ContentType
+            ContentType = contentType
         };
 
         await AddPostMediaAsync(media, ct);
@@ -130,47 +144,16 @@ public class PostRepository : IPostRepository
                         UpdatedBy   = @UpdatedBy
                     WHERE PostId = @PostId AND IsDeleted = false;";
 
-        await _connection.ExecuteAsync(sql, entity, transaction: _transaction);
-
-        var existingMedia = (await _connection.QueryAsync<PostMedia>(
-            "SELECT * FROM PostMedia WHERE PostId = @PostId;",
-            new { PostId = entity.PostId },
-            transaction: _transaction)).ToList();
-
-        var mediaToDelete = existingMedia
-            .Where(em => !entity.Media.Any(m => m.ObjectName == em.ObjectName))
-            .ToList();
-
-        foreach (var media in mediaToDelete)
+        await _connection.ExecuteAsync(sql, new
         {
-            await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
-                .WithBucket(_bucketName)
-                .WithObject(media.ObjectName));
-
-            await _connection.ExecuteAsync(
-                "DELETE FROM PostMedia WHERE Id = @Id;",
-                new { media.Id },
-                transaction: _transaction);
-        }
-
-        var mediaToAdd = entity.Media
-            .Where(m => !existingMedia.Any(em => em.ObjectName == m.ObjectName))
-            .ToList();
-
-        foreach (var media in mediaToAdd)
-        {
-            await _connection.ExecuteAsync(
-                @"INSERT INTO PostMedia (PostId, Bucket, ObjectName, ContentType)
-                  VALUES (@PostId, @Bucket, @ObjectName, @ContentType);",
-                new
-                {
-                    PostId = entity.PostId,
-                    Bucket = media.Bucket,
-                    ObjectName = media.ObjectName,
-                    ContentType = media.ContentType
-                },
-                transaction: _transaction);
-        }
+            entity.Title,
+            entity.Description,
+            entity.ExternalLink,
+            Status = entity.Status.ToString(),
+            entity.UpdatedAt,
+            entity.UpdatedBy,
+            entity.PostId,
+        }, transaction: _transaction);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
@@ -331,5 +314,76 @@ public class PostRepository : IPostRepository
             new { TagId = tagId },
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId");
+    }
+
+    public async Task<IEnumerable<Post>> GetByUserIdAsync(int userId, CancellationToken ct = default)
+    {
+        var sql = @"SELECT p.*, a.*, c.*
+                    FROM Posts p
+                    LEFT JOIN PostAuthors a            ON p.PostAuthorId = a.PostAuthorId
+                    LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
+                    WHERE a.UserId = @UserId AND p.IsDeleted = false
+                    ORDER BY p.CreatedAt DESC;";
+
+        return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
+            sql,
+            (post, author, collab) =>
+            {
+                post.Author        = author;
+                post.Collaboration = collab;
+                return post;
+            },
+            new { UserId = userId },
+            transaction: _transaction,
+            splitOn: "PostAuthorId,CollaborationSnapshotId");
+    }
+
+    public async Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
+    {
+        var existing = await _connection.QuerySingleOrDefaultAsync<(int UserId, string? ExistingAvatar)>(
+            "SELECT UserId, AvatarUrl FROM PostAuthors WHERE UserName = @UserName LIMIT 1;",
+            new { UserName = userName });
+
+        if (existing != default)
+        {
+            if (avatarUrl != null && existing.ExistingAvatar != avatarUrl)
+            {
+                await _connection.ExecuteAsync(
+                    "UPDATE PostAuthors SET AvatarUrl = @AvatarUrl, SyncedAt = @SyncedAt WHERE UserName = @UserName;",
+                    new { AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow, UserName = userName });
+            }
+            return existing.UserId;
+        }
+
+        var newUserId = await _connection.ExecuteScalarAsync<int>(
+            "SELECT COALESCE(MAX(UserId), 200) + 1 FROM PostAuthors;");
+
+        await _connection.ExecuteAsync(
+            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (@UserId, @UserName, @AvatarUrl, @SyncedAt);",
+            new { UserId = newUserId, UserName = userName, AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow });
+
+        return newUserId;
+    }
+
+    public async Task<int> EnsurePostAuthorByUserIdAsync(int userId, string userName, string? avatarUrl = null, CancellationToken ct = default)
+    {
+        var existing = await _connection.QuerySingleOrDefaultAsync<(int PostAuthorId, string? ExistingAvatar)>(
+            "SELECT PostAuthorId, AvatarUrl FROM PostAuthors WHERE UserId = @UserId LIMIT 1;",
+            new { UserId = userId });
+
+        if (existing != default)
+        {
+            if (avatarUrl != null && existing.ExistingAvatar != avatarUrl)
+            {
+                await _connection.ExecuteAsync(
+                    "UPDATE PostAuthors SET AvatarUrl = @AvatarUrl, SyncedAt = @SyncedAt WHERE UserId = @UserId;",
+                    new { AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow, UserId = userId });
+            }
+            return existing.PostAuthorId;
+        }
+
+        return await _connection.ExecuteScalarAsync<int>(
+            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (@UserId, @UserName, @AvatarUrl, @SyncedAt) RETURNING PostAuthorId;",
+            new { UserId = userId, UserName = userName, AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow });
     }
 }

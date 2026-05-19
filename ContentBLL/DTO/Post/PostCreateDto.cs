@@ -18,4 +18,12 @@ public class PostCreateDto
     public List<int> TagIds { get; set; } = new();
 
     public string CreatedBy { get; set; } = null!;
+
+    // Username to display as the post author (used in EnsurePostAuthor)
+    public string? AuthorUsername { get; set; }
+
+    public string? AuthorAvatarUrl { get; set; }
+
+    // "Draft" або "Published"
+    public string? Status { get; set; }
 }

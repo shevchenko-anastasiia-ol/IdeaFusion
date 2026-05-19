@@ -27,13 +27,15 @@ builder.Services.AddServiceDiscovery();
 
 builder.Services.AddGrpcClient<UserGrpcService.UserGrpcServiceClient>(o =>
     {
-        o.Address = new Uri("https+http://identityservice");
+        var address = builder.Configuration["Grpc__IdentityService"] ?? "https://identityservice";
+        o.Address = new Uri(address);
     })
     .AddServiceDiscovery();
 
 builder.Services.AddGrpcClient<CollaborationRequestGrpcService.CollaborationRequestGrpcServiceClient>(o =>
     {
-        o.Address = new Uri("https+http://collaborationservice");
+        var address = builder.Configuration["Grpc__CollaborationService"] ?? "https://collaborationservice";
+        o.Address = new Uri(address);
     })
     .AddServiceDiscovery();
 
@@ -66,12 +68,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 
 builder.Services.AddDbContext<ContentDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("contentdb")));
 
 builder.Services.AddSingleton<IConnectionFactory>(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
-    var connStr = configuration.GetConnectionString("DefaultConnection");
+    var connStr = configuration.GetConnectionString("contentdb");
 
     if (string.IsNullOrWhiteSpace(connStr))
         throw new Exception("Connection string 'DefaultConnection' is missing!");
@@ -81,7 +83,7 @@ builder.Services.AddSingleton<IConnectionFactory>(sp =>
 
 builder.Services.AddHealthChecks()
     .AddNpgSql(
-        connectionString: builder.Configuration.GetConnectionString("DefaultConnection")!,
+        connectionString: builder.Configuration.GetConnectionString("contentdb")!,
         name: "postgresql",
         tags: ["db", "ready"]);
 
@@ -98,9 +100,20 @@ using (var scope = app.Services.CreateScope())
         dbContext.Database.EnsureCreated();
         logger.LogInformation("Database schema created/verified.");
 
+        // Apply pending schema changes that EnsureCreated doesn't handle
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE collaborationsnapshots ADD COLUMN IF NOT EXISTS externalid character varying(100);");
+        logger.LogInformation("Schema patches applied.");
+
         var seeder = new ContentDAL.Data.ContentDbSeed(dbContext,
             services.GetRequiredService<ILogger<ContentDAL.Data.ContentDbSeed>>());
         await seeder.SeedAsync();
+
+        var realSeeder = new ContentDAL.Data.RealDataSeeder(
+            dbContext,
+            services.GetRequiredService<IMinioClient>(),
+            services.GetRequiredService<ILogger<ContentDAL.Data.RealDataSeeder>>());
+        await realSeeder.SeedAsync();
     }
     catch (Exception ex)
     {

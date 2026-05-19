@@ -6,4 +6,5 @@ public class CollaborationDto
     public int CollaborationId { get; set; }
     public string Name { get; set; } = null!;
     public string? AvatarUrl { get; set; }
+    public string? ExternalId { get; set; }
 }

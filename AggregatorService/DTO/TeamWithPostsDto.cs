@@ -10,15 +10,21 @@ public class TeamWithPostsDto
 {
     [JsonPropertyName("team")]
     public AggregatorTeamDto Team { get; set; } = null!;
- 
+
     [JsonPropertyName("posts")]
     public List<AggregatorTeamPostDto> Posts { get; set; } = new();
- 
+
+    [JsonPropertyName("collaborationRequests")]
+    public List<AggregatorCollaborationRequestDto> CollaborationRequests { get; set; } = new();
+
     [JsonPropertyName("totalPosts")]
     public int TotalPosts => Posts?.Count ?? 0;
- 
+
     [JsonPropertyName("openRolesCount")]
     public int OpenRolesCount => Team?.RequiredRoles?.Count ?? 0;
- 
+
+    [JsonPropertyName("pendingRequestsCount")]
+    public int PendingRequestsCount => CollaborationRequests?.Count(r => r.Status == "Pending") ?? 0;
+
     public bool IsValid() => Team != null;
 }

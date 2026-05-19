@@ -1,0 +1,169 @@
+.vectorParent {
+  position: absolute;
+  top: 973px;
+  left: 773px;
+  border-radius: var(--br-501);
+  background-color: var(--color-gray-400);
+  width: var(--width-643);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 21px var(--padding-31) var(--padding-28) var(--padding-36);
+  box-sizing: border-box;
+  gap: 12.7px;
+  max-width: 100%;
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild,
+.frameItem {
+  position: relative;
+  display: none;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.frameChild {
+  height: 21px;
+  overflow: hidden;
+  object-fit: contain;
+}
+.frameItem {
+  width: var(--width-643);
+  height: 514px;
+  border-radius: var(--br-501);
+  background-color: var(--color-gray-400);
+}
+.needsRoles {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-14);
+  flex-shrink: 0;
+}
+.h3 {
+  margin: 0;
+  position: relative;
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  z-index: 1;
+}
+.roleChoices {
+  align-self: stretch;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-14) var(--padding-30) var(--padding-17);
+  box-sizing: border-box;
+  max-width: 100%;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.react,
+.roleChoicesChild {
+  position: relative;
+  flex-shrink: 0;
+}
+.roleChoicesChild {
+  height: var(--height-60);
+  width: 576px;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  display: none;
+  max-width: 100%;
+}
+.react {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  z-index: 2;
+}
+.roleChoices2 {
+  align-self: stretch;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-15) var(--padding-32) var(--padding-16);
+  box-sizing: border-box;
+  max-width: 100%;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.roleChoicesItem {
+  height: var(--height-60);
+  width: var(--width-572);
+  position: relative;
+  display: none;
+}
+.roleChoices3,
+.roleChoices6,
+.roleChoicesChild2,
+.roleChoicesItem {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.roleChoices3 {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-15) var(--padding-30) var(--padding-16);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.roleChoices6,
+.roleChoicesChild2 {
+  height: var(--height-60);
+}
+.roleChoicesChild2 {
+  width: 573px;
+  position: relative;
+  display: none;
+}
+.roleChoices6 {
+  align-self: stretch;
+  border: var(--border-3);
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-15) 179px var(--padding-17) 197px;
+  z-index: 1;
+  font-size: var(--fs-20);
+}
+.h34,
+.roleChoicesChild3 {
+  position: relative;
+  flex-shrink: 0;
+}
+.roleChoicesChild3 {
+  height: var(--height-60);
+  width: var(--width-572);
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  border: var(--border-3);
+  box-sizing: border-box;
+  display: none;
+  max-width: 100%;
+}
+.h34 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 300;
+  font-family: inherit;
+  z-index: 2;
+}
+@media screen and (max-width: 450px) {
+  .h3,
+  .react {
+    font-size: var(--fs-19);
+  }
+  .h34 {
+    font-size: var(--fs-16);
+  }
+}

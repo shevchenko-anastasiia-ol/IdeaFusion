@@ -9,7 +9,6 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var postgresUser = builder.AddParameter("postgres-username", "postgres", secret: true);
 var postgresPass = builder.AddParameter("postgres-password", "1234567890", secret: true);
-
 var mongo = builder.AddMongoDB("mongodb").WithDataVolume();
 
 var redisPass = builder.AddParameter("redis-password", "redis123", secret: true);
@@ -49,7 +48,8 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq",
 
 var minio = builder.AddContainer("minio", "minio/minio")
     .WithArgs("server", "/data")
-    .WithEndpoint(9000, 9000);
+    .WithEndpoint(9000, 9000)
+    .WithVolume("minio-data", "/data");
 
 var identityService = builder.AddProject<Projects.IdentityAPI>("identityservice")
     .WithReference(identityDb)           

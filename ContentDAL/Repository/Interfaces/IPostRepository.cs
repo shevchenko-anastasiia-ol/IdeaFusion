@@ -13,10 +13,14 @@ public interface IPostRepository
     Task<Post?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<IEnumerable<Post>> GetAllAsync(CancellationToken ct = default);
     Task<IEnumerable<Post>> GetByAuthorAsync(int postAuthorId, CancellationToken ct = default);
+    Task<IEnumerable<Post>> GetByUserIdAsync(int userId, CancellationToken ct = default);
     Task<IEnumerable<Post>> GetByCollaborationAsync(int collaborationSnapshotId, CancellationToken ct = default);
     Task<IEnumerable<Post>> GetByStatusAsync(PostStatus status, CancellationToken ct = default);
     Task<IEnumerable<Post>> GetByTagAsync(int tagId, CancellationToken ct = default);
     Task<PostMedia> UploadMediaAsync(int postId, IFormFile file, CancellationToken ct = default);
     Task<string> GetMediaUrlAsync(PostMedia media, CancellationToken ct = default);
+    Task<IEnumerable<PostMedia>> GetMediaByPostIdAsync(int postId, CancellationToken ct = default);
     Task DeleteMediaAsync(int postId, CancellationToken ct = default);
+    Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default);
+    Task<int> EnsurePostAuthorByUserIdAsync(int userId, string userName, string? avatarUrl = null, CancellationToken ct = default);
 }

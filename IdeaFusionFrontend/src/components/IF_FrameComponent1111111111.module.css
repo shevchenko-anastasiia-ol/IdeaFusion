@@ -1,0 +1,168 @@
+.frameChild,
+.rectangleParent {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-600);
+  max-width: 100%;
+}
+.rectangleParent {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: var(--padding-13) var(--padding-27) var(--padding-18)
+    var(--padding-34);
+  box-sizing: border-box;
+  gap: var(--gap-20);
+  min-width: var(--min-w-730);
+  z-index: 1;
+  text-align: left;
+  font-size: var(--fs-32);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: var(--height-118);
+  width: var(--width-1123);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.frameWrapper,
+.parent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.frameWrapper {
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-8);
+  box-sizing: border-box;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.parent {
+  align-self: stretch;
+  gap: var(--gap-1);
+}
+.h2,
+.illustrator {
+  margin: 0;
+  position: relative;
+  z-index: 2;
+}
+.frameContainer,
+.frameParent {
+  display: flex;
+  align-items: flex-start;
+}
+.frameParent {
+  width: 349px;
+  flex-direction: column;
+  gap: var(--gap-18);
+  max-width: 100%;
+  flex-shrink: 0;
+  font-size: var(--fs-15);
+  color: var(--color-mediumpurple);
+}
+.frameContainer {
+  align-self: stretch;
+  justify-content: flex-end;
+}
+.designHeaderParent {
+  gap: var(--gap-34);
+}
+.designHeader,
+.designHeaderParent,
+.rectangleGroup {
+  display: flex;
+  align-items: flex-start;
+}
+.designHeader {
+  flex-direction: column;
+  padding: var(--padding-5) var(--padding-0) var(--padding-0);
+}
+.rectangleGroup {
+  height: var(--height-30);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslateblue-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  padding: var(--padding-3) var(--padding-11) var(--padding-4) var(--padding-12);
+  z-index: 2;
+}
+.div,
+.frameItem {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameItem {
+  height: var(--height-30);
+  width: var(--width-78);
+  border-radius: var(--br-30);
+  background-color: var(--color-darkslateblue-200);
+  border: var(--border-2);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.frameInner,
+.rectangleContainer {
+  height: var(--height-40);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumaquamarine-300);
+  border: var(--border-4);
+  box-sizing: border-box;
+}
+.rectangleContainer {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-3) var(--padding-16) var(--padding-4);
+  z-index: 2;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+}
+.frameInner {
+  width: 142px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.h3,
+.h32 {
+  margin: 0;
+  position: relative;
+}
+.h3 {
+  z-index: 1;
+  flex-shrink: 0;
+}
+.h32 {
+  color: var(--color-gray-100);
+  z-index: 2;
+}
+@media screen and (max-width: 1200px) {
+  .rectangleParent {
+    flex-wrap: wrap;
+    min-width: 100%;
+  }
+}
+@media screen and (max-width: 825px) {
+  .h2 {
+    font-size: var(--fs-26);
+  }
+}
+@media screen and (max-width: 450px) {
+  .h2,
+  .illustrator {
+    font-size: var(--fs-19);
+  }
+  .designHeaderParent {
+    gap: var(--gap-17);
+    flex-wrap: wrap;
+  }
+  .h32 {
+    font-size: var(--fs-19);
+  }
+}

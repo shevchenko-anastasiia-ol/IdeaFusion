@@ -1,0 +1,303 @@
+/* ── Layout ── */
+.page {
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    background-color: #111111;
+    font-family: var(--font-inter, "Inter", sans-serif);
+    overflow-x: hidden;
+  }
+  
+  .rightCol {
+    flex: 1;
+    margin-left: 124px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100vh;
+  }
+  
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 12px 40px;
+    background-color: #111111;
+    border-bottom: 1px solid #222;
+    flex-wrap: wrap;
+  }
+  
+  .headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  
+  .backBtn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 15px;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+    transition: color 0.15s;
+  }
+  .backBtn:hover { color: #fff; }
+  
+  .pageTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #f0f0f0;
+    white-space: nowrap;
+  }
+  
+  .headerControls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  
+  .filterGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .filterBtn {
+    padding: 8px 18px;
+    border-radius: 30px;
+    border: 1.5px solid transparent;
+    background-color: #1e1e1e;
+    color: #888;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .filterBtn:hover {
+    background-color: #2a2a2a;
+    color: #ddd;
+  }
+  
+  .filterBtnActive {
+    padding: 8px 18px;
+    border-radius: 30px;
+    border: 1.5px solid #7c5cfc;
+    background-color: #7c5cfc;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  
+  .divider {
+    width: 1px;
+    height: 28px;
+    background-color: #333;
+    flex-shrink: 0;
+  }
+  
+  /* ── Grid ── */
+  .grid {
+    padding: 32px 40px 60px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    align-items: start;
+    flex: 1;
+  }
+  
+  @media (max-width: 1200px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  
+  /* ── Post Card — matches search page style ── */
+  .postCard {
+    background-color: #181818;
+    border-radius: 24px;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s;
+    border: 1px solid #222;
+  }
+  .postCard:hover { transform: translateY(-3px); }
+  
+  /* Preview — fixed 4:5 portrait format */
+  .previewImg {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  /* Placeholder when no photo — same dimensions as .previewImg */
+  .preview {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    max-height: 300px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .previewLabel {
+    font-size: 18px;
+    color: rgba(124, 92, 252, 0.6);
+    font-family: var(--font-inter);
+  }
+  
+  /* Card body */
+  .postFooter {
+    padding: 16px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .postHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  .authorRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
+  .authorName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    font-family: var(--font-inter);
+    line-height: 1.2;
+  }
+  .authorTime {
+    font-size: 12px;
+    color: #666;
+    font-family: var(--font-inter);
+  }
+  
+  .categoryBadge {
+    font-size: 12px;
+    padding: 3px 12px;
+    border-radius: 30px;
+    background-color: rgba(124, 92, 252, 0.15);
+    border: 1px solid #7c5cfc;
+    color: #a48fff;
+    font-family: var(--font-inter);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .teamBadge {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 30px;
+    background-color: rgba(63, 204, 160, 0.12);
+    border: 1px solid #3fcca0;
+    color: #3fcca0;
+    font-family: var(--font-inter);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .postTitle {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    font-family: var(--font-inter);
+    line-height: 1.3;
+  }
+  
+  .postStats {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-top: 2px;
+  }
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    color: #666;
+    font-family: var(--font-inter);
+    font-weight: 300;
+  }
+  .statIcon {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px 40px 32px;
+  }
+
+  .pageBtn {
+    background: none;
+    border: 1px solid #333;
+    border-radius: 20px;
+    padding: 6px 20px;
+    font-size: 13px;
+    color: #888;
+    cursor: pointer;
+    font-family: var(--font-inter);
+    transition: all 0.15s;
+  }
+  .pageBtn:hover:not(:disabled) {
+    border-color: #7c5cfc;
+    color: #a48fff;
+  }
+  .pageBtn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .pageNum {
+    font-size: 13px;
+    color: #555;
+    font-family: var(--font-inter);
+    min-width: 80px;
+    text-align: center;
+  }
+

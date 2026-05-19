@@ -1,0 +1,197 @@
+.frameChild,
+.rectangleParent {
+  width: var(--width-600);
+  border-radius: var(--br-40);
+  background-color: var(--color-gray-300);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: absolute;
+  top: 592px;
+  left: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 29px var(--padding-15) 25px;
+  box-sizing: border-box;
+  gap: 49px;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: var(--height-273);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.publishSelection {
+  width: 555px;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) 91px;
+  box-sizing: border-box;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.h3 {
+  margin: 0;
+  flex: 1;
+  position: relative;
+  font-size: inherit;
+  font-weight: 500;
+  font-family: inherit;
+  display: inline-block;
+  max-width: 100%;
+  z-index: 1;
+}
+.frameParent {
+  width: 557px;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  gap: var(--gap-15);
+  max-width: 100%;
+  flex-shrink: 0;
+  font-size: var(--fs-20);
+}
+.frameItem,
+.rectangleGroup {
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+}
+.rectangleGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 42px var(--padding-36) var(--padding-45);
+  gap: var(--gap-1);
+  z-index: 1;
+}
+.frameItem {
+  width: var(--width-271);
+  height: var(--height-141);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.personalContainer {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-11) var(--padding-0) var(--padding-12);
+  flex-shrink: 0;
+}
+.button,
+.h32 {
+  position: relative;
+  z-index: 2;
+}
+.button {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-01);
+  background-color: transparent;
+  font-size: var(--fs-24);
+  font-weight: 500;
+  font-family: var(--font-inter);
+  color: var(--color-white);
+  text-align: left;
+  display: inline-block;
+}
+.h32 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 300;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.rectangleContainer {
+  flex: 1;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-37) var(--padding-22) var(--padding-45)
+    var(--padding-36);
+  box-sizing: border-box;
+  gap: var(--gap-1);
+  min-width: 222px;
+  z-index: 1;
+}
+.button2,
+.frameInner {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameInner {
+  width: var(--width-271);
+  height: 136px;
+  border-radius: var(--br-30);
+  background-color: var(--color-gray-200);
+  display: none;
+}
+.button2 {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-01);
+  background-color: transparent;
+  font-size: var(--fs-24);
+  font-weight: 500;
+  font-family: var(--font-inter);
+  color: var(--color-white);
+  text-align: left;
+  display: inline-block;
+  z-index: 2;
+}
+.teamContainer,
+.teamSelection {
+  display: flex;
+  align-items: flex-start;
+}
+.teamSelection {
+  padding: var(--padding-0) var(--padding-4) var(--padding-0) var(--padding-17);
+  flex-shrink: 0;
+}
+.teamContainer {
+  gap: var(--gap-12);
+}
+.div {
+  position: relative;
+  font-weight: 300;
+  z-index: 2;
+}
+.teamContainerInner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-9) var(--padding-0) var(--padding-0);
+}
+.arrowIcon {
+  cursor: pointer;
+  border: 0;
+  padding: var(--padding-01);
+  background-color: transparent;
+  width: var(--width-14_7);
+  height: var(--height-15);
+  position: relative;
+  object-fit: contain;
+  z-index: 2;
+}
+@media screen and (max-width: 450px) {
+  .button,
+  .h3 {
+    font-size: var(--fs-19);
+  }
+  .h32 {
+    font-size: var(--fs-16);
+  }
+  .button2 {
+    font-size: var(--fs-19);
+  }
+  .div {
+    font-size: var(--fs-16);
+  }
+}

@@ -44,6 +44,7 @@ public class GroupInvitation : BaseEntity
     [BsonIgnoreIfNull]
     public DateTime? ResolvedAt { get; private set; }
  
+    [BsonConstructor]
     private GroupInvitation() { }
  
     public GroupInvitation(string teamId, string invitedUserId, string invitedByUserId, string role, string? message, int expirationDays = 7)

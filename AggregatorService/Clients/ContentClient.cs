@@ -167,6 +167,25 @@ public class ContentClient
     }
  
     /// <summary>
+    /// GET api/post/by-userid/{userId}  — filters by PostAuthor.UserId (external identity reference)
+    /// </summary>
+    public async Task<List<AggregatorPostDto>> GetPostsByUserIdAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/post/by-userid/{userId}", cancellationToken);
+            if (!response.IsSuccessStatusCode) return new List<AggregatorPostDto>();
+            return await response.Content.ReadFromJsonAsync<List<AggregatorPostDto>>(JsonOptions, cancellationToken)
+                   ?? new List<AggregatorPostDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling ContentService for posts by userId. UserId: {UserId}", userId);
+            return new List<AggregatorPostDto>();
+        }
+    }
+
+    /// <summary>
     /// GET api/post/by-collaboration/{collaborationSnapshotId}
     /// </summary>
     public async Task<List<AggregatorPostDto>> GetPostsByCollaborationSnapshotAsync(int collaborationSnapshotId, CancellationToken cancellationToken = default)
@@ -439,6 +458,20 @@ public class ContentClient
         }
     }
  
+    /// <summary>
+    /// GET api/savedpost/count?postId={postId}
+    /// </summary>
+    public async Task<int> GetSavedCountByPostIdAsync(int postId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/savedpost/count?postId={postId}", cancellationToken);
+            if (!response.IsSuccessStatusCode) return 0;
+            return await response.Content.ReadFromJsonAsync<int>(JsonOptions, cancellationToken);
+        }
+        catch { return 0; }
+    }
+
     /// <summary>
     /// GET api/savedpost/exists?postId={postId}&userId={userId}
     /// </summary>

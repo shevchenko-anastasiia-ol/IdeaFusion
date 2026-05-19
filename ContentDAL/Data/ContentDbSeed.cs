@@ -36,93 +36,67 @@ public class ContentDbSeed
         try
         {
             _logger.LogInformation("=== Starting ContentService database seeding ===");
- 
-            var hasAuthors = await _context.PostAuthors.AnyAsync();
-            var hasCollaborations = await _context.CollaborationSnapshots.AnyAsync();
+
+            await RemoveSeedPostsAsync();
+
             var hasTags = await _context.Tags.AnyAsync();
-            var hasPosts = await _context.Posts.AnyAsync();
-            var hasComments = await _context.Comments.AnyAsync();
-            var hasLikes = await _context.Likes.AnyAsync();
-            var hasViews = await _context.PostViews.AnyAsync();
-            var hasSaved = await _context.SavedPosts.AnyAsync();
-            var hasMedia = await _context.PostMedia.AnyAsync();
-            
-            _logger.LogInformation(
-                "Current state — Authors: {HasAuthors}, Collaborations: {HasCollaborations}, Tags: {HasTags}, Posts: {HasPosts}, Comments: {HasComments}, " +
-                "Likes: {HasLikes}, Views: {HasViews}, Saved: {HasSaved}",
-                hasAuthors, hasCollaborations, hasTags, hasPosts, hasComments, hasLikes, hasViews, hasSaved);
- 
-            if (hasAuthors && hasCollaborations && hasTags && hasPosts && hasComments && hasLikes && hasViews && hasSaved)
-            {
-                _logger.LogInformation("Database already seeded. Skipping...");
-                return;
-            }
- 
-            if (!hasAuthors)
-                await SeedPostAuthorsAsync();
-            else
-                _logger.LogInformation("PostAuthors already seeded. Skipping...");
- 
-            if (!hasCollaborations)
-                await SeedCollaborationSnapshotsAsync();
-            else
-                _logger.LogInformation("CollaborationSnapshots already seeded. Skipping...");
- 
+
             if (!hasTags)
                 await SeedTagsAsync();
             else
                 _logger.LogInformation("Tags already seeded. Skipping...");
- 
-            if (!hasPosts)
-                await SeedPostsAsync();
-            else
-                _logger.LogInformation("Posts already seeded. Skipping...");
- 
-            if (!hasComments)
-                await SeedCommentsAsync();
-            else
-                _logger.LogInformation("Comments already seeded. Skipping...");
- 
-            if (!hasLikes)
-                await SeedLikesAsync();
-            else
-                _logger.LogInformation("Likes already seeded. Skipping...");
- 
-            if (!hasViews)
-                await SeedPostViewsAsync();
-            else
-                _logger.LogInformation("PostViews already seeded. Skipping...");
- 
-            if (!hasSaved)
-                await SeedSavedPostsAsync();
-            else
-                _logger.LogInformation("SavedPosts already seeded. Skipping...");
-            
-            if (!hasMedia)
-                await SeedPostMediaAsync();
-            else
-                _logger.LogInformation("PostMedia already seeded. Skipping...");
-            
-            var finalAuthors = await _context.PostAuthors.CountAsync();
-            var finalCollaborations = await _context.CollaborationSnapshots.CountAsync();
-            var finalTags = await _context.Tags.CountAsync();
-            var finalPosts = await _context.Posts.CountAsync();
-            var finalComments = await _context.Comments.CountAsync();
-            var finalLikes = await _context.Likes.CountAsync();
-            var finalViews = await _context.PostViews.CountAsync();
-            var finalSaved = await _context.SavedPosts.CountAsync();
- 
-            _logger.LogInformation("=== Seeding completed successfully! ===");
-            _logger.LogInformation(
-                "Final counts — Authors: {Authors}, Collaborations: {Collaborations}, Tags: {Tags}, Posts: {Posts}, Comments: {Comments}, " +
-                "Likes: {Likes}, Views: {Views}, Saved: {Saved}",
-                finalAuthors, finalCollaborations, finalTags, finalPosts, finalComments, finalLikes, finalViews, finalSaved);
+
+            _logger.LogInformation("=== Seeding completed ===");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "!!! CRITICAL ERROR during ContentService seeding !!!");
             throw;
         }
+    }
+
+    private async Task RemoveSeedPostsAsync()
+    {
+        var seededPosts = await _context.Posts
+            .Where(p => p.CreatedBy == "seed")
+            .ToListAsync();
+
+        if (!seededPosts.Any())
+        {
+            _logger.LogInformation("No seeded posts found. Skipping cleanup.");
+            return;
+        }
+
+        var postIds = seededPosts.Select(p => p.PostId).ToList();
+
+        // Delete related data in dependency order
+        await _context.SavedPosts.Where(x => postIds.Contains(x.PostId)).ExecuteDeleteAsync();
+        await _context.PostViews.Where(x => postIds.Contains(x.PostId)).ExecuteDeleteAsync();
+        await _context.Likes.Where(x => postIds.Contains(x.PostId)).ExecuteDeleteAsync();
+        await _context.PostMedia.Where(x => postIds.Contains(x.PostId)).ExecuteDeleteAsync();
+
+        // Delete replies first, then top-level comments
+        var commentIds = await _context.Comments
+            .Where(c => postIds.Contains(c.PostId))
+            .Select(c => c.CommentId)
+            .ToListAsync();
+        await _context.Comments.Where(c => c.ParentCommentId != null && commentIds.Contains(c.CommentId)).ExecuteDeleteAsync();
+        await _context.Comments.Where(c => postIds.Contains(c.PostId)).ExecuteDeleteAsync();
+
+        await _context.PostTags.Where(pt => postIds.Contains(pt.PostId)).ExecuteDeleteAsync();
+
+        _context.Posts.RemoveRange(seededPosts);
+        await _context.SaveChangesAsync();
+
+        // Remove orphaned fake authors and collaboration snapshots
+        await _context.PostAuthors
+            .Where(a => !_context.Posts.Any(p => p.PostAuthorId == a.PostAuthorId))
+            .ExecuteDeleteAsync();
+        await _context.CollaborationSnapshots
+            .Where(c => !_context.Posts.Any(p => p.CollaborationSnapshotId == c.CollaborationSnapshotId))
+            .ExecuteDeleteAsync();
+
+        _logger.LogInformation("Removed {Count} seeded posts and their related data.", seededPosts.Count);
     }
  
     private async Task SeedPostAuthorsAsync()

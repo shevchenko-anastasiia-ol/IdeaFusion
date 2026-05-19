@@ -1,0 +1,138 @@
+.participantsList,
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+}
+.participantsList {
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--gap-21);
+  max-width: 100%;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.wrapper {
+  flex-direction: column;
+  padding: var(--padding-15) var(--padding-0) var(--padding-0);
+}
+.h3 {
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  min-width: var(--min-w-111);
+  z-index: 1;
+}
+.teamMemberIcons {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-8);
+  min-width: var(--min-w-172);
+}
+.teamAvatars {
+  height: var(--height-60);
+  flex: 1;
+  position: relative;
+}
+.avatarIcons {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-darkblue-200);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.h32 {
+  margin: 0;
+  position: absolute;
+  top: 16px;
+  left: 10px;
+  display: inline-block;
+  min-width: var(--min-w-44);
+  z-index: 2;
+}
+.teamAvatarsChild {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-salmon-100);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.h33 {
+  margin: 0;
+  position: absolute;
+  top: 16px;
+  left: 10px;
+  display: inline-block;
+  min-width: var(--min-w-41);
+  z-index: 2;
+}
+.teamAvatarsItem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  background-color: var(--color-goldenrod);
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.h34 {
+  margin: 0;
+  position: absolute;
+  top: 16px;
+  left: 10px;
+  display: inline-block;
+  min-width: var(--min-w-34);
+  z-index: 2;
+}
+.missingAvatarWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-2) var(--padding-0) var(--padding-0);
+  color: var(--color-dimgray-100);
+}
+.missingAvatar {
+  align-self: stretch;
+  height: var(--height-60);
+  position: relative;
+}
+.missingAvatarChild {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--br-50);
+  border: var(--border-6);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.h35 {
+  margin: 0;
+  position: absolute;
+  top: 17px;
+  left: 15px;
+  display: inline-block;
+  min-width: var(--min-w-30);
+  z-index: 2;
+}
+@media screen and (max-width: 450px) {
+  .h3,
+  .h32,
+  .h33,
+  .h34,
+  .h35 {
+    font-size: var(--fs-19);
+  }
+}

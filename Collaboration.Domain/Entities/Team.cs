@@ -62,17 +62,29 @@ public class Team : BaseEntity
  
     [BsonElement("requiredRoles")]
     public List<RequiredRole> RequiredRoles { get; private set; } = [];
- 
+
+    [BsonElement("avatarUrl")]
+    [BsonIgnoreIfNull]
+    public string? AvatarUrl { get; private set; }
+
+    [BsonConstructor]
     private Team() { }
- 
-    public Team(string name, string description, string category, List<string> tags, UserSnapshot owner)
+
+    public Team(string name, string description, string category, List<string> tags, UserSnapshot owner, string? avatarUrl = null)
     {
         SetName(name);
         SetDescription(description);
         SetCategory(category);
         Tags = tags ?? [];
+        AvatarUrl = avatarUrl;
         Members.Add(new TeamMember { User = owner, Role = "Owner" });
         MarkAsCreated(owner.UserId);
+    }
+
+    public void SetAvatarUrl(string? avatarUrl, string userId)
+    {
+        AvatarUrl = avatarUrl;
+        MarkAsUpdated(userId);
     }
  
     public void SetName(string name)

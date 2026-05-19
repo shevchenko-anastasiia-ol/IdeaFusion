@@ -1,0 +1,383 @@
+.frameChild,
+.rectangleParent {
+  width: 100%;
+  border-radius: var(--br-20);  /* ← було var(--br-50) */
+  background-color: var(--color-gray-400);
+  max-width: 100%;
+}
+.rectangleParent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-25) var(--padding-10) 43px;
+  box-sizing: border-box;
+  gap: 24.5px;
+  text-align: left;
+  font-size: var(--fs-24);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+}
+.frameChild {
+  height: 478px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) 34px;
+  flex-shrink: 0;
+}
+.h3 {
+  margin: 0;
+  position: relative;
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  z-index: 1;
+}
+.designElementsParent,
+.teamListing {
+  display: flex;
+  align-items: flex-start;
+  max-width: 100%;
+}
+.teamListing {
+  width: 497px;
+  flex-direction: column;
+  gap: 17px;
+  flex-shrink: 0;
+}
+.designElementsParent {
+  align-self: stretch;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--gap-4);
+}
+.designElements {
+  height: 91px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--padding-8) var(--padding-0) var(--padding-0);
+  box-sizing: border-box;
+}
+.designSeparator {
+  width: var(--width-2);
+  height: var(--height-85);
+  position: relative;
+  border-right: 2px solid var(--color-mediumslateblue-200);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.frameItem,
+.rectangleGroup {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  max-width: 100%;
+}
+.rectangleGroup {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: var(--padding-21) var(--padding-35) var(--padding-26)
+    var(--padding-25);
+  box-sizing: border-box;
+  gap: var(--gap-20);
+  min-width: var(--min-w-319);
+  z-index: 1;
+}
+.frameItem {
+  height: var(--height-105);
+  width: var(--width-491);
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.graphicsDesign {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap-9);
+  flex-shrink: 0;
+}
+.h32,
+.uiux {
+  position: relative;
+  z-index: 2;
+}
+.h32 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+}
+.uiux {
+  font-size: var(--fs-16);
+}
+.frameWrapper {
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-1);
+  flex-shrink: 0;
+  font-size: var(--fs-15);
+}
+.frameParent,
+.frameWrapper,
+.rectangleContainer {
+  display: flex;
+  align-items: flex-start;
+}
+.frameParent {
+  flex-direction: column;
+  gap: var(--gap-11);
+}
+.rectangleContainer {
+  height: var(--height-25);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-300);
+  border: var(--border-3);
+  box-sizing: border-box;
+  padding: var(--padding-2) var(--padding-16) var(--padding-1) var(--padding-20);
+  z-index: 2;
+}
+.div,
+.frameInner {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameInner {
+  height: var(--height-25);
+  width: 97px;
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumslateblue-300);
+  border: var(--border-3);
+  box-sizing: border-box;
+  display: none;
+}
+.div {
+  z-index: 1;
+}
+.container {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-1) var(--padding-0) var(--padding-5);
+  font-size: var(--fs-16);
+  color: var(--color-gray-100);
+}
+.frameGroup {
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  gap: var(--gap-4);
+  max-width: 100%;
+}
+.lineWrapper {
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-9);
+  box-sizing: border-box;
+}
+.lineDiv {
+  width: var(--width-2);
+  height: var(--height-85);
+  position: relative;
+  border-right: 2px solid var(--color-mediumaquamarine-200);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.frameContainer,
+.frameDiv {
+  flex: 1;
+  box-sizing: border-box;
+}
+.frameDiv {
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  display: flex;
+  align-items: flex-end;
+  padding: var(--padding-17) var(--padding-28) var(--padding-26);
+  gap: var(--gap-8);
+  min-width: var(--min-w-319);
+  max-width: 100%;
+  z-index: 1;
+}
+.frameContainer {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-0) var(--padding-2);
+  min-width: 173px;
+  flex-shrink: 0;
+}
+.frameContainer,
+.frameParent2,
+.parent {
+  display: flex;
+  flex-direction: column;
+}
+.parent {
+  align-self: stretch;
+  align-items: flex-start;
+  gap: var(--gap-12);
+}
+.frameParent2 {
+  height: 56px;
+  align-items: flex-end;
+  gap: var(--gap-5);
+  flex-shrink: 0;
+  font-size: var(--fs-15);
+}
+.frameWrapper2 {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: var(--padding-0) var(--padding-1);
+}
+.frameChild2,
+.groupDiv {
+  height: var(--height-25);
+  border-radius: var(--br-30);
+  background-color: var(--color-mediumaquamarine-300);
+  border: var(--border-1);
+  box-sizing: border-box;
+}
+.groupDiv {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-1) var(--padding-13) var(--padding-2) var(--padding-19);
+  z-index: 2;
+}
+.frameChild2 {
+  width: 101px;
+  position: relative;
+  display: none;
+  flex-shrink: 0;
+}
+.div4 {
+  flex: 1;
+  position: relative;
+  font-size: var(--fs-11);
+  color: var(--color-gray-100);
+  text-align: right;
+  z-index: 2;
+}
+.frameParent3 {
+  width: 497px;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--gap-4);
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.frameChild3 {
+  width: var(--width-2);
+  height: var(--height-85);
+  position: relative;
+  border-right: 2px solid var(--color-salmon-100);
+  box-sizing: border-box;
+  z-index: 1;
+}
+.rectangleParent2 {
+  flex: 1;
+  border-radius: var(--br-20);
+  background-color: var(--color-gray-700);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: var(--padding-13) var(--padding-30) var(--padding-32)
+    var(--padding-24);
+  box-sizing: border-box;
+  gap: var(--gap-20);
+  min-width: var(--min-w-319);
+  max-width: 100%;
+  z-index: 1;
+}
+.group,
+.teamDetails {
+  display: flex;
+  align-items: flex-start;
+}
+.group {
+  flex-direction: column;
+  gap: var(--gap-12);
+  flex-shrink: 0;
+}
+.teamDetails {
+  align-self: stretch;
+  padding: var(--padding-0) var(--padding-1);
+  font-size: var(--fs-16);
+}
+.ost {
+  position: relative;
+  z-index: 2;
+}
+.rectangleParent3,
+.teamStats {
+  display: flex;
+  align-items: flex-start;
+}
+.teamStats {
+  flex-direction: column;
+  gap: var(--gap-11);
+  flex-shrink: 0;
+  font-size: var(--fs-15);
+}
+.rectangleParent3 {
+  height: var(--height-25);
+  border-radius: var(--br-30);
+  background-color: var(--color-salmon-200);
+  border: var(--border-5);
+  box-sizing: border-box;
+  padding: var(--padding-3) var(--padding-11);
+  z-index: 2;
+}
+.div5,
+.frameChild5 {
+  position: relative;
+  flex-shrink: 0;
+}
+.frameChild5 {
+  height: var(--height-25);
+  width: 107px;
+  border-radius: var(--br-30);
+  background-color: var(--color-salmon-200);
+  border: var(--border-5);
+  box-sizing: border-box;
+  display: none;
+}
+.div5 {
+  line-height: 16.1px;
+  z-index: 1;
+}
+.frame {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--padding-0) var(--padding-1) var(--padding-0) var(--padding-15);
+  font-size: var(--fs-16);
+  color: var(--color-gray-100);
+}
+@media screen and (max-width: 450px) {
+  .h3 {
+    font-size: var(--fs-19);
+  }
+  .rectangleGroup {
+    flex-wrap: wrap;
+  }
+  .h32 {
+    font-size: var(--fs-19);
+  }
+  .frameDiv,
+  .rectangleParent2 {
+    flex-wrap: wrap;
+  }
+}

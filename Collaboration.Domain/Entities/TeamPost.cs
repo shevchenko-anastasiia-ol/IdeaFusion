@@ -27,6 +27,7 @@ public class TeamPost : BaseEntity
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime PublishedAt { get; private set; }
  
+    [BsonConstructor]
     private TeamPost() { }
  
     public TeamPost(string postId, string teamId, UserSnapshot author, string title)

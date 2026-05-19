@@ -62,9 +62,6 @@ public class DeleteTeamCommandValidator : AbstractValidator<DeleteTeamCommand>
     {
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  

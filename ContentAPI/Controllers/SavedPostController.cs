@@ -15,6 +15,13 @@ public class SavedPostController : ControllerBase
         _savedPostService = savedPostService;
     }
  
+    [HttpGet("count")]
+    public async Task<ActionResult<int>> Count([FromQuery] int postId, CancellationToken ct)
+    {
+        var count = await _savedPostService.CountByPostAsync(postId, ct);
+        return Ok(count);
+    }
+
     [HttpGet("by-user/{userId:int}")]
     public async Task<ActionResult<IEnumerable<SavedPostDto>>> GetByUser(int userId, CancellationToken ct)
     {

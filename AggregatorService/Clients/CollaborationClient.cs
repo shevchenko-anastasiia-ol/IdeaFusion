@@ -62,13 +62,38 @@ public class CollaborationClient
                 return null;
             }
  
-            var team = await response.Content.ReadFromJsonAsync<AggregatorTeamDto>(JsonOptions, cancellationToken);
+            var raw = await response.Content.ReadFromJsonAsync<TeamDetailRaw>(JsonOptions, cancellationToken);
             stopwatch.Stop();
- 
+
+            if (raw is null) return null;
+
+            var team = new AggregatorTeamDto
+            {
+                TeamId       = raw.Id ?? string.Empty,
+                Name         = raw.Name ?? string.Empty,
+                Description  = raw.Description ?? string.Empty,
+                Category     = raw.Category ?? string.Empty,
+                Status       = raw.Status ?? string.Empty,
+                AvatarUrl    = raw.AvatarUrl,
+                Tags         = raw.Tags ?? new List<string>(),
+                Members      = raw.Members?.Select(m => new AggregatorTeamMemberDto
+                {
+                    UserId   = m.User?.UserId   ?? string.Empty,
+                    Username = m.User?.Username ?? string.Empty,
+                    AvatarUrl = m.User?.AvatarUrl,
+                    Role     = m.Role ?? string.Empty,
+                }).ToList() ?? new List<AggregatorTeamMemberDto>(),
+                RequiredRoles = raw.RequiredRoles?.Select(r => new AggregatorRequiredRoleDto
+                {
+                    Role        = r.Role ?? string.Empty,
+                    Description = r.Description,
+                }).ToList() ?? new List<AggregatorRequiredRoleDto>(),
+            };
+
             _logger.LogInformation(
                 "CollaborationService responded successfully. TeamId: {TeamId}, Duration: {Duration}ms, CorrelationId: {CorrelationId}",
                 teamId, stopwatch.ElapsedMilliseconds, correlationId);
- 
+
             return team;
         }
         catch (Exception ex)
@@ -88,15 +113,15 @@ public class CollaborationClient
     {
         var stopwatch = Stopwatch.StartNew();
         var correlationId = GetCorrelationId();
- 
+
         try
         {
             _logger.LogInformation(
                 "Calling CollaborationService for teams by member. UserId: {UserId}, CorrelationId: {CorrelationId}",
                 userId, correlationId);
- 
+
             var response = await _httpClient.GetAsync($"/api/team/member/{userId}", cancellationToken);
- 
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
@@ -104,16 +129,27 @@ public class CollaborationClient
                     userId, response.StatusCode, correlationId);
                 return new List<AggregatorTeamSummaryDto>();
             }
- 
-            var teams = await response.Content
-                .ReadFromJsonAsync<List<AggregatorTeamSummaryDto>>(JsonOptions, cancellationToken);
+
+            // Collaboration API returns full Team entities (array).
+            // Deserialize via the intermediate type that matches the actual JSON shape.
+            var raw = await response.Content
+                .ReadFromJsonAsync<List<CollaborationTeamRaw>>(JsonOptions, cancellationToken);
             stopwatch.Stop();
- 
+
+            var teams = raw?.Select(t => new AggregatorTeamSummaryDto
+            {
+                TeamId       = t.Id ?? string.Empty,
+                Name         = t.Name ?? string.Empty,
+                Category     = t.Category ?? string.Empty,
+                Status       = t.Status ?? string.Empty,
+                MembersCount = t.Members?.Count ?? 0,
+            }).ToList() ?? new List<AggregatorTeamSummaryDto>();
+
             _logger.LogInformation(
                 "CollaborationService responded with member teams. UserId: {UserId}, Count: {Count}, Duration: {Duration}ms, CorrelationId: {CorrelationId}",
-                userId, teams?.Count ?? 0, stopwatch.ElapsedMilliseconds, correlationId);
- 
-            return teams ?? new List<AggregatorTeamSummaryDto>();
+                userId, teams.Count, stopwatch.ElapsedMilliseconds, correlationId);
+
+            return teams;
         }
         catch (Exception ex)
         {
@@ -123,6 +159,49 @@ public class CollaborationClient
                 userId, stopwatch.ElapsedMilliseconds, correlationId);
             return new List<AggregatorTeamSummaryDto>();
         }
+    }
+
+    // Intermediate types matching the actual JSON shape returned by Collaboration API's team endpoints.
+    // The API serializes domain Team entities directly, so property names are camelCase C# identifiers.
+    private sealed class CollaborationTeamRaw
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Category { get; set; }
+        public string? Status { get; set; }
+        public List<object>? Members { get; set; }
+    }
+
+    private sealed class TeamDetailRaw
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public string? Category { get; set; }
+        public string? Status { get; set; }
+        public List<string>? Tags { get; set; }
+        public List<TeamMemberRaw>? Members { get; set; }
+        public List<RequiredRoleRaw>? RequiredRoles { get; set; }
+        public string? AvatarUrl { get; set; }
+    }
+
+    private sealed class TeamMemberRaw
+    {
+        public UserSnapshotRaw? User { get; set; }
+        public string? Role { get; set; }
+    }
+
+    private sealed class UserSnapshotRaw
+    {
+        public string? UserId { get; set; }
+        public string? Username { get; set; }
+        public string? AvatarUrl { get; set; }
+    }
+
+    private sealed class RequiredRoleRaw
+    {
+        public string? Role { get; set; }
+        public string? Description { get; set; }
     }
  
     // -------------------------------------------------------------------------
@@ -173,6 +252,44 @@ public class CollaborationClient
         }
     }
  
+    /// <summary>
+    /// Looks up MongoDB TeamPost by content postId, then fetches the team to build an AggregatorCollaborationDto.
+    /// Returns null for posts that are not team posts or when any lookup fails.
+    /// Used to enrich posts created before the CollaborationSnapshotId column existed.
+    /// </summary>
+    public async Task<AggregatorCollaborationDto?> GetTeamCollaborationByPostIdAsync(string postId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var teamPostResponse = await _httpClient.GetAsync($"/api/team-posts/{postId}", cancellationToken);
+            if (!teamPostResponse.IsSuccessStatusCode) return null;
+
+            var teamPost = await teamPostResponse.Content.ReadFromJsonAsync<TeamPostRaw>(JsonOptions, cancellationToken);
+            if (teamPost?.TeamId is null) return null;
+
+            var team = await GetTeamByIdAsync(teamPost.TeamId, cancellationToken);
+            if (team is null) return null;
+
+            return new AggregatorCollaborationDto
+            {
+                Name       = team.Name,
+                AvatarUrl  = team.AvatarUrl,
+                ExternalId = teamPost.TeamId,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch team collaboration for postId {PostId}", postId);
+            return null;
+        }
+    }
+
+    private sealed class TeamPostRaw
+    {
+        public string? PostId { get; set; }
+        public string? TeamId { get; set; }
+    }
+
     // -------------------------------------------------------------------------
     // COLLABORATION REQUESTS  →  CollaborationRequestController: api/collaboration-requests
     // -------------------------------------------------------------------------
