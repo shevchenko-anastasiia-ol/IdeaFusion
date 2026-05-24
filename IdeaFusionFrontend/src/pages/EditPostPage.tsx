@@ -1,6 +1,7 @@
 import { FunctionComponent, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import { postsApi, tagsApi } from "../api/posts";
 import type { TagDto } from "../api/types";
 import { useAuth } from "../context/AuthContext";
@@ -334,6 +335,7 @@ const EditPostPage: FunctionComponent = () => {
             </div>
           </div>
         )}
+        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
       </div>
     </div>
   );

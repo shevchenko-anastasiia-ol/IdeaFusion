@@ -38,3 +38,17 @@
 @media screen and (max-width: 450px) {
   .div { font-size: var(--fs-19); }
 }
+
+@media screen and (max-width: 768px) {
+  .postsArea {
+    margin-left: 0;
+    padding-bottom: 72px;
+  }
+  .filterRegionParent {
+    height: auto;
+    position: relative;
+  }
+  .postsList {
+    padding: 16px 16px 40px;
+  }
+}

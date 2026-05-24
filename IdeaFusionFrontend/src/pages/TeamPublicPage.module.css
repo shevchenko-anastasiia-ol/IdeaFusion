@@ -297,3 +297,21 @@
     border-color: #7c5cfc;
     color: #a48fff;
   }
+
+@media screen and (max-width: 768px) {
+  .content {
+    margin-left: 0;
+    width: 100%;
+  }
+  .profileHeader {
+    padding: 16px 20px;
+  }
+  .main {
+    flex-direction: column;
+    padding: 16px 20px 80px;
+    gap: 16px;
+  }
+  .portfolioGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,6 +1,7 @@
 import { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import { teamsApi } from "../api/teams";
 import { useAuth } from "../context/AuthContext";
 import { aggregatorApi } from "../api/aggregator";
@@ -339,6 +340,7 @@ const UserPublicPage: FunctionComponent = () => {
             </div>
           </div>
         </div>
+        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
       </div>
     </div>
   );

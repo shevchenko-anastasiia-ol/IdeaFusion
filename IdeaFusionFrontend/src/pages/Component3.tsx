@@ -1,6 +1,7 @@
 import { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import styles from "./Component3.module.css";
 import { useAuth } from "../context/AuthContext";
 import { teamsApi, groupInvitationsApi } from "../api/teams";
@@ -172,7 +173,8 @@ const Component3: FunctionComponent<Component3Type> = () => {
     <div className={styles.page}>
       <FrameComponent2 />
 
-      <div className={styles.body}>
+      <div className={styles.pageRight}>
+        <div className={styles.body}>
         {/* ── Main: my teams ── */}
         <div className={styles.main}>
           <div className={styles.mainHeader}>
@@ -255,6 +257,8 @@ const Component3: FunctionComponent<Component3Type> = () => {
             ))}
           </div>
         </div>
+        </div>
+        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
       </div>
     </div>
   );

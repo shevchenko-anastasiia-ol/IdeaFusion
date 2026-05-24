@@ -1,6 +1,7 @@
 import { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import { teamsApi, groupInvitationsApi } from "../api/teams";
 import { useAuth } from "../context/AuthContext";
 import type { TeamEntity, UserDto } from "../api/types";
@@ -215,6 +216,7 @@ const InviteToTeamPage: FunctionComponent = () => {
           </div>
         )}
       </main>
+      <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="124px" />
     </div>
   );
 };

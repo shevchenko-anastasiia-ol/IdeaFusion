@@ -85,75 +85,109 @@ const FrameComponent2: FunctionComponent<FrameComponent2Type> = ({
   ];
 
   return (
-    <section className={[styles.rectangleParent, className].join(" ")}>
-      <Box className={styles.frameChild} />
-      <Box className={styles.frameWrapper}>
-        <img
-          className={styles.frameItem}
-          loading="lazy"
-          alt=""
-          src="/Group-1@2x.png"
-        />
-      </Box>
-      <Box className={styles.frameParent}>
+    <>
+      <section className={[styles.rectangleParent, className].join(" ")}>
+        <Box className={styles.frameChild} />
+        <Box className={styles.frameWrapper}>
+          <img
+            className={styles.frameItem}
+            loading="lazy"
+            alt=""
+            src="/Group-1@2x.png"
+          />
+        </Box>
+        <Box className={styles.frameParent}>
+          {navItems.map((item) => {
+            const active = isActive(item.routes);
+            return active ? (
+              <Box key={item.label} className={styles.activeNavItem} title={item.label}>
+                {item.icon(true)}
+              </Box>
+            ) : (
+              <button
+                key={item.label}
+                className={styles.frameButton}
+                onClick={item.onClick}
+                title={item.label}
+              >
+                {item.icon(false)}
+              </button>
+            );
+          })}
+        </Box>
+        <Box
+          className={styles.profileInfo}
+          onClick={() => navigate(user ? "/personal" : "/login")}
+          sx={{ cursor: "pointer" }}
+          title={user ? "Профіль" : "Увійти"}
+        >
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt="avatar"
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", zIndex: 3 }}
+            />
+          ) : user ? (
+            <>
+              <Box className={styles.profileAvatar} />
+              <Typography
+                className={styles.h3}
+                variant="inherit"
+                variantMapping={{ inherit: "h3" }}
+                sx={{ fontWeight: "700" }}
+              >
+                {userInitials}
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Box className={styles.profileAvatar} />
+              <svg
+                style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 3 }}
+                width="28" height="28" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <polyline points="10 17 15 12 10 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="15" y1="12" x2="3" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </>
+          )}
+        </Box>
+      </section>
+
+      {/* ── Bottom navigation (mobile only) ── */}
+      <nav className={styles.bottomNav}>
         {navItems.map((item) => {
           const active = isActive(item.routes);
-          return active ? (
-            <Box key={item.label} className={styles.activeNavItem} title={item.label}>
-              {item.icon(true)}
-            </Box>
-          ) : (
+          return (
             <button
               key={item.label}
-              className={styles.frameButton}
+              className={`${styles.bottomNavItem} ${active ? styles.bottomNavItemActive : ""}`}
               onClick={item.onClick}
-              title={item.label}
             >
-              {item.icon(false)}
+              {item.icon(active)}
+              <span className={`${styles.bottomNavLabel} ${active ? styles.bottomNavLabelActive : ""}`}>
+                {item.label}
+              </span>
             </button>
           );
         })}
-      </Box>
-      <Box
-        className={styles.profileInfo}
-        onClick={() => navigate(user ? "/personal" : "/login")}
-        sx={{ cursor: "pointer" }}
-        title={user ? "Профіль" : "Увійти"}
-      >
-        {user?.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt="avatar"
-            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", zIndex: 3 }}
-          />
-        ) : user ? (
-          <>
-            <Box className={styles.profileAvatar} />
-            <Typography
-              className={styles.h3}
-              variant="inherit"
-              variantMapping={{ inherit: "h3" }}
-              sx={{ fontWeight: "700" }}
-            >
-              {userInitials}
-            </Typography>
-          </>
-        ) : (
-          <>
-            <Box className={styles.profileAvatar} />
-            <svg
-              style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 3 }}
-              width="28" height="28" viewBox="0 0 24 24" fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <polyline points="10 17 15 12 10 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="15" y1="12" x2="3" y2="12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </>
-        )}
-      </Box>
-    </section>
+        <button
+          className={styles.bottomNavItem}
+          onClick={() => navigate(user ? "/personal" : "/login")}
+        >
+          <div className={styles.bottomNavAvatar}>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className={styles.bottomNavAvatarImg} />
+            ) : (
+              <span>{userInitials || "?"}</span>
+            )}
+          </div>
+          <span className={styles.bottomNavLabel}>Профіль</span>
+        </button>
+      </nav>
+    </>
   );
 };
 

@@ -71,3 +71,17 @@
     font-size: var(--fs-22);
   }
 }
+
+@media screen and (max-width: 768px) {
+  .searchBar {
+    position: relative;
+    top: auto;
+    left: auto;
+    padding: 12px 16px;
+    width: 100%;
+  }
+  .searchBarItem {
+    min-width: 0;
+    width: 100%;
+  }
+}

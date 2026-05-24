@@ -7,22 +7,21 @@
   font-family: var(--font-inter);
 }
 
-/* sticky sidebar */
-.page > :first-child {
-  position: sticky !important;
-  top: 0;
-  height: 100vh;
-  flex-shrink: 0;
+/* column wrapper: right of fixed sidebar */
+.pageRight {
+  flex: 1;
+  margin-left: 124px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 /* area to the right of the sidebar */
 .body {
-  margin-left: 124px;
   flex: 1;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  min-height: 100vh;
   overflow-x: hidden;
 }
 
@@ -323,7 +322,64 @@
 @media screen and (max-width: 1100px) {
   .sidebar { width: 280px; }
 }
+
 @media screen and (max-width: 900px) {
-  .body { flex-direction: column; }
-  .sidebar { width: 100%; padding: 0 32px 32px; }
+  .pageRight {
+    margin-left: 0;
+  }
+  .body {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .main {
+    width: 100%;
+    padding: 24px 24px 32px;
+    box-sizing: border-box;
+  }
+  .sidebar {
+    width: 100%;
+    padding: 0 24px 32px;
+    box-sizing: border-box;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .pageRight {
+    margin-left: 0;
+    padding-bottom: 68px;
+  }
+  .main {
+    padding: 16px 16px 24px;
+  }
+  .mainHeader {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .newTeamBtn {
+    width: 100%;
+    text-align: center;
+  }
+  .filters {
+    gap: 6px;
+  }
+  .teamCard {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .teamNameRow {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .teamAccent {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+  }
+  .sidebar {
+    padding: 0 16px 24px;
+    width: 100%;
+  }
+  .sidebarSection {
+    padding: 16px;
+  }
 }

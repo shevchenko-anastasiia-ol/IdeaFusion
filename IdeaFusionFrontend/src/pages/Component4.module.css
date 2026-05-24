@@ -20,14 +20,6 @@
   flex-direction: row;
 }
 
-/* Override sidebar to be sticky in this layout */
-.main > :first-child {
-  position: sticky !important;
-  top: 0;
-  height: 100vh;
-  flex-shrink: 0;
-}
-
 /* ── Content area (right of sidebar) ── */
 .content {
   margin-left: 124px;
@@ -220,5 +212,26 @@
   font-family: var(--font-inter);
   min-width: 120px;
   text-align: center;
+}
+
+/* ── Responsive ── */
+@media screen and (max-width: 768px) {
+  .content {
+    margin-left: 0;
+    padding-bottom: 72px;
+  }
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 8px 16px 0;
+    gap: 12px;
+  }
+  .headerRow {
+    padding: 20px 16px 12px;
+  }
+}
+@media screen and (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 

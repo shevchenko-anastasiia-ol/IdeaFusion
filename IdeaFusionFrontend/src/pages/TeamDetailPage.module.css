@@ -602,3 +602,40 @@
   transition: border-color 0.2s, color 0.2s;
 }
 .addMemberBtn:hover { border-color: #7c5cfc; color: #a48fff; }
+
+/* ── Responsive ── */
+@media screen and (max-width: 768px) {
+  .content {
+    margin-left: 0;
+    width: 100%;
+  }
+  .loading {
+    margin-left: 0;
+    padding: 40px 20px;
+  }
+  .pageHeader, .profileCard, .pubProfileHeader {
+    padding: 12px 20px;
+  }
+  .profileName {
+    font-size: 18px;
+  }
+  .main, .pubMain {
+    flex-direction: column;
+    padding: 16px 20px 72px;
+    gap: 12px;
+  }
+  .portfolioSection {
+    padding: 0 20px 72px;
+  }
+  .portfolioGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pubPortfolioGrid {
+    grid-template-columns: 1fr;
+  }
+}
+@media screen and (max-width: 480px) {
+  .portfolioGrid {
+    grid-template-columns: 1fr;
+  }
+}

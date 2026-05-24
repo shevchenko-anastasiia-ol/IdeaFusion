@@ -345,7 +345,7 @@ const Component1: FunctionComponent<Component1Type> = ({}) => {
           </div>
         </div>
       </main>
-      <div style={{ marginLeft: "124px" }}>
+      <div className={styles.moderationWrapper}>
         <Moderation />
       </div>
     </Box>

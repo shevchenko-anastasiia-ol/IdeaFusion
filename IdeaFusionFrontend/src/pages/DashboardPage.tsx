@@ -1,6 +1,7 @@
 import { FunctionComponent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import { useAuth } from "../context/AuthContext";
 import { aggregatorApi } from "../api/aggregator";
 import type { UserDashboardDto } from "../api/types";
@@ -43,7 +44,8 @@ const DashboardPage: FunctionComponent = () => {
     <div className={styles.page}>
       <FrameComponent2 />
 
-      <div className={styles.content}>
+      <div className={styles.rightCol}>
+        <div className={styles.content}>
         {/* ── Header ── */}
         <div className={styles.header}>
           <div className={styles.profileRow}>
@@ -127,6 +129,8 @@ const DashboardPage: FunctionComponent = () => {
             + Створити нову команду
           </button>
         </div>
+        </div>
+        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
       </div>
     </div>
   );

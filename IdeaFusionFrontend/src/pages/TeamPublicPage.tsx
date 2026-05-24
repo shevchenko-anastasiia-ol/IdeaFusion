@@ -1,6 +1,7 @@
 import { FunctionComponent } from "react";
 import { useNavigate } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import styles from "./TeamPublicPage.module.css";
 
 const TeamPublicPage: FunctionComponent = () => {
@@ -138,6 +139,7 @@ const TeamPublicPage: FunctionComponent = () => {
             </div>
           </div>
         </div>
+        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
       </div>
     </div>
   );

@@ -6,9 +6,15 @@
   font-family: var(--font-inter, "Inter", sans-serif);
 }
 
-.content {
+.rightCol {
   flex: 1;
   margin-left: 124px;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
   padding: 32px 40px 60px 40px;
   display: flex;
   flex-direction: column;
@@ -300,6 +306,44 @@
 
 @media (max-width: 1200px) { .savedGrid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 800px)  { .savedGrid { grid-template-columns: 1fr; } }
+
+/* ── Responsive ── */
+@media screen and (max-width: 768px) {
+  .rightCol {
+    margin-left: 0;
+    padding-bottom: 68px;
+  }
+  .content {
+    padding: 20px 16px 40px;
+  }
+  .statsRow {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .statCard {
+    padding: 20px 16px;
+  }
+  .statNum {
+    font-size: 48px;
+  }
+  .teamsBox {
+    border-radius: 16px;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .profileRow {
+    gap: 12px;
+  }
+  .avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 18px;
+  }
+}
 
 .savedCard {
   background-color: #1a1a1a;

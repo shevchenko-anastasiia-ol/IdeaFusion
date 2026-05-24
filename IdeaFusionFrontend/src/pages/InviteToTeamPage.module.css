@@ -295,3 +295,16 @@
   margin-top: 8px;
 }
 .submitBtn:hover { background-color: #6a4de0; }
+
+@media screen and (max-width: 768px) {
+  .header {
+    padding: 16px 16px;
+  }
+  .main {
+    margin-left: 0;
+    padding: 20px 16px 80px;
+  }
+  .sidebar {
+    display: none;
+  }
+}

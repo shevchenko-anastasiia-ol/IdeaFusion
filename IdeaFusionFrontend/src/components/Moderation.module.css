@@ -229,6 +229,11 @@
     font-size: var(--fs-19);
   }
 }
+@media screen and (max-width: 768px) {
+  .moderation {
+    padding-bottom: 80px;
+  }
+}
 
 
 

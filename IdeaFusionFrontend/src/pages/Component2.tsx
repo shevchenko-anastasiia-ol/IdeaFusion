@@ -389,7 +389,7 @@ const Component2: FunctionComponent<Component2Type> = () => {
               <SectionHeader title="Пости" linkLabel="Всі пости →" onLink={() => navigate("/posts")} />
               <Box className={styles.searchCategorySeparatorInline} />
               {filteredPosts.length > 0 ? (
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", mt: "16px" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: "16px", mt: "16px" }}>
                   {filteredPosts.slice(0, 6).map(p => <PostCard key={p.post.postId} item={p} onDelete={id => setPosts(prev => prev.filter(x => x.post.postId !== id))} />)}
                 </Box>
               ) : (
@@ -405,7 +405,7 @@ const Component2: FunctionComponent<Component2Type> = () => {
               <SectionHeader title="Користувачі" linkLabel="Всі користувачі →" onLink={() => navigate("/users")} />
               <Box className={styles.searchCategorySeparatorInline} />
               {filteredUsers.length > 0 ? (
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", mt: "16px" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: "12px", mt: "16px" }}>
                   {filteredUsers.slice(0, 6).map(u => <UserCard key={u.id} user={u} meId={me?.id} isAdmin={isAdmin} onDelete={handleDeleteUser} />)}
                 </Box>
               ) : (
@@ -421,7 +421,7 @@ const Component2: FunctionComponent<Component2Type> = () => {
               <SectionHeader title="Команди" linkLabel="Всі команди →" onLink={() => navigate("/teams")} />
               <Box className={styles.searchCategorySeparatorInline} />
               {filteredTeams.length > 0 ? (
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", mt: "16px" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, gap: "16px", mt: "16px" }}>
                   {filteredTeams.slice(0, 6).map(t => <TeamCard key={t.id} team={t} isAdmin={isAdmin} onDelete={handleDeleteTeam} />)}
                 </Box>
               ) : (

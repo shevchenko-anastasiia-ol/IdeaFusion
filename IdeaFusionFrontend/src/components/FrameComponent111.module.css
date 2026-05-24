@@ -261,6 +261,26 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  .rectangleParent {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .frameParent {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .frameGroup {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
 .filterBtn {
   background-color: #2a2a2a;
   border: none;

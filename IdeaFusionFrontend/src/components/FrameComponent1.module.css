@@ -113,3 +113,11 @@
   }
 }
 
+@media screen and (max-width: 768px) {
+  .rectangleParent {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 16px;
+  }
+}
+

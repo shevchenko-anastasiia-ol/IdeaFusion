@@ -1,6 +1,7 @@
 import { FunctionComponent, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
+import Moderation from "../components/Moderation";
 import { teamsApi, collaborationRequestsApi } from "../api/teams";
 import { aggregatorApi } from "../api/aggregator";
 import { authApi } from "../api/auth";
@@ -544,6 +545,7 @@ const TeamDetailPage: FunctionComponent = () => {
               </div>
             )}
           </div>
+          <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
         </div>
       </div>
     );
@@ -706,6 +708,7 @@ const TeamDetailPage: FunctionComponent = () => {
             </div>
           </div>
         </div>
+        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
       </div>
     </div>
   );

@@ -453,3 +453,36 @@
   background-color: #252525;
 }
 .pdfIcon { font-size: 24px; }
+
+/* ── Responsive ── */
+@media screen and (max-width: 768px) {
+  .content {
+    margin-left: 0;
+    width: 100%;
+    padding-top: 0;
+  }
+  .back {
+    padding: 12px 0 4px 16px;
+  }
+  .main {
+    flex-direction: column;
+  }
+  .postCol {
+    padding: 16px 16px 32px;
+  }
+  .commentsCol {
+    width: 100%;
+    position: static;
+    height: auto;
+    overflow: visible;
+    padding: 16px 16px 80px;
+    background-color: #181818;
+  }
+  .commentsList {
+    overflow: visible;
+    max-height: none;
+  }
+  .title {
+    font-size: 22px;
+  }
+}

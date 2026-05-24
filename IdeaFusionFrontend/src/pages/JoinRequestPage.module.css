@@ -234,3 +234,11 @@
   margin-top: 4px;
 }
 .submitBtn:hover { background-color: #6a4de0; }
+
+@media screen and (max-width: 768px) {
+  .content {
+    margin-left: 0;
+    width: 100%;
+    padding-bottom: 72px;
+  }
+}

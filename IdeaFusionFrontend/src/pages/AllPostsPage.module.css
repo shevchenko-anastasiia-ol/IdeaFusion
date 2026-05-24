@@ -124,6 +124,20 @@
   @media (max-width: 800px) {
     .grid { grid-template-columns: 1fr; }
   }
+
+@media screen and (max-width: 768px) {
+  .rightCol {
+    margin-left: 0;
+    padding-bottom: 68px;
+  }
+  .header {
+    padding: 12px 16px;
+  }
+  .grid {
+    padding: 8px 16px 0;
+    gap: 12px;
+  }
+}
   
   /* ── Post Card — matches search page style ── */
   .postCard {

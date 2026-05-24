@@ -84,3 +84,14 @@
     padding-left: 156px;
   }
 }
+
+@media screen and (max-width: 768px) {
+  .main {
+    padding: 0 16px 80px 16px;
+  }
+  .pageHeader {
+    padding-left: 24px;
+    padding-right: 24px;
+    margin: 0;
+  }
+}
