@@ -99,7 +99,16 @@ public class ContentCollaborationAggregationController : ControllerBase
  
             // Step 3: Aggregate
             var comments = await commentsTask;
- 
+
+            if (comments.Count > 0)
+            {
+                var replyTasks = comments.Select(c =>
+                    _contentClient.GetRepliesAsync(c.CommentId, cancellationToken)
+                        .ContinueWith(t => { if (t.IsCompletedSuccessfully) c.Replies = t.Result; },
+                            TaskScheduler.Default));
+                await Task.WhenAll(replyTasks);
+            }
+
             var aggregated = new PostFullDetailsDto
             {
                 Post                 = post,

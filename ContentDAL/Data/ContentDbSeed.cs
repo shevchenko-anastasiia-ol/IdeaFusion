@@ -2,9 +2,11 @@
 using ContentDomain.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ContentDAL.Data;
 
+[ExcludeFromCodeCoverage]
 public class ContentDbSeed
 {
     private readonly ContentDbContext _context;

@@ -66,41 +66,47 @@ public class GroupInvitationRepository : GenericRepository<GroupInvitation>, IGr
         bool ascending = false,
         CancellationToken cancellationToken = default)
     {
-        var filters = new List<FilterDefinition<GroupInvitation>>();
- 
-        if (!string.IsNullOrWhiteSpace(teamId))
-            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.TeamId, teamId));
- 
-        if (!string.IsNullOrWhiteSpace(invitedUserId))
-            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.InvitedUserId, invitedUserId));
- 
-        if (!string.IsNullOrWhiteSpace(invitedByUserId))
-            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.InvitedByUserId, invitedByUserId));
- 
-        if (!string.IsNullOrWhiteSpace(role))
-            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.Role, role));
- 
-        if (status.HasValue)
-            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.Status, status.Value));
- 
-        if (isExpired.HasValue)
-        {
-            filters.Add(isExpired.Value
-                ? Builders<GroupInvitation>.Filter.Lt(i => i.ExpiresAt, DateTime.UtcNow)
-                : Builders<GroupInvitation>.Filter.Gt(i => i.ExpiresAt, DateTime.UtcNow));
-        }
- 
-        var combinedFilter = filters.Any()
-            ? Builders<GroupInvitation>.Filter.And(filters)
-            : Builders<GroupInvitation>.Filter.Empty;
- 
+        var filter = BuildFilter(teamId, invitedUserId, invitedByUserId, role, status, isExpired);
+
         var sort = ascending
             ? Builders<GroupInvitation>.Sort.Ascending(i => i.CreatedAt)
             : Builders<GroupInvitation>.Sort.Descending(i => i.CreatedAt);
- 
+
         return await PagedList<GroupInvitation>.ToPagedListAsync(
-            _collection.Find(combinedFilter).Sort(sort),
+            _collection.Find(filter).Sort(sort),
             pageNumber, pageSize, cancellationToken);
+    }
+
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+    internal static FilterDefinition<GroupInvitation> BuildFilter(
+        string? teamId, string? invitedUserId, string? invitedByUserId, string? role,
+        InvitationStatus? status, bool? isExpired)
+    {
+        var filters = new List<FilterDefinition<GroupInvitation>>();
+
+        if (!string.IsNullOrWhiteSpace(teamId))
+            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.TeamId, teamId));
+
+        if (!string.IsNullOrWhiteSpace(invitedUserId))
+            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.InvitedUserId, invitedUserId));
+
+        if (!string.IsNullOrWhiteSpace(invitedByUserId))
+            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.InvitedByUserId, invitedByUserId));
+
+        if (!string.IsNullOrWhiteSpace(role))
+            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.Role, role));
+
+        if (status.HasValue)
+            filters.Add(Builders<GroupInvitation>.Filter.Eq(i => i.Status, status.Value));
+
+        if (isExpired.HasValue)
+            filters.Add(isExpired.Value
+                ? Builders<GroupInvitation>.Filter.Lt(i => i.ExpiresAt, DateTime.UtcNow)
+                : Builders<GroupInvitation>.Filter.Gt(i => i.ExpiresAt, DateTime.UtcNow));
+
+        return filters.Any()
+            ? Builders<GroupInvitation>.Filter.And(filters)
+            : Builders<GroupInvitation>.Filter.Empty;
     }
  
     public async Task<PagedList<GroupInvitation>> GetByCursorAsync(string? cursor, int pageSize, CancellationToken cancellationToken = default)

@@ -363,9 +363,25 @@ const TeamDetailPage: FunctionComponent = () => {
                   <label className={styles.fieldLabel}>Категорія</label>
                   <input className={styles.input} value={editCategory} onChange={(e) => setEditCategory(e.target.value)} />
                 </div>
-                <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                  {saving ? "Збереження..." : "Зберегти зміни"}
-                </button>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+                    {saving ? "Збереження..." : "Зберегти зміни"}
+                  </button>
+                  <button
+                    className={styles.deleteTeamBtn}
+                    onClick={async () => {
+                      if (!confirm(`Видалити команду «${team.name}»? Цю дію не можна скасувати.`)) return;
+                      try {
+                        await teamsApi.deleteTeam(team.id);
+                        navigate("/team/new", { replace: true });
+                      } catch (e: unknown) {
+                        alert(e instanceof Error ? e.message : "Помилка видалення");
+                      }
+                    }}
+                  >
+                    Видалити команду
+                  </button>
+                </div>
                 {saveMsg && <span className={styles.saveMsg}>{saveMsg}</span>}
               </div>
 

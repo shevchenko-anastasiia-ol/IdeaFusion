@@ -14,6 +14,7 @@ public class MinioService
 
     public MinioService(string endpoint, string accessKey, string secretKey, string bucketName)
     {
+        _endpoint   = endpoint;
         _bucketName = bucketName;
         _client = new MinioClient()
             .WithEndpoint(endpoint)

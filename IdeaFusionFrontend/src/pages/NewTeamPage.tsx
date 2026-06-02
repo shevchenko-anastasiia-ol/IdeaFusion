@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
 import Moderation from "../components/Moderation";
 import { teamsApi } from "../api/teams";
-import { mediaApi } from "../api/posts";
+import { authApi } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import styles from "./NewTeamPage.module.css";
 
@@ -60,7 +60,10 @@ const Component1: FunctionComponent<Component1Type> = () => {
       const tags = customTag.trim() ? [...selectedTags, customTag.trim()] : selectedTags;
       let teamAvatarUrl: string | undefined;
       if (avatarFile) {
-        try { teamAvatarUrl = await mediaApi.upload(avatarFile); } catch {}
+        try {
+          const { url } = await authApi.uploadFile(avatarFile);
+          teamAvatarUrl = url;
+        } catch {}
       }
       const team = await teamsApi.create({
         name: name.trim(),

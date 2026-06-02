@@ -266,6 +266,19 @@
 }
 .saveBtn:hover:not(:disabled) { background-color: #6a4de0; }
 .saveBtn:disabled { opacity: 0.6; cursor: default; }
+.deleteTeamBtn {
+  background: none;
+  border: 1px solid #ff6b6b;
+  border-radius: 30px;
+  color: #ff6b6b;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.deleteTeamBtn:hover { background-color: #ff6b6b; color: #fff; }
 .saveMsg {
   font-size: 13px;
   color: #3fcca0;

@@ -79,8 +79,8 @@ const UserPublicPage: FunctionComponent = () => {
       // Fetch portfolio: personal posts + team posts, using the portfolio endpoint
       const userName = u.userName ?? u.email.split('@')[0];
       try {
-        const userContentId = await postauthorApi.getByUserName(userName, u.avatarUrl ?? undefined);
-        const userPosts = await aggregatorApi.getPortfolio(userContentId, u.id);
+        const ids = await postauthorApi.getByUserName(userName, u.avatarUrl ?? undefined);
+        const userPosts = await aggregatorApi.getPortfolio(ids.userId, u.id);
         setPosts(userPosts);
       } catch {
         // No posts available — not an error

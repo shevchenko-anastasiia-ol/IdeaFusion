@@ -120,7 +120,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-    await dbContext.Database.MigrateAsync();
+    if (dbContext.Database.IsRelational())
+        await dbContext.Database.MigrateAsync();
+    else
+        await dbContext.Database.EnsureCreatedAsync();
     await IdentitySeeder.SeedAsync(app.Services);
 }
 
@@ -141,3 +144,5 @@ app.MapHealthChecks("/health");
 app.MapControllers();
 
 await app.RunAsync();
+
+public partial class Program { }

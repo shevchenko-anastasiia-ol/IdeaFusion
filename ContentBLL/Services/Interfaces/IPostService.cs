@@ -15,5 +15,5 @@ public interface IPostService
     Task<PostDto> UpdateAsync(int id, PostUpdateDto dto, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
     Task ArchiveAsync(int id, CancellationToken ct = default);
-    Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default);
+    Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default);
 }

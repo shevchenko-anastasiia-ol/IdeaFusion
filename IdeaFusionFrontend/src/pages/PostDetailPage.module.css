@@ -214,7 +214,16 @@
   align-items: flex-start;
 }
 .nested {
-  margin-left: 32px;
+  margin-left: 44px;
+  border-left: 2px solid #2a2a2a;
+  padding-left: 12px;
+}
+
+.repliesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
 }
 .commentAvatar {
   width: 36px;
@@ -238,6 +247,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-bottom: 6px;
 }
 .commentName {
@@ -485,4 +496,78 @@
   .title {
     font-size: 22px;
   }
+}
+
+/* ── Comment actions ─────────────────────────────── */
+.commentActions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.commentActionBtn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.commentActionBtn:hover {
+  color: #e0e0e0;
+  background: rgba(255,255,255,0.06);
+}
+
+.commentActionBtnDanger:hover {
+  color: #ff6b6b;
+  background: rgba(255,107,107,0.1);
+}
+
+.inlineEditWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.inlineEdit {
+  width: 100%;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 8px 10px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.inlineEdit:focus {
+  outline: none;
+  border-color: #6e5bff;
+}
+
+.inlineEditBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.cancelBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #aaa;
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.cancelBtn:hover {
+  border-color: #888;
+  color: #e0e0e0;
 }

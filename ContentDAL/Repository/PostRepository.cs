@@ -338,10 +338,10 @@ public class PostRepository : IPostRepository
             splitOn: "PostAuthorId,CollaborationSnapshotId");
     }
 
-    public async Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
+    public async Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
     {
-        var existing = await _connection.QuerySingleOrDefaultAsync<(int UserId, string? ExistingAvatar)>(
-            "SELECT UserId, AvatarUrl FROM PostAuthors WHERE UserName = @UserName LIMIT 1;",
+        var existing = await _connection.QuerySingleOrDefaultAsync<(int PostAuthorId, int UserId, string? ExistingAvatar)>(
+            "SELECT PostAuthorId, UserId, AvatarUrl FROM PostAuthors WHERE UserName = @UserName LIMIT 1;",
             new { UserName = userName });
 
         if (existing != default)
@@ -352,17 +352,17 @@ public class PostRepository : IPostRepository
                     "UPDATE PostAuthors SET AvatarUrl = @AvatarUrl, SyncedAt = @SyncedAt WHERE UserName = @UserName;",
                     new { AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow, UserName = userName });
             }
-            return existing.UserId;
+            return (existing.PostAuthorId, existing.UserId);
         }
 
         var newUserId = await _connection.ExecuteScalarAsync<int>(
             "SELECT COALESCE(MAX(UserId), 200) + 1 FROM PostAuthors;");
 
-        await _connection.ExecuteAsync(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (@UserId, @UserName, @AvatarUrl, @SyncedAt);",
+        var newPostAuthorId = await _connection.ExecuteScalarAsync<int>(
+            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (@UserId, @UserName, @AvatarUrl, @SyncedAt) RETURNING PostAuthorId;",
             new { UserId = newUserId, UserName = userName, AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow });
 
-        return newUserId;
+        return (newPostAuthorId, newUserId);
     }
 
     public async Task<int> EnsurePostAuthorByUserIdAsync(int userId, string userName, string? avatarUrl = null, CancellationToken ct = default)

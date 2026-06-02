@@ -21,6 +21,6 @@ public interface IPostRepository
     Task<string> GetMediaUrlAsync(PostMedia media, CancellationToken ct = default);
     Task<IEnumerable<PostMedia>> GetMediaByPostIdAsync(int postId, CancellationToken ct = default);
     Task DeleteMediaAsync(int postId, CancellationToken ct = default);
-    Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default);
+    Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default);
     Task<int> EnsurePostAuthorByUserIdAsync(int userId, string userName, string? avatarUrl = null, CancellationToken ct = default);
 }

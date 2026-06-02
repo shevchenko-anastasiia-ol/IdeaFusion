@@ -104,42 +104,54 @@ public class TeamRepository : GenericRepository<Team>, ITeamRepository
         string? orderBy = null, bool ascending = false,
         CancellationToken cancellationToken = default)
     {
+        var filter = BuildTeamFilter(name, category, tag, status, memberId, requiredRole);
+        var sort   = BuildTeamSort(orderBy, ascending);
+
+        return await PagedList<Team>.ToPagedListAsync(
+            _collection.Find(filter).Sort(sort),
+            pageNumber, pageSize, cancellationToken);
+    }
+
+    internal static FilterDefinition<Team> BuildTeamFilter(
+        string? name, string? category, string? tag, TeamStatus? status,
+        string? memberId, string? requiredRole)
+    {
         var filters = new List<FilterDefinition<Team>>
         {
             Builders<Team>.Filter.Eq(t => t.IsDeleted, false)
         };
- 
+
         if (!string.IsNullOrWhiteSpace(name))
             filters.Add(Builders<Team>.Filter.Regex(t => t.Name, new BsonRegularExpression(name, "i")));
- 
+
         if (!string.IsNullOrWhiteSpace(category))
             filters.Add(Builders<Team>.Filter.Eq(t => t.Category, category));
- 
+
         if (!string.IsNullOrWhiteSpace(tag))
             filters.Add(Builders<Team>.Filter.AnyEq(t => t.Tags, tag));
- 
+
         if (status.HasValue)
             filters.Add(Builders<Team>.Filter.Eq(t => t.Status, status.Value));
- 
-        // Оновлено: UserSnapshot вкладений
+
         if (!string.IsNullOrWhiteSpace(memberId))
             filters.Add(Builders<Team>.Filter.Eq("members.user.userId", memberId));
- 
+
         if (!string.IsNullOrWhiteSpace(requiredRole))
             filters.Add(Builders<Team>.Filter.ElemMatch(t => t.RequiredRoles, r => r.Role == requiredRole));
- 
-        var combinedFilter = Builders<Team>.Filter.And(filters);
- 
-        var sort = orderBy?.ToLower() switch
-        {
-            "name" => ascending ? Builders<Team>.Sort.Ascending(t => t.Name) : Builders<Team>.Sort.Descending(t => t.Name),
-            _ => ascending ? Builders<Team>.Sort.Ascending(t => t.CreatedAt) : Builders<Team>.Sort.Descending(t => t.CreatedAt)
-        };
- 
-        return await PagedList<Team>.ToPagedListAsync(
-            _collection.Find(combinedFilter).Sort(sort),
-            pageNumber, pageSize, cancellationToken);
+
+        return Builders<Team>.Filter.And(filters);
     }
+
+    internal static SortDefinition<Team> BuildTeamSort(string? orderBy, bool ascending) =>
+        orderBy?.ToLower() switch
+        {
+            "name" => ascending
+                ? Builders<Team>.Sort.Ascending(t => t.Name)
+                : Builders<Team>.Sort.Descending(t => t.Name),
+            _ => ascending
+                ? Builders<Team>.Sort.Ascending(t => t.CreatedAt)
+                : Builders<Team>.Sort.Descending(t => t.CreatedAt)
+        };
  
     public async Task<PagedList<Team>> GetByCursorAsync(string? cursor, int pageSize, CancellationToken cancellationToken = default)
     {

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
 import Moderation from "../components/Moderation";
 import { aggregatorApi } from "../api/aggregator";
-import { commentsApi, likesApi, savedPostsApi } from "../api/posts";
+import { commentsApi, likesApi, postauthorApi, savedPostsApi } from "../api/posts";
 import type { AggregatorCommentDto, PostFullDetailsDto, UserDto } from "../api/types";
 import { timeAgo } from "../api/types";
 import { useAuth } from "../context/AuthContext";
@@ -18,32 +18,165 @@ function avatarColor(seed: string | number): string {
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
 }
 
-const CommentThread: FunctionComponent<{ comment: AggregatorCommentDto; depth?: number; userAvatarMap: Map<string, string> }> = ({ comment, depth = 0, userAvatarMap }) => {
-  const { user } = useAuth();
+const CommentThread: FunctionComponent<{
+  comment: AggregatorCommentDto;
+  depth?: number;
+  userAvatarMap: Map<string, string>;
+  postId: number;
+  onRefresh: () => void;
+}> = ({ comment, depth = 0, userAvatarMap, postId, onRefresh }) => {
+  const { user, contentPostAuthorId } = useAuth();
   const currentUserName = user?.userName ?? user?.email?.split('@')[0];
+  const isOwn = !!contentPostAuthorId && comment.author.postAuthorId === contentPostAuthorId;
+
   const avatarUrl = comment.author.avatarUrl
     ?? userAvatarMap.get(comment.author.userName)
     ?? (comment.author.userName === currentUserName ? user?.avatarUrl : undefined);
 
+  const [editing, setEditing]     = useState(false);
+  const [editBody, setEditBody]   = useState(comment.body);
+  const [replying, setReplying]   = useState(false);
+  const [replyBody, setReplyBody] = useState('');
+  const [busy, setBusy]           = useState(false);
+
+  async function saveEdit() {
+    if (!editBody.trim() || !user) return;
+    setBusy(true);
+    try {
+      await commentsApi.update(comment.commentId, editBody.trim(), user.id);
+      setEditing(false);
+      onRefresh();
+    } catch {}
+    setBusy(false);
+  }
+
+  async function sendReply() {
+    if (!replyBody.trim() || !user) return;
+    setBusy(true);
+    try {
+      let authorId = contentPostAuthorId;
+      if (!authorId) {
+        const userName = user.userName ?? user.email.split('@')[0];
+        const ids = await postauthorApi.getByUserName(userName, user.avatarUrl ?? undefined).catch(() => null);
+        authorId = ids?.postAuthorId ?? null;
+      }
+      if (!authorId) { setBusy(false); return; }
+      await commentsApi.create({
+        postId,
+        postAuthorId: authorId,
+        parentCommentId: comment.commentId,
+        body: replyBody.trim(),
+        createdBy: user.id,
+      });
+      setReplyBody('');
+      setReplying(false);
+      onRefresh();
+    } catch {}
+    setBusy(false);
+  }
+
   return (
-    <div className={`${styles.comment} ${depth > 0 ? styles.nested : ""}`}>
-      {avatarUrl ? (
-        <img src={avatarUrl} alt={comment.author.userName} className={styles.commentAvatar} style={{ objectFit: 'cover' }} />
-      ) : (
-        <div className={styles.commentAvatar} style={{ backgroundColor: avatarColor(comment.author.userId) }}>
-          {comment.author.userName.slice(0, 2).toUpperCase()}
+    <div className={depth > 0 ? styles.nested : undefined}>
+      <div className={styles.comment}>
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={comment.author.userName} className={styles.commentAvatar} style={{ objectFit: 'cover' }} />
+        ) : (
+          <div className={styles.commentAvatar} style={{ backgroundColor: avatarColor(comment.author.userId) }}>
+            {comment.author.userName.slice(0, 2).toUpperCase()}
+          </div>
+        )}
+        <div className={styles.commentBody}>
+          <div className={styles.commentHeader}>
+            <span className={styles.commentName}>{comment.author.userName}</span>
+            <span className={styles.commentTime}>{timeAgo(comment.createdAt)}</span>
+            <div className={styles.commentActions}>
+              {user && depth === 0 && (
+                <button
+                  className={styles.commentActionBtn}
+                  title="Відповісти"
+                  onClick={() => { setReplying(r => !r); setEditing(false); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+                  </svg>
+                </button>
+              )}
+              {isOwn && (
+                <>
+                  <button
+                    className={styles.commentActionBtn}
+                    title="Редагувати"
+                    onClick={() => { setEditing(e => !e); setReplying(false); setEditBody(comment.body); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button
+                    className={`${styles.commentActionBtn} ${styles.commentActionBtnDanger}`}
+                    title="Видалити"
+                    onClick={async () => {
+                      setBusy(true);
+                      try { await commentsApi.delete(comment.commentId); onRefresh(); } catch {}
+                      setBusy(false);
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {editing ? (
+            <div className={styles.inlineEditWrap}>
+              <textarea
+                className={styles.inlineEdit}
+                value={editBody}
+                rows={2}
+                onChange={e => setEditBody(e.target.value)}
+              />
+              <div className={styles.inlineEditBtns}>
+                <button className={styles.sendBtn} disabled={busy || !editBody.trim()} onClick={saveEdit}>
+                  {busy ? '...' : 'Зберегти'}
+                </button>
+                <button className={styles.cancelBtn} onClick={() => setEditing(false)}>Скасувати</button>
+              </div>
+            </div>
+          ) : (
+            <p className={styles.commentText}>{comment.body}</p>
+          )}
+
+          {replying && (
+            <div className={styles.inlineEditWrap}>
+              <textarea
+                className={styles.inlineEdit}
+                value={replyBody}
+                rows={2}
+                placeholder="Напишіть відповідь..."
+                onChange={e => setReplyBody(e.target.value)}
+              />
+              <div className={styles.inlineEditBtns}>
+                <button className={styles.sendBtn} disabled={busy || !replyBody.trim()} onClick={sendReply}>
+                  {busy ? '...' : 'Надіслати'}
+                </button>
+                <button className={styles.cancelBtn} onClick={() => setReplying(false)}>Скасувати</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      {comment.replies && comment.replies.length > 0 && (
+        <div className={styles.repliesList}>
+          {comment.replies.map(r => (
+            <CommentThread key={r.commentId} comment={r} depth={depth + 1} userAvatarMap={userAvatarMap}
+              postId={postId} onRefresh={onRefresh} />
+          ))}
         </div>
       )}
-      <div className={styles.commentBody}>
-        <div className={styles.commentHeader}>
-          <span className={styles.commentName}>{comment.author.userName}</span>
-          <span className={styles.commentTime}>{timeAgo(comment.createdAt)}</span>
-        </div>
-        <p className={styles.commentText}>{comment.body}</p>
-      </div>
-      {comment.replies?.map(r => (
-        <CommentThread key={r.commentId} comment={r} depth={depth + 1} userAvatarMap={userAvatarMap} />
-      ))}
     </div>
   );
 };
@@ -112,7 +245,7 @@ const MediaCarousel: FunctionComponent<{ urls: string[]; title: string }> = ({ u
 const PostDetailPage: FunctionComponent = () => {
   const navigate        = useNavigate();
   const { id }          = useParams<{ id: string }>();
-  const { user, contentUserId } = useAuth();
+  const { user, contentUserId, contentPostAuthorId } = useAuth();
   const [data,    setData]    = useState<PostFullDetailsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
@@ -182,21 +315,43 @@ const PostDetailPage: FunctionComponent = () => {
     }
   }
 
+  async function refreshComments() {
+    if (!id) return;
+    try {
+      const refreshed = await aggregatorApi.getPostFull(Number(id));
+      setData(refreshed);
+    } catch {}
+  }
+
+  const [commentError, setCommentError] = useState<string | null>(null);
+
   async function handleSend() {
     if (!body.trim() || !data || !user) return;
     setSending(true);
+    setCommentError(null);
     try {
+      let authorId = contentPostAuthorId;
+      if (!authorId) {
+        const userName = user.userName ?? user.email.split('@')[0];
+        const ids = await postauthorApi.getByUserName(userName, user.avatarUrl ?? undefined).catch(() => null);
+        authorId = ids?.postAuthorId ?? null;
+      }
+      if (!authorId) {
+        setCommentError('Не вдалося визначити автора. Спробуйте перезайти.');
+        setSending(false);
+        return;
+      }
       await commentsApi.create({
         postId: data.post.postId,
-        postAuthorId: data.post.author?.postAuthorId ?? 0,
+        postAuthorId: authorId,
         body: body.trim(),
         createdBy: user.id,
       });
       setBody('');
-      // re-fetch to get updated comments
-      const refreshed = await aggregatorApi.getPostFull(Number(id));
-      setData(refreshed);
-    } catch {}
+      await refreshComments();
+    } catch (e: any) {
+      setCommentError(e?.message ?? 'Помилка надсилання коментаря');
+    }
     setSending(false);
   }
 
@@ -335,7 +490,13 @@ const PostDetailPage: FunctionComponent = () => {
                 <p style={{ color: "#666", fontSize: 14 }}>Коментарів ще немає</p>
               )}
               {comments.map(c => (
-                <CommentThread key={c.commentId} comment={c} userAvatarMap={userAvatarMap} />
+                <CommentThread
+                  key={c.commentId}
+                  comment={c}
+                  userAvatarMap={userAvatarMap}
+                  postId={post.postId}
+                  onRefresh={refreshComments}
+                />
               ))}
             </div>
 
@@ -359,6 +520,7 @@ const PostDetailPage: FunctionComponent = () => {
                 <button className={styles.sendBtn} disabled={sending || !body.trim()} onClick={handleSend}>
                   {sending ? '...' : 'Надіслати'}
                 </button>
+                {commentError && <p style={{ color: '#ff6b6b', fontSize: 12, margin: '4px 0 0' }}>{commentError}</p>}
               </div>
             </div>
           </div>

@@ -67,8 +67,16 @@ namespace IdentityAPI.Controllers;
                 return ValidationProblem(ModelState);
 
             _logger.LogInformation("User {Email} attempting to log in.", loginDto.Email);
-            var tokens = await _userService.LoginUserAsync(loginDto, cancellationToken);
-            return Ok(tokens);
+            try
+            {
+                var tokens = await _userService.LoginUserAsync(loginDto, cancellationToken);
+                return Ok(tokens);
+            }
+            catch (System.Security.Authentication.AuthenticationException ex)
+            {
+                _logger.LogWarning("Login failed for {Email}: {Message}", loginDto.Email, ex.Message);
+                return Unauthorized(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -105,8 +113,16 @@ namespace IdentityAPI.Controllers;
                 return ValidationProblem(ModelState);
 
             _logger.LogInformation("Token refresh requested.");
-            var newTokens = await _tokenService.RefreshTokensAsync(tokenRequest, cancellationToken);
-            return Ok(newTokens);
+            try
+            {
+                var newTokens = await _tokenService.RefreshTokensAsync(tokenRequest, cancellationToken);
+                return Ok(newTokens);
+            }
+            catch (System.Security.Authentication.AuthenticationException ex)
+            {
+                _logger.LogWarning("Token refresh failed: {Message}", ex.Message);
+                return Unauthorized(new { message = ex.Message });
+            }
         }
 
         /// <summary>

@@ -24,7 +24,7 @@ public class PostAuthorController : ControllerBase
         [FromQuery] string? avatarUrl,
         CancellationToken ct)
     {
-        var userId = await _postService.EnsurePostAuthorAsync(userName, avatarUrl, ct);
-        return Ok(userId);
+        var (postAuthorId, userId) = await _postService.EnsurePostAuthorAsync(userName, avatarUrl, ct);
+        return Ok(new { postAuthorId, userId });
     }
 }

@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ServiceDefaults.Extensions;
 
+[ExcludeFromCodeCoverage]
 public static class KeycloakAuthenticationExtensions
 {
     /// <summary>

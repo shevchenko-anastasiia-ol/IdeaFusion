@@ -1,11 +1,13 @@
-﻿using IdentityServiceDomain.Entities;
+using IdentityServiceDomain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace IdentityDAL.Data;
 
+[ExcludeFromCodeCoverage]
 public class IdentitySeeder
 {
     public static async Task SeedAsync(IServiceProvider services)
@@ -20,26 +22,36 @@ public class IdentitySeeder
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 
-        await context.Database.MigrateAsync();
+        if (context.Database.IsRelational())
+            await context.Database.MigrateAsync();
+        else
+            await context.Database.EnsureCreatedAsync();
+        await SeedRolesAsync(roleManager, logger);
+        await SeedTestUsersAsync(userManager, logger);
+        await SeedAdminAsync(userManager, logger);
+    }
 
-        // 🔹 ROLES
+    internal static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager, ILogger logger)
+    {
         string[] roles = ["Admin", "User"];
 
         foreach (var roleName in roles)
         {
-            if (!await roleManager.RoleExistsAsync(roleName))
+            if (await roleManager.RoleExistsAsync(roleName))
+                continue;
+
+            await roleManager.CreateAsync(new ApplicationRole
             {
-                await roleManager.CreateAsync(new ApplicationRole
-                {
-                    Name = roleName,
-                    NormalizedName = roleName.ToUpper()
-                });
+                Name = roleName,
+                NormalizedName = roleName.ToUpper()
+            });
 
-                logger.LogInformation("Created role {Role}", roleName);
-            }
+            logger.LogInformation("Created role {Role}", roleName);
         }
+    }
 
-        // 🔹 TEST USERS
+    internal static async Task SeedTestUsersAsync(UserManager<ApplicationUser> userManager, ILogger logger)
+    {
         var testUsers = new List<(Guid Id, string Email, string Username)>
         {
             (Guid.Parse("22222222-2222-2222-2222-222222222222"), "anna@ideafusion.com", "AnnoGray"),
@@ -61,51 +73,48 @@ public class IdentitySeeder
                 CreatedAt = DateTime.UtcNow
             };
 
-            var result = await userManager.CreateAsync(user, "User@1234");
-
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(user, "User");
-                logger.LogInformation("Created test user: {Email}", email);
-            }
-            else
-            {
-                logger.LogWarning("Failed to create test user {Email}: {Errors}",
-                    email,
-                    string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
+            await CreateUserAsync(userManager, user, "User@1234", "User", logger);
         }
+    }
 
-        // 🔹 ADMIN
-        var adminId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    internal static async Task SeedAdminAsync(UserManager<ApplicationUser> userManager, ILogger logger)
+    {
         var adminEmail = "admin@admin.com";
 
-        var admin = await userManager.FindByEmailAsync(adminEmail);
+        if (await userManager.FindByEmailAsync(adminEmail) is not null)
+            return;
 
-        if (admin == null)
+        var admin = new ApplicationUser
         {
-            admin = new ApplicationUser
-            {
-                Id = adminId,
-                UserName = "Admin",
-                Email = adminEmail,
-                EmailConfirmed = true,
-                CreatedAt = DateTime.UtcNow
-            };
+            Id = Guid.Parse("99999999-9999-9999-9999-999999999999"),
+            UserName = "Admin",
+            Email = adminEmail,
+            EmailConfirmed = true,
+            CreatedAt = DateTime.UtcNow
+        };
 
-            var result = await userManager.CreateAsync(admin, "Admin@1234");
+        await CreateUserAsync(userManager, admin, "Admin@1234", "Admin", logger);
+    }
 
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(admin, "Admin");
-                logger.LogInformation("Created admin user: {Email}", adminEmail);
-            }
-            else
-            {
-                logger.LogWarning("Failed to create admin: {Errors}",
-                    string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
+    internal static async Task CreateUserAsync(
+        UserManager<ApplicationUser> userManager,
+        ApplicationUser user,
+        string password,
+        string role,
+        ILogger logger)
+    {
+        var result = await userManager.CreateAsync(user, password);
+
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(user, role);
+            logger.LogInformation("Created user: {Email}", user.Email);
         }
-
+        else
+        {
+            logger.LogWarning("Failed to create user {Email}: {Errors}",
+                user.Email,
+                string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
     }
 }

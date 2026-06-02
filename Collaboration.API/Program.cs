@@ -197,3 +197,5 @@ app.MapGrpcService<CollaborationRequestGrpcServiceImpl>();
 app.MapGrpcServicesWithReflection();
 
 await app.RunAsync();
+
+public partial class Program { }

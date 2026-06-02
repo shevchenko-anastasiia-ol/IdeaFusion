@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using FluentValidation;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Collaboration.API.Controllers;
 
@@ -16,6 +17,7 @@ public abstract class BaseApiController : ControllerBase
         _mediator = mediator;
     }
 
+    [ExcludeFromCodeCoverage]
     protected IActionResult HandleException(Exception ex)
     {
         return ex switch

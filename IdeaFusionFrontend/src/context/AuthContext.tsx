@@ -6,6 +6,7 @@ import type { LoginDto, RegisterDto, UpdateProfileDto, UserDto } from '../api/ty
 interface AuthContextValue {
   user: UserDto | null;
   contentUserId: number | null;
+  contentPostAuthorId: number | null;
   loading: boolean;
   login: (dto: LoginDto) => Promise<void>;
   register: (dto: RegisterDto) => Promise<void>;
@@ -16,15 +17,21 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function fetchContentUserId(me: UserDto): Promise<number | null> {
+async function fetchContentIds(me: UserDto): Promise<{ userId: number | null; postAuthorId: number | null }> {
   const userName = me.userName ?? me.email.split('@')[0];
-  try { return await postauthorApi.getByUserName(userName, me.avatarUrl); } catch { return null; }
+  try {
+    const ids = await postauthorApi.getByUserName(userName, me.avatarUrl);
+    return { userId: ids.userId, postAuthorId: ids.postAuthorId };
+  } catch {
+    return { userId: null, postAuthorId: null };
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]                   = useState<UserDto | null>(null);
-  const [contentUserId, setContentUserId] = useState<number | null>(null);
-  const [loading, setLoading]             = useState(true);
+  const [user, setUser]                           = useState<UserDto | null>(null);
+  const [contentUserId, setContentUserId]         = useState<number | null>(null);
+  const [contentPostAuthorId, setContentPostAuthorId] = useState<number | null>(null);
+  const [loading, setLoading]                     = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -32,7 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authApi.me()
       .then(async (me) => {
         setUser(me);
-        setContentUserId(await fetchContentUserId(me));
+        const ids = await fetchContentIds(me);
+        setContentUserId(ids.userId);
+        setContentPostAuthorId(ids.postAuthorId);
       })
       .catch(() => {
         localStorage.removeItem('accessToken');
@@ -47,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('refreshToken', tokens.refreshToken);
     const me = await authApi.me();
     setUser(me);
-    setContentUserId(await fetchContentUserId(me));
+    const ids = await fetchContentIds(me);
+    setContentUserId(ids.userId);
+    setContentPostAuthorId(ids.postAuthorId);
   }, []);
 
   const register = useCallback(async (dto: RegisterDto) => {
@@ -60,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('refreshToken');
     setUser(null);
     setContentUserId(null);
+    setContentPostAuthorId(null);
   }, []);
 
   const updateAvatar = useCallback(async (file: File) => {
@@ -79,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, contentUserId, loading, login, register, logout, updateAvatar, updateProfile }}>
+    <AuthContext.Provider value={{ user, contentUserId, contentPostAuthorId, loading, login, register, logout, updateAvatar, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

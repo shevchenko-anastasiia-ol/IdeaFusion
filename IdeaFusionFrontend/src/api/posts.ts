@@ -45,6 +45,9 @@ export const commentsApi = {
   create: (dto: CommentCreateDto) =>
     api.post<CommentDto>('/api/comment', dto),
 
+  update: (id: number, body: string, updatedBy: string) =>
+    api.put<CommentDto>(`/api/comment/${id}`, { body, updatedBy }),
+
   delete: (id: number) =>
     api.delete<void>(`/api/comment/${id}`),
 };
@@ -77,7 +80,7 @@ export const tagsApi = {
 export const postauthorApi = {
   getByUserName: (userName: string, avatarUrl?: string) => {
     const params = avatarUrl ? `?avatarUrl=${encodeURIComponent(avatarUrl)}` : '';
-    return api.get<number>(`/api/postauthor/by-username/${encodeURIComponent(userName)}${params}`);
+    return api.get<{ postAuthorId: number; userId: number }>(`/api/postauthor/by-username/${encodeURIComponent(userName)}${params}`);
   },
 };
 

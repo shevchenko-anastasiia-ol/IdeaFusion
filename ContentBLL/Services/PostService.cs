@@ -189,7 +189,7 @@ public class PostService : IPostService
         return await MapPostsWithTagsAndMediaAsync(posts, ct);
     }
 
-    public Task<int> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
+    public Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
         => _uow.PostRepository.EnsurePostAuthorAsync(userName, avatarUrl, ct);
 
     private async Task DeletePostTagsAsync(int postId, CancellationToken ct)

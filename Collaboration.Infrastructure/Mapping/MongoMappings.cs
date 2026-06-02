@@ -10,86 +10,79 @@ namespace Collaboration.Infrastructure.Mapping;
 
 public static class MongoMappings
 {
+    private static volatile bool _registered;
+    private static readonly object _lock = new();
+
     public static void Register()
     {
-        var pack = new ConventionPack
+        lock (_lock)
         {
-            new IgnoreIfNullConvention(true),
-            new IgnoreExtraElementsConvention(true)
-        };
-        ConventionRegistry.Register("CollaborationConventions", pack, _ => true);
+            if (_registered) return;
+            _registered = true;
 
-        // Enum serializers
-        BsonSerializer.RegisterSerializer(new TeamStatusSerializer());
-        BsonSerializer.RegisterSerializer(new CollaborationRequestStatusSerializer());
-        BsonSerializer.RegisterSerializer(new InvitationStatusSerializer());
+            var pack = new ConventionPack
+            {
+                new IgnoreIfNullConvention(true),
+                new IgnoreExtraElementsConvention(true)
+            };
+            ConventionRegistry.Register("CollaborationConventions", pack, _ => true);
 
-        // UserSnapshot — реєструємо кастомний серіалайзер
-        // НЕ реєструємо BsonClassMap для UserSnapshot — вони конфліктують
-        BsonSerializer.RegisterSerializer(new UserSnapshotSerializer());
+            // Enum serializers
+            BsonSerializer.RegisterSerializer(new TeamStatusSerializer());
+            BsonSerializer.RegisterSerializer(new CollaborationRequestStatusSerializer());
+            BsonSerializer.RegisterSerializer(new InvitationStatusSerializer());
 
-        // BaseEntity
-        if (!BsonClassMap.IsClassMapRegistered(typeof(BaseEntity)))
-        {
-            BsonClassMap.RegisterClassMap<BaseEntity>(cm =>
+            // UserSnapshot — custom serializer only; BsonClassMap conflicts with it.
+            BsonSerializer.RegisterSerializer(new UserSnapshotSerializer());
+
+            // Class maps — guard against the TOCTOU race where MongoDB's auto-mapping
+            // (triggered by concurrent tests that use real MongoDbContext) registers a
+            // class map between our IsClassMapRegistered check and RegisterClassMap call.
+            RegisterClassMapSafe<BaseEntity>(cm =>
             {
                 cm.AutoMap();
                 cm.SetIsRootClass(true);
             });
-        }
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(TeamMember)))
-        {
-            BsonClassMap.RegisterClassMap<TeamMember>(cm =>
+            RegisterClassMapSafe<TeamMember>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+            RegisterClassMapSafe<RequiredRole>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+            RegisterClassMapSafe<Team>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+            RegisterClassMapSafe<CollaborationRequest>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+            RegisterClassMapSafe<GroupInvitation>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+            RegisterClassMapSafe<TeamPost>(cm =>
             {
                 cm.AutoMap();
                 cm.SetIgnoreExtraElements(true);
             });
         }
+    }
 
-        if (!BsonClassMap.IsClassMapRegistered(typeof(RequiredRole)))
+    private static void RegisterClassMapSafe<T>(Action<BsonClassMap<T>> init)
+    {
+        if (BsonClassMap.IsClassMapRegistered(typeof(T))) return;
+        try
         {
-            BsonClassMap.RegisterClassMap<RequiredRole>(cm =>
-            {
-                cm.AutoMap();
-                cm.SetIgnoreExtraElements(true);
-            });
+            BsonClassMap.RegisterClassMap(init);
         }
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(Team)))
-        {
-            BsonClassMap.RegisterClassMap<Team>(cm =>
-            {
-                cm.AutoMap();
-                cm.SetIgnoreExtraElements(true);
-            });
-        }
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(CollaborationRequest)))
-        {
-            BsonClassMap.RegisterClassMap<CollaborationRequest>(cm =>
-            {
-                cm.AutoMap();
-                cm.SetIgnoreExtraElements(true);
-            });
-        }
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(GroupInvitation)))
-        {
-            BsonClassMap.RegisterClassMap<GroupInvitation>(cm =>
-            {
-                cm.AutoMap();
-                cm.SetIgnoreExtraElements(true);
-            });
-        }
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(TeamPost)))
-        {
-            BsonClassMap.RegisterClassMap<TeamPost>(cm =>
-            {
-                cm.AutoMap();
-                cm.SetIgnoreExtraElements(true);
-            });
-        }
+        catch (ArgumentException) { }
     }
 }

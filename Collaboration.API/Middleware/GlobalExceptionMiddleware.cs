@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Collaboration.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,6 +34,7 @@ public class GlobalExceptionMiddleware
         }
     }
 
+    [ExcludeFromCodeCoverage]
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/problem+json";

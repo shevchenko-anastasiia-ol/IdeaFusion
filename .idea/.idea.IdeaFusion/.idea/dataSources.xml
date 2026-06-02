@@ -86,5 +86,26 @@
       <jdbc-url>mongodb://admin:0hJkfu81wDPRaBvMpT8RYj@localhost:56458?authSource=admin&amp;authMechanism=SCRAM-SHA-256</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="mongodb" uuid="10d3929d-59a7-4761-b1a7-0655d64be130">
+      <driver-ref>mongo.4</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.dbschema.MongoJdbcDriver</jdbc-driver>
+      <jdbc-url>mongodb://admin:0hJkfu81wDPRaBvMpT8RYj@localhost:61987?authSource=admin&amp;authMechanism=SCRAM-SHA-256</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="postgres" uuid="f45f21c4-5d3c-4fce-b5cf-3cad7b4ccd7c">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://localhost:61994/?password=1234567890&amp;user=postgres</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="redis" uuid="b8f7e2b8-e7eb-404e-acda-e94a777b0be4">
+      <driver-ref>redis</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>jdbc.RedisDriver</jdbc-driver>
+      <jdbc-url>jdbc:redis://redis123@localhost:62099</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
