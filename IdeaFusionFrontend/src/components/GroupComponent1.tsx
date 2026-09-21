@@ -1,4 +1,4 @@
-import { FunctionComponent, useState } from "react";
+import { FunctionComponent } from "react";
 import { Box, Typography } from "@mui/material";
 import styles from "./GroupComponent1.module.css";
 

@@ -19,6 +19,9 @@ public class MongoIndexCreation : IIndexCreation
         await CreateCollaborationRequestIndexesAsync(cancellationToken);
         await CreateGroupInvitationIndexesAsync(cancellationToken);
         await CreateTeamPostIndexesAsync(cancellationToken);
+        await CreateChatMessageIndexesAsync(cancellationToken);
+        await CreateTeamVacancyIndexesAsync(cancellationToken);
+        await CreateVacancyApplicationIndexesAsync(cancellationToken);
     }
  
     private async Task CreateTeamIndexesAsync(CancellationToken cancellationToken)
@@ -95,6 +98,15 @@ public class MongoIndexCreation : IIndexCreation
             new CreateIndexModel<Team>(
                 Builders<Team>.IndexKeys.Ascending(t => t.IsDeleted),
                 new CreateIndexOptions { Name = "idx_is_deleted" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Індекс за кількістю відкритих вакансій (для фільтру "є вакансії")
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<Team>(
+                Builders<Team>.IndexKeys.Ascending(t => t.OpenVacancyCount),
+                new CreateIndexOptions { Name = "idx_open_vacancy_count" }
             ),
             cancellationToken: cancellationToken
         );
@@ -270,6 +282,125 @@ public class MongoIndexCreation : IIndexCreation
             new CreateIndexModel<TeamPost>(
                 Builders<TeamPost>.IndexKeys.Descending(p => p.PublishedAt),
                 new CreateIndexOptions { Name = "idx_published_at" }
+            ),
+            cancellationToken: cancellationToken
+        );
+    }
+
+    private async Task CreateChatMessageIndexesAsync(CancellationToken cancellationToken)
+    {
+        var collection = _context.ChatMessages;
+
+        // Складний індекс: чат + час (для історії повідомлень)
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<ChatMessage>(
+                Builders<ChatMessage>.IndexKeys
+                    .Ascending(m => m.ChatId)
+                    .Descending(m => m.CreatedAt),
+                new CreateIndexOptions { Name = "idx_chat_id_sent_at" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Індекс за відправником (для синхронізації snapshot)
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<ChatMessage>(
+                Builders<ChatMessage>.IndexKeys.Ascending("sender.userId"),
+                new CreateIndexOptions { Name = "idx_sender_user_id" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Індекс за датою створення (для пагінації курсом)
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<ChatMessage>(
+                Builders<ChatMessage>.IndexKeys.Descending(m => m.CreatedAt),
+                new CreateIndexOptions { Name = "idx_created_at" }
+            ),
+            cancellationToken: cancellationToken
+        );
+    }
+
+    private async Task CreateTeamVacancyIndexesAsync(CancellationToken cancellationToken)
+    {
+        var collection = _context.TeamVacancies;
+
+        // Складний індекс: команда + статус
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<TeamVacancy>(
+                Builders<TeamVacancy>.IndexKeys
+                    .Ascending(v => v.TeamId)
+                    .Ascending(v => v.Status)
+                    .Descending(v => v.CreatedAt),
+                new CreateIndexOptions { Name = "idx_vacancy_team_open" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Категорія (сфера інтересів) + статус + час — для перегляду вакансій
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<TeamVacancy>(
+                Builders<TeamVacancy>.IndexKeys
+                    .Ascending(v => v.Category)
+                    .Ascending(v => v.Status)
+                    .Descending(v => v.CreatedAt),
+                new CreateIndexOptions { Name = "idx_vacancy_category_status" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Пошук за роллю
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<TeamVacancy>(
+                Builders<TeamVacancy>.IndexKeys.Ascending(v => v.Role),
+                new CreateIndexOptions { Name = "idx_vacancy_role" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Індекс за датою створення (для сортування за замовчуванням)
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<TeamVacancy>(
+                Builders<TeamVacancy>.IndexKeys.Descending(v => v.CreatedAt),
+                new CreateIndexOptions { Name = "idx_vacancy_created_at" }
+            ),
+            cancellationToken: cancellationToken
+        );
+    }
+
+    private async Task CreateVacancyApplicationIndexesAsync(CancellationToken cancellationToken)
+    {
+        var collection = _context.VacancyApplications;
+
+        // Складний індекс: вакансія + статус (для списку заявок та dedupe/pending)
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<VacancyApplication>(
+                Builders<VacancyApplication>.IndexKeys
+                    .Ascending(a => a.VacancyId)
+                    .Ascending(a => a.Status),
+                new CreateIndexOptions { Name = "idx_app_vacancy_status" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Заявник + вакансія (для перевірки повторних заявок)
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<VacancyApplication>(
+                Builders<VacancyApplication>.IndexKeys
+                    .Ascending("applicant.userId")
+                    .Ascending(a => a.VacancyId),
+                new CreateIndexOptions { Name = "idx_app_user_vacancy" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Заявки за командою
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<VacancyApplication>(
+                Builders<VacancyApplication>.IndexKeys
+                    .Ascending(a => a.TeamId)
+                    .Descending(a => a.CreatedAt),
+                new CreateIndexOptions { Name = "idx_app_team_created" }
             ),
             cancellationToken: cancellationToken
         );

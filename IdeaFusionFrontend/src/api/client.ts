@@ -69,11 +69,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       const raw = await res.text();
       const body = raw ? JSON.parse(raw) : null;
       const base = body?.title ?? body?.message
-        ?? (Array.isArray(body) ? body.map((e: any) => e.description).join('; ') : null)
+        ?? (Array.isArray(body) ? body.map((e: { description?: string }) => e.description).join('; ') : null)
         ?? message;
       const detail = body?.details ? ` (${body.details})` : '';
       message = base + detail;
-    } catch {}
+    } catch {
+      // тіло помилки не є валідним JSON, лишаємо повідомлення за замовчуванням
+    }
     throw new Error(message);
   }
 

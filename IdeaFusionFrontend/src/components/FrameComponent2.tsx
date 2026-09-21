@@ -70,6 +70,18 @@ const FrameComponent2: FunctionComponent<FrameComponent2Type> = ({
       ),
     },
     {
+      label: "Вакансії",
+      routes: ["/vacancies"],
+      onClick: () => navigate("/vacancies"),
+      icon: (active: boolean) => (
+        <svg className={active ? styles.sidebarIconActive : styles.sidebarIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="7" width="18" height="13" rx="2.5" stroke={active ? "white" : "#6D6C6C"} strokeWidth="1.8" />
+          <path d="M9 7V6a3 3 0 0 1 6 0v1" stroke={active ? "white" : "#6D6C6C"} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M3 12h18" stroke={active ? "white" : "#6D6C6C"} strokeWidth="1.8" />
+        </svg>
+      ),
+    },
+    {
       label: "Дашборд",
       routes: ["/dashboard", "/profile", "/portfolio"],
       onClick: () => navigate("/dashboard"),

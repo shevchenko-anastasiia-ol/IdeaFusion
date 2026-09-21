@@ -187,7 +187,7 @@ const PostCard: FunctionComponent<{ item: PostWithEngagementDto; userAvatarMap: 
                 e.stopPropagation();
                 if (!confirm('Видалити цей пост назавжди?')) return;
                 try { await postsApi.delete(post.postId); onDelete?.(post.postId); }
-                catch (ex: any) { alert(ex.message ?? 'Помилка видалення'); }
+                catch (ex) { alert(ex instanceof Error ? ex.message : 'Помилка видалення'); }
               }}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

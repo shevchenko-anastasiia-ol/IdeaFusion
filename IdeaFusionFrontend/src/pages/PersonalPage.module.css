@@ -193,6 +193,52 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
   }
+
+  .applicationsList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .applicationRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: #1e1e1e;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .applicationRow:hover { background-color: #242424; }
+  .applicationStatus {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 30px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .applicationStatus[data-status="pending"] {
+    background: rgba(255, 179, 71, 0.12);
+    border: 1px solid #ffb347;
+    color: #ffb347;
+  }
+  .applicationStatus[data-status="accepted"] {
+    background: rgba(0, 201, 167, 0.12);
+    border: 1px solid #00c9a7;
+    color: #00c9a7;
+  }
+  .applicationStatus[data-status="rejected"] {
+    background: rgba(239, 83, 80, 0.12);
+    border: 1px solid #ef5350;
+    color: #ef5350;
+  }
+  .applicationStatus[data-status="cancelled"] {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #2a2a2a;
+    color: #555;
+  }
   .portfolioCard {
     border-radius: 20px;
     background-color: #1e1e1e;

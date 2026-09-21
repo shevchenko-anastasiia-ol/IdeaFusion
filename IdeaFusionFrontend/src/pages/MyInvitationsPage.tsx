@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
 import Moderation from "../components/Moderation";
 import { groupInvitationsApi, teamsApi } from "../api/teams";
-import type { GroupInvitationEntity, UserDto } from "../api/types";
+import type { GroupInvitationEntity, UserDto, TeamEntity, PagedResult } from "../api/types";
 import { invitationStatusKey, timeAgo } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
@@ -32,14 +32,14 @@ const MyInvitationsPage: FunctionComponent = () => {
     Promise.all([
       groupInvitationsApi.getByUser(user.id),
       api.get<UserDto[]>('/api/users').catch(() => [] as UserDto[]),
-      teamsApi.getPaged(1, 200).then((r: any) => Array.isArray(r) ? r : (r.items ?? [])).catch(() => []),
+      teamsApi.getPaged(1, 200).then((r: PagedResult<TeamEntity>) => Array.isArray(r) ? r : (r.items ?? [])).catch(() => []),
     ]).then(([inv, users, teams]) => {
       setInvitations(inv as GroupInvitationEntity[]);
       const um: Record<string, UserDto> = {};
       (users as UserDto[]).forEach(u => { um[u.id] = u; });
       setUserMap(um);
       const tm: Record<string, string> = {};
-      (teams as any[]).forEach(t => { tm[t.id] = t.name; });
+      teams.forEach(t => { tm[t.id] = t.name; });
       setTeamMap(tm);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [user]);

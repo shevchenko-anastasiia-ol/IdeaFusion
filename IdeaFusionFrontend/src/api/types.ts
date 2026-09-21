@@ -236,13 +236,36 @@ export interface UserDashboardDto {
 }
 
 // ── Collaboration (direct entity shape from API) ──────────────────────────
+export const TEAM_PERMISSIONS: { key: string; label: string }[] = [
+  { key: "canPublishPosts", label: "Публікувати пости" },
+  { key: "canEditPosts", label: "Редагувати та видаляти пости" },
+  { key: "canInviteMembers", label: "Запрошувати учасників" },
+  { key: "canRemoveMembers", label: "Видаляти учасників" },
+  { key: "canEditTeam", label: "Змінювати налаштування команди" },
+];
+
 export interface TeamMemberEntity {
   user: { userId: string; username: string; avatarUrl?: string };
   role: string;
   joinedAt: string;
+  permissions?: string[];
 }
 
 export interface RequiredRoleEntity { role: string; description?: string; }
+
+export function hasPermission(team: TeamEntity | null | undefined, userId: string | undefined, perm: string): boolean {
+  if (!team || !userId) return false;
+  const member = team.members.find(m => m.user.userId === userId);
+  if (!member) return false;
+  if (member.role === "Owner") return true;
+  const perms = member.permissions ?? [];
+  if (perms.length === 0) return perm === "canPublishPosts";
+  return perms.includes(perm);
+}
+
+export function isTeamOwner(team: TeamEntity | null | undefined, userId: string | undefined): boolean {
+  return !!team?.members.find(m => m.user.userId === userId && m.role === "Owner");
+}
 
 export interface TeamEntity {
   id: string;
@@ -255,6 +278,7 @@ export interface TeamEntity {
   avatarUrl?: string;
   members: TeamMemberEntity[];
   requiredRoles: RequiredRoleEntity[];
+  openVacancyCount: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -325,6 +349,13 @@ export interface SetTeamAvatarUrlCommand {
   userId: string;
 }
 
+export interface UpdateTeamMemberPermissionsCommand {
+  teamId: string;
+  targetMemberId: string;
+  permissions: string[];
+  userId: string;
+}
+
 export interface CreateCollaborationRequestCommand {
   teamId: string;
   fromUserId: string;
@@ -361,6 +392,98 @@ export interface CreateTeamCommand {
   teamAvatarUrl?: string;
 }
 
+// ── Chat ──────────────────────────────────────────────────────────────────
+export interface ChatMessageDto {
+  id: string;
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl?: string;
+  text: string;
+  sentAt: string;
+}
+
+export interface ChatSummaryDto {
+  chatId: string;
+  teamId: string;
+  teamName: string;
+  teamAvatarUrl?: string;
+  memberCount: number;
+  lastMessage?: string;
+  lastSenderName?: string;
+  lastMessageAt?: string;
+  createdAt?: string;
+}
+
+export interface ChatHistoryPage {
+  items: ChatMessageDto[];
+  hasMore: boolean;
+  nextCursor?: string;
+}
+
+export interface SendChatMessageCommand {
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl?: string;
+  text: string;
+}
+
+// ── Team vacancies ────────────────────────────────────────────────────────
+export interface TeamVacancyEntity {
+  id: string;
+  teamId: string;
+  teamName: string;
+  teamAvatarUrl?: string;
+  category: string;
+  tags: string[];
+  role: string;
+  description?: string;
+  requirements?: string;
+  // "Open" | "Closed"  (or numeric 0|1)
+  status: number | string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface VacancyApplicationEntity {
+  id: string;
+  vacancyId: string;
+  teamId: string;
+  teamName: string;
+  applicantUserId: string;
+  applicantUsername: string;
+  applicantAvatarUrl?: string;
+  role: string;
+  message?: string;
+  // "Pending" | "Accepted" | "Rejected" | "Cancelled"  (or numeric 0..3)
+  status: number | string;
+  resolvedAt?: string;
+  createdAt: string;
+}
+
+export interface VacancyPage {
+  items: TeamVacancyEntity[];
+  hasMore: boolean;
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface CreateTeamVacancyCommand {
+  teamId: string;
+  userId: string;
+  role: string;
+  description?: string;
+  requirements?: string;
+}
+
+export interface CloseTeamVacancyCommand { vacancyId: string; userId: string; }
+export interface ApplyToVacancyCommand { vacancyId: string; userId: string; message?: string; }
+export interface AcceptVacancyApplicationCommand { applicationId: string; userId: string; }
+export interface RejectVacancyApplicationCommand { applicationId: string; userId: string; }
+export interface CancelVacancyApplicationCommand { applicationId: string; userId: string; }
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 export function teamStatusLabel(status: number | string): string {
   const n = typeof status === 'string' ? parseInt(status, 10) : status;
@@ -368,6 +491,33 @@ export function teamStatusLabel(status: number | string): string {
   if (n === 1 || status === 'Searching') return 'У пошуку';
   if (n === 2 || status === 'Completed') return 'Завершена';
   return String(status);
+}
+
+export function vacancyStatusKey(status: number | string): 'open' | 'closed' {
+  const n = typeof status === 'string' ? parseInt(status, 10) : status;
+  if (n === 0 || status === 'Open')  return 'open';
+  return 'closed';
+}
+
+export function vacancyStatusLabel(status: number | string): string {
+  return vacancyStatusKey(status) === 'open' ? 'Відкрита' : 'Закрита';
+}
+
+export function applicationStatusKey(status: number | string): 'pending' | 'accepted' | 'rejected' | 'cancelled' {
+  const n = typeof status === 'string' ? parseInt(status, 10) : status;
+  if (n === 0 || status === 'Pending')   return 'pending';
+  if (n === 1 || status === 'Accepted')  return 'accepted';
+  if (n === 2 || status === 'Rejected')  return 'rejected';
+  return 'cancelled';
+}
+
+export function applicationStatusLabel(status: number | string): string {
+  switch (applicationStatusKey(status)) {
+    case 'pending':   return 'Очікує розгляду';
+    case 'accepted':  return 'Прийнято';
+    case 'rejected':  return 'Відхилено';
+    case 'cancelled': return 'Скасовано';
+  }
 }
 
 export function requestStatusKey(status: number | string): 'new' | 'accepted' | 'rejected' | 'cancelled' {

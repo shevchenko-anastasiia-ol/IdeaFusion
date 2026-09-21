@@ -5,7 +5,9 @@ import Moderation from "../components/Moderation";
 import { useAuth } from "../context/AuthContext";
 import { authApi } from "../api/auth";
 import { aggregatorApi } from "../api/aggregator";
-import type { PostWithEngagementDto } from "../api/types";
+import { vacanciesApi } from "../api/vacancies";
+import type { PostWithEngagementDto, VacancyApplicationEntity } from "../api/types";
+import { applicationStatusKey, applicationStatusLabel, timeAgo } from "../api/types";
 import styles from "./PersonalPage.module.css";
 
 const FILTERS = ["Всі", "Дизайн", "Музика", "Арт", "Анімація"];
@@ -26,13 +28,6 @@ function getMediaType(url: string): 'image' | 'video' | 'audio' | 'pdf' {
   if (ext === 'pdf') return 'pdf';
   return 'image';
 }
-function cardMedia(urls: string[], fallbackBg: string) {
-  const img = urls.find(u => getMediaType(u) === 'image');
-  if (img) return { style: { backgroundImage: `url("${img}")`, backgroundSize: 'cover', backgroundPosition: 'center' }, icon: null };
-  const t = urls[0] ? getMediaType(urls[0]) : null;
-  return { style: { backgroundColor: fallbackBg, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-           icon: t === 'video' ? '🎬' : t === 'audio' ? '🎵' : t === 'pdf' ? '📄' : null };
-}
 
 const PersonalPage: FunctionComponent = () => {
   const navigate = useNavigate();
@@ -42,6 +37,10 @@ const PersonalPage: FunctionComponent = () => {
   const [activeFilter, setActiveFilter] = useState("Всі");
   const [posts,    setPosts]    = useState<PostWithEngagementDto[]>([]);
   const [loading,  setLoading]  = useState(false);
+
+  // My vacancy applications
+  const [myApplications, setMyApplications] = useState<VacancyApplicationEntity[]>([]);
+  const [vacsLoading, setVacsLoading] = useState(true);
 
   // Avatar
   const fileInputRef  = useRef<HTMLInputElement>(null);
@@ -77,6 +76,15 @@ const PersonalPage: FunctionComponent = () => {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user, contentUserId]);
+
+  useEffect(() => {
+    if (!user) { setVacsLoading(false); return; }
+    setVacsLoading(true);
+    vacanciesApi.getMyApplications(user.id)
+      .then(setMyApplications)
+      .catch(() => {})
+      .finally(() => setVacsLoading(false));
+  }, [user]);
 
   const filtered = activeFilter === "Всі"
     ? posts
@@ -356,6 +364,37 @@ const PersonalPage: FunctionComponent = () => {
               </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Мої відгуки на вакансії */}
+        <div className={styles.portfolioSection}>
+          <div className={styles.portfolioHeader}>
+            <h2 className={styles.portfolioTitle}>Мої відгуки</h2>
+          </div>
+          <div className={styles.applicationsList}>
+            {vacsLoading && <p style={{ color: "#aaa" }}>Завантаження...</p>}
+            {!vacsLoading && myApplications.length === 0 && <p style={{ color: "#777" }}>Ви ще не подавали відгуки на вакансії</p>}
+            {myApplications.map(app => (
+              <div
+                className={styles.applicationRow}
+                key={app.id}
+                onClick={() => navigate(`/vacancies/${app.vacancyId}`)}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className={styles.cardTitle2}>{app.teamName}</div>
+                  <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
+                    {app.role} · {timeAgo(app.createdAt)}
+                  </div>
+                </div>
+                <span
+                  className={styles.applicationStatus}
+                  data-status={applicationStatusKey(app.status)}
+                >
+                  {applicationStatusLabel(app.status)}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
         <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />

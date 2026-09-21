@@ -36,7 +36,7 @@ const NavigationNestedFour: FunctionComponent<NavigationNestedFourType> = ({
         <label className={styles.label} htmlFor="file-loco-0010-s2-1:126">
           <div className={styles.frameChild} />
           <div className={styles.pngJpgContainer}>
-            Оберіть файли або перетягніть сюди
+            Оберіть файли або перетягніть сюди
             <br />
             PNG, JPG · до 50 МБ
           </div>

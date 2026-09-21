@@ -25,10 +25,12 @@ public class CreateGroupInvitationCommandHandler
     {
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new DomainException($"Team '{request.TeamId}' not found.");
- 
+
         if (team.IsDeleted)
             throw new DomainException("Team is deleted.");
- 
+
+        team.EnsurePermission(request.InvitedByUserId, Domain.Entities.TeamPermission.InviteMembers);
+
         var alreadyMember = await _teamRepository.IsUserMemberAsync(
             request.TeamId, request.InvitedUserId, cancellationToken);
         if (alreadyMember)

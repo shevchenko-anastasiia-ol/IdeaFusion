@@ -46,7 +46,7 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq",
     .WithManagementPlugin()
     .WithDataVolume();
 
-var minio = builder.AddContainer("minio", "minio/minio")
+var minio = builder.AddContainer("minio", "quay.io/minio/minio")
     .WithArgs("server", "/data")
     .WithEndpoint(9000, 9000)
     .WithVolume("minio-data", "/data");

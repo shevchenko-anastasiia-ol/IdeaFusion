@@ -1,5 +1,5 @@
 import { FunctionComponent, useState } from "react";
-import { Box, Typography, Button } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import styles from "./PostColumn.module.css";
 import { useNavigate } from "react-router-dom";
 
@@ -275,7 +275,6 @@ const PostCard: FunctionComponent<{ post: Post }> = ({ post }) => {
 };
 
 const PostColumnFiltered: FunctionComponent<PostColumnFilteredType> = ({
-  className = "",
   query = "",
 }) => {
   const q = query.trim().toLowerCase();

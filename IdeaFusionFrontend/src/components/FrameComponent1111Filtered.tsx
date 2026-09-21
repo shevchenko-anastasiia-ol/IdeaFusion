@@ -124,7 +124,7 @@ const FrameComponent1111Filtered: FunctionComponent<FrameComponent1111FilteredTy
 
         <Box className={styles.teamDescriptions}>
           <Box className={styles.teamElements}>
-            {filtered.map((team, idx) => {
+            {filtered.map(team => {
               const isFirst = team.id === "bureaucrats";
               return isFirst ? (
                 <Box

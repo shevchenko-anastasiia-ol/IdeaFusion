@@ -41,6 +41,7 @@ public class TeamPostCommandHandlersTests
     public async Task CreatePost_WhenAllConditionsMet_CreatesAndReturnsPost()
     {
         var team = CreateTeam();
+        team.AddMember(new UserSnapshot("user-1", "alice"), "Member");
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
         _postRepoMock.Setup(r => r.ExistsByPostIdAsync("post-1", "team-1", _ct)).ReturnsAsync(false);
@@ -127,6 +128,7 @@ public class TeamPostCommandHandlersTests
     public async Task CreatePost_WhenPostAlreadyLinked_ThrowsDomainException()
     {
         var team = CreateTeam();
+        team.AddMember(new UserSnapshot("user-1", "alice"), "Member");
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
         _postRepoMock.Setup(r => r.ExistsByPostIdAsync("post-1", "team-1", _ct)).ReturnsAsync(true);
@@ -143,6 +145,27 @@ public class TeamPostCommandHandlersTests
                      .WithMessage("*already linked*");
     }
 
+    [Fact]
+    public async Task CreatePost_WhenMemberHasNoPublishPermission_ThrowsDomainException()
+    {
+        var team = CreateTeam();
+        team.AddMember(new UserSnapshot("user-1", "alice"), "Member");
+        team.Members.Single(m => m.UserId == "user-1").Permissions = [Domain.Entities.TeamPermission.EditPosts];
+        _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
+        _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
+
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        var command = new CreateTeamPostCommand
+        {
+            PostId = "post-1", TeamId = "team-1", AuthorUserId = "user-1",
+            AuthorUsername = "alice", Title = "Title"
+        };
+
+        await handler.Invoking(h => h.Handle(command, _ct))
+                     .Should().ThrowAsync<DomainException>()
+                     .WithMessage("*required permission*");
+    }
+
     // ── UpdateTeamPostTitleCommandHandler ─────────────────────────────────────
 
     [Fact]
@@ -150,9 +173,10 @@ public class TeamPostCommandHandlersTests
     {
         var post = CreateTeamPost();
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
+        _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
         _postRepoMock.Setup(r => r.UpdateAsync(post, _ct)).ReturnsAsync(post);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object);
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
             PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
@@ -170,7 +194,7 @@ public class TeamPostCommandHandlersTests
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct))
                      .ReturnsAsync((Domain.Entities.TeamPost?)null);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object);
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
             PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
@@ -187,7 +211,7 @@ public class TeamPostCommandHandlersTests
         var post = CreateTeamPost(teamId: "other-team");
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object);
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
             PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
@@ -205,7 +229,7 @@ public class TeamPostCommandHandlersTests
         post.MarkAsDeleted();
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object);
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
             PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
@@ -223,7 +247,7 @@ public class TeamPostCommandHandlersTests
     {
         var post = CreateTeamPost(authorId: "user-1");
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
-        _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(false);
+        _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
         _postRepoMock.Setup(r => r.UpdateAsync(post, _ct)).ReturnsAsync(post);
 
         var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
@@ -240,11 +264,14 @@ public class TeamPostCommandHandlersTests
     }
 
     [Fact]
-    public async Task DeletePost_WhenTeamMemberDeletes_ReturnsUnitAndMarksDeleted()
+    public async Task DeletePost_WhenMemberWithEditPermissionDeletes_ReturnsUnitAndMarksDeleted()
     {
         var post = CreateTeamPost(authorId: "author-id");
+        var team = CreateTeam();
+        team.AddMember(new UserSnapshot("member-id", "deleter"), "Moderator");
+        team.Members.Single(m => m.UserId == "member-id").Permissions = [Domain.Entities.TeamPermission.EditPosts];
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
-        _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "member-id", _ct)).ReturnsAsync(true);
+        _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _postRepoMock.Setup(r => r.UpdateAsync(post, _ct)).ReturnsAsync(post);
 
         var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
@@ -298,7 +325,7 @@ public class TeamPostCommandHandlersTests
     {
         var post = CreateTeamPost(authorId: "author-id");
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
-        _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "outsider", _ct)).ReturnsAsync(false);
+        _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
 
         var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
         var command = new DeleteTeamPostCommand
@@ -308,6 +335,6 @@ public class TeamPostCommandHandlersTests
 
         await handler.Invoking(h => h.Handle(command, _ct))
                      .Should().ThrowAsync<DomainException>()
-                     .WithMessage("*author or a team member*");
+                     .WithMessage("*edit permission*");
     }
 }

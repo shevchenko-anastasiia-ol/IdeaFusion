@@ -1,9 +1,14 @@
 using Collaboration.API;
 using Collaboration.API.Controllers;
+using Collaboration.API.Hubs;
 using Collaboration.API.Middleware;
 using Collaboration.API.Services;
 using Collaboration.Application.Behaviors;
+using Collaboration.Application.Commands.Team;
+using Collaboration.Application.Commands.Vacancy;
 using Collaboration.Application.Queries.CollaborationRequest;
+using Collaboration.Application.Queries.Vacancy;
+using Collaboration.Application.Validators;
 using Collaboration.Domain.Interfaces;
 using Collaboration.Infrastructure.Data;
 using Collaboration.Infrastructure.Indexes;
@@ -92,6 +97,9 @@ builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 builder.Services.AddScoped<ICollaborationRequestRepository, CollaborationRequestRepository>();
 builder.Services.AddScoped<IGroupInvitationRepository, GroupInvitationRepository>();
 builder.Services.AddScoped<ITeamPostRepository, TeamPostRepository>();
+builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+builder.Services.AddScoped<ITeamVacancyRepository, TeamVacancyRepository>();
+builder.Services.AddScoped<IVacancyApplicationRepository, VacancyApplicationRepository>();
 
 // --- Infrastructure ---
 builder.Services.AddSingleton<IIndexCreation, MongoIndexCreation>();
@@ -120,10 +128,24 @@ builder.Services.AddMediatR(cfg =>
 });
 
 // --- Validators ---
-builder.Services.AddValidatorsFromAssembly(typeof(BaseApiController).Assembly);
+
+builder.Services.AddScoped<IValidator<CreateTeamVacancyCommand>, CreateTeamVacancyCommandValidator>();
+builder.Services.AddScoped<IValidator<CloseTeamVacancyCommand>, CloseTeamVacancyCommandValidator>();
+builder.Services.AddScoped<IValidator<ApplyToVacancyCommand>, ApplyToVacancyCommandValidator>();
+builder.Services.AddScoped<IValidator<AcceptVacancyApplicationCommand>, AcceptVacancyApplicationCommandValidator>();
+builder.Services.AddScoped<IValidator<RejectVacancyApplicationCommand>, RejectVacancyApplicationCommandValidator>();
+builder.Services.AddScoped<IValidator<CancelVacancyApplicationCommand>, CancelVacancyApplicationCommandValidator>();
+builder.Services.AddScoped<IValidator<SearchVacanciesQuery>, SearchVacanciesQueryValidator>();
+builder.Services.AddScoped<IValidator<GetTeamVacanciesQuery>, GetTeamVacanciesQueryValidator>();
+builder.Services.AddScoped<IValidator<GetVacancyApplicationsQuery>, GetVacancyApplicationsQueryValidator>();
+builder.Services.AddScoped<IValidator<GetMyVacancyApplicationsQuery>, GetMyVacancyApplicationsQueryValidator>();
+builder.Services.AddScoped<IValidator<UpdateTeamMemberPermissionsCommand>, UpdateTeamMemberPermissionsCommandValidator>();
 
 // --- Memory Cache (для CachingBehavior) ---
 builder.Services.AddMemoryCache();
+
+// --- SignalR (чати команд) ---
+builder.Services.AddSignalR();
 
 // --- Controllers ---
 builder.Services.AddControllers()
@@ -195,6 +217,7 @@ app.MapHealthChecks("/health");
 app.MapControllers();
 app.MapGrpcService<CollaborationRequestGrpcServiceImpl>();
 app.MapGrpcServicesWithReflection();
+app.MapHub<ChatHub>("/hubs/chat");
 
 await app.RunAsync();
 

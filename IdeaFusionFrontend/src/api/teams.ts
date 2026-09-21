@@ -15,6 +15,7 @@ import type {
   SetTeamStatusCommand,
   TeamEntity,
   UpdateTeamCommand,
+  UpdateTeamMemberPermissionsCommand,
 } from './types';
 
 export const teamsApi = {
@@ -48,8 +49,11 @@ export const teamsApi = {
   setAvatarUrl: (id: string, cmd: SetTeamAvatarUrlCommand) =>
     api.patch<TeamEntity>(`/api/team/${id}/avatar-url`, cmd),
 
-  deleteTeam: (id: string) =>
-    api.delete<void>(`/api/team/${id}`),
+  setMemberPermissions: (id: string, cmd: UpdateTeamMemberPermissionsCommand) =>
+    api.patch<TeamEntity>(`/api/team/${id}/members/${cmd.targetMemberId}/permissions`, cmd),
+
+  deleteTeam: (id: string, requestedByUserId: string) =>
+    api.delete<void>(`/api/team/${id}?requestedByUserId=${encodeURIComponent(requestedByUserId)}`),
 };
 
 export const collaborationRequestsApi = {

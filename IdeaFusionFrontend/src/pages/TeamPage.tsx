@@ -25,7 +25,7 @@ const TeamPage: FunctionComponent = () => {
         }
       })
       .catch(() => navigate("/team/new", { replace: true }));
-  }, [user, authLoading]);
+  }, [user, authLoading, navigate]);
 
   return (
     <div className={styles.page}>

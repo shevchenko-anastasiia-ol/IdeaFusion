@@ -6,15 +6,18 @@ export type GroupComponent11Type = {
   className?: string;
   onTypeChange?: (type: string) => void;
   onCategoryChange?: (category: string) => void;
+  onVacanciesChange?: (onlyWithVacancies: boolean) => void;
 };
 
 const GroupComponent11: FunctionComponent<GroupComponent11Type> = ({
   className = "",
   onTypeChange,
   onCategoryChange,
+  onVacanciesChange,
 }) => {
   const [activeType, setActiveType] = useState("Всі");
   const [activeCategory, setActiveCategory] = useState("Всі");
+  const [onlyVacancies, setOnlyVacancies] = useState(false);
 
   const types = ["Всі", "Пости", "Користувачі", "Команди"];
   const categories = ["Всі", "Дизайн", "Музика", "Фото", "Анімація", "Арт", "Gamedev", "3D", "UI/UX"];
@@ -27,6 +30,11 @@ const GroupComponent11: FunctionComponent<GroupComponent11Type> = ({
   const handleCategory = (c: string) => {
     setActiveCategory(c);
     onCategoryChange?.(c);
+  };
+
+  const handleVacancies = (v: boolean) => {
+    setOnlyVacancies(v);
+    onVacanciesChange?.(v);
   };
 
   const activeStyle: React.CSSProperties = {
@@ -64,6 +72,18 @@ const GroupComponent11: FunctionComponent<GroupComponent11Type> = ({
             {c}
           </button>
         ))}
+      </Box>
+
+      <Box className={styles.categorySeparator}>
+        <Box className={styles.refinementCategory} />
+      </Box>
+
+      {/* Вакансії */}
+      <Box className={styles.genreCategory}>
+        <button key="vac" style={onlyVacancies ? activeStyle : inactiveStyle}
+          onClick={() => handleVacancies(!onlyVacancies)}>
+          Тільки з вакансіями
+        </button>
       </Box>
     </section>
   );

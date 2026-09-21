@@ -30,6 +30,8 @@ public class CreateTeamPostCommandHandler : ICommandHandler<CreateTeamPostComman
         var isMember = await _teamRepository.IsUserMemberAsync(request.TeamId, request.AuthorUserId, cancellationToken);
         if (!isMember)
             throw new DomainException("Only team members can publish posts on behalf of the team.");
+
+        team.EnsurePermission(request.AuthorUserId, Domain.Entities.TeamPermission.PublishPosts);
  
         var alreadyExists = await _teamPostRepository.ExistsByPostIdAsync(request.PostId, request.TeamId, cancellationToken);
         if (alreadyExists)
@@ -46,23 +48,33 @@ public class CreateTeamPostCommandHandler : ICommandHandler<CreateTeamPostComman
 public class UpdateTeamPostTitleCommandHandler : ICommandHandler<UpdateTeamPostTitleCommand, Domain.Entities.TeamPost>
 {
     private readonly ITeamPostRepository _teamPostRepository;
- 
-    public UpdateTeamPostTitleCommandHandler(ITeamPostRepository teamPostRepository)
+    private readonly ITeamRepository _teamRepository;
+
+    public UpdateTeamPostTitleCommandHandler(
+        ITeamPostRepository teamPostRepository,
+        ITeamRepository teamRepository)
     {
         _teamPostRepository = teamPostRepository;
+        _teamRepository = teamRepository;
     }
- 
+
     public async Task<Domain.Entities.TeamPost> Handle(UpdateTeamPostTitleCommand request, CancellationToken cancellationToken)
     {
         var teamPost = await _teamPostRepository.GetByPostIdAsync(request.PostId, cancellationToken)
-            ?? throw new DomainException($"TeamPost with PostId '{request.PostId}' not found.");
- 
+?? throw new DomainException($"TeamPost with PostId '{request.PostId}' not found.");
+  
         if (teamPost.TeamId != request.TeamId)
             throw new DomainException("Post does not belong to this team.");
- 
+
         if (teamPost.IsDeleted)
             throw new DomainException("TeamPost is deleted.");
- 
+
+        var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
+            ?? throw new DomainException($"Team '{request.TeamId}' not found.");
+
+        if (teamPost.Author.UserId != request.UserId)
+            team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.EditPosts);
+
         teamPost.UpdateTitle(request.Title, request.UserId);
         await _teamPostRepository.UpdateAsync(teamPost, cancellationToken);
         return teamPost;
@@ -87,13 +99,16 @@ public class DeleteTeamPostCommandHandler : ICommandHandler<DeleteTeamPostComman
         var teamPost = await _teamPostRepository.GetByPostIdAsync(request.PostId, cancellationToken)
             ?? throw new DomainException($"TeamPost with PostId '{request.PostId}' not found.");
  
-        if (teamPost.TeamId != request.TeamId)
+if (teamPost.TeamId != request.TeamId)
             throw new DomainException("Post does not belong to this team.");
- 
-        var isMember = await _teamRepository.IsUserMemberAsync(request.TeamId, request.UserId, cancellationToken);
-        if (!isMember && teamPost.Author.UserId != request.UserId)
-            throw new DomainException("Only the author or a team member can delete this post.");
- 
+
+        var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
+            ?? throw new DomainException($"Team '{request.TeamId}' not found.");
+
+        var isAuthor = teamPost.Author.UserId == request.UserId;
+        if (!isAuthor && !team.HasPermission(request.UserId, Domain.Entities.TeamPermission.EditPosts))
+            throw new DomainException("Only the post author or a member with edit permission can delete this post.");
+
         teamPost.MarkAsDeleted();
         await _teamPostRepository.UpdateAsync(teamPost, cancellationToken);
         return Unit.Value;

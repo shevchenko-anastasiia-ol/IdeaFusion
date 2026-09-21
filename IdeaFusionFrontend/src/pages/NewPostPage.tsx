@@ -5,6 +5,7 @@ import Moderation from "../components/Moderation";
 import { teamsApi } from "../api/teams";
 import { tagsApi } from "../api/posts";
 import type { TeamEntity, TagDto } from "../api/types";
+import { hasPermission } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import styles from "./NewPostPage.module.css";
 
@@ -66,7 +67,9 @@ const NewPostPage: FunctionComponent = () => {
 
   useEffect(() => {
     if (!user) return;
-    teamsApi.getByMember(user.id).then(setMyTeams).catch(() => {});
+    teamsApi.getByMember(user.id)
+      .then((teams) => setMyTeams(teams.filter((t) => hasPermission(t, user.id, "canPublishPosts"))))
+      .catch(() => {});
   }, [user]);
 
   useEffect(() => {
@@ -171,8 +174,8 @@ const NewPostPage: FunctionComponent = () => {
       }
 
       navigate(-1);
-    } catch (ex: any) {
-      setError(ex.message ?? 'Помилка збереження');
+    } catch (ex) {
+      setError(ex instanceof Error ? ex.message : 'Помилка збереження');
     } finally {
       setSubmitting(false);
     }

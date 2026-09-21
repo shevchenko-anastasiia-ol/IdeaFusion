@@ -5,7 +5,7 @@ import Moderation from "../components/Moderation";
 import { teamsApi, groupInvitationsApi } from "../api/teams";
 import { useAuth } from "../context/AuthContext";
 import type { TeamEntity, UserDto } from "../api/types";
-import { teamStatusLabel } from "../api/types";
+import { teamStatusLabel, hasPermission } from "../api/types";
 import { api } from "../api/client";
 import styles from "./InviteToTeamPage.module.css";
 
@@ -41,13 +41,13 @@ const InviteToTeamPage: FunctionComponent = () => {
       teamsApi.getByMember(user.id),
     ]).then(([inv, teams]) => {
       setInvitee(inv);
-      const owned = (teams as TeamEntity[]).filter(t =>
-        t.members.some(m => m.user.userId === user.id && m.role === "Owner")
+      const allowed = (teams as TeamEntity[]).filter(t =>
+        hasPermission(t, user.id, "canInviteMembers")
       );
-      setMyTeams(owned);
-      if (!selectedTeamId && owned.length > 0) setSelectedTeamId(owned[0].id);
+      setMyTeams(allowed);
+      if (!selectedTeamId && allowed.length > 0) setSelectedTeamId(allowed[0].id);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [user, inviteeId]);
+  }, [user, inviteeId, selectedTeamId]);
 
   const selectedTeam = myTeams.find(t => t.id === selectedTeamId) ?? null;
 

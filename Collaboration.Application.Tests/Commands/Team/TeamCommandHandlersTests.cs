@@ -383,4 +383,96 @@ public class TeamCommandHandlersTests
                      .Should().ThrowAsync<DomainException>()
                      .WithMessage("*deleted*");
     }
+
+    // ── UpdateTeamMemberPermissionsCommandHandler ─────────────────────────────
+
+    [Fact]
+    public async Task SetPermissions_WhenOwner_SetsPermissionsAndReturnsTeam()
+    {
+        var team = CreateTeam();
+        team.AddMember(new UserSnapshot("member-id", "member-username"), "Developer");
+        _repoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
+        _repoMock.Setup(r => r.UpdateAsync(team, _ct)).ReturnsAsync(team);
+
+        var handler = new UpdateTeamMemberPermissionsCommandHandler(_repoMock.Object);
+        var command = new UpdateTeamMemberPermissionsCommand
+        {
+            TeamId = "team-1",
+            TargetMemberId = "member-id",
+            Permissions = [TeamPermission.EditPosts, TeamPermission.InviteMembers],
+            UserId = "owner-id"
+        };
+
+        var result = await handler.Handle(command, _ct);
+
+        var member = result.Members.Single(m => m.UserId == "member-id");
+        member.Permissions.Should().Contain(TeamPermission.EditPosts);
+        member.Permissions.Should().Contain(TeamPermission.InviteMembers);
+        _repoMock.Verify(r => r.UpdateAsync(team, _ct), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetPermissions_WhenNotOwner_ThrowsDomainException()
+    {
+        var team = CreateTeam();
+        team.AddMember(new UserSnapshot("member-id", "member-username"), "Developer");
+        _repoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
+
+        var handler = new UpdateTeamMemberPermissionsCommandHandler(_repoMock.Object);
+        var command = new UpdateTeamMemberPermissionsCommand
+        {
+            TeamId = "team-1",
+            TargetMemberId = "member-id",
+            Permissions = [TeamPermission.EditPosts],
+            UserId = "member-id"
+        };
+
+        await handler.Invoking(h => h.Handle(command, _ct))
+                     .Should().ThrowAsync<DomainException>()
+                     .WithMessage("*team leader*");
+    }
+
+    [Fact]
+    public async Task SetPermissions_WhenTargetIsOwner_ThrowsDomainException()
+    {
+        var team = CreateTeam();
+        _repoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
+
+        var handler = new UpdateTeamMemberPermissionsCommandHandler(_repoMock.Object);
+        var command = new UpdateTeamMemberPermissionsCommand
+        {
+            TeamId = "team-1",
+            TargetMemberId = "owner-id",
+            Permissions = [TeamPermission.EditPosts],
+            UserId = "owner-id"
+        };
+
+        await handler.Invoking(h => h.Handle(command, _ct))
+                     .Should().ThrowAsync<DomainException>()
+                     .WithMessage("*team leader*");
+    }
+
+    [Fact]
+    public async Task UpdateTeam_WhenMemberHasNoEditTeamPermission_ThrowsDomainException()
+    {
+        var team = CreateTeam();
+        team.AddMember(new UserSnapshot("member-id", "member-username"), "Developer");
+        _repoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
+        _repoMock.Setup(r => r.ExistsByNameAsync("Updated Name", "team-1", _ct)).ReturnsAsync(false);
+
+        var handler = new UpdateTeamCommandHandler(_repoMock.Object);
+        var command = new UpdateTeamCommand
+        {
+            TeamId = "team-1",
+            Name = "Updated Name",
+            Description = "New desc",
+            Category = "Art",
+            Tags = ["art"],
+            UserId = "member-id"
+        };
+
+        await handler.Invoking(h => h.Handle(command, _ct))
+                     .Should().ThrowAsync<DomainException>()
+                     .WithMessage("*required permission*");
+    }
 }

@@ -43,13 +43,15 @@ public class UpdateTeamCommandHandler : ICommandHandler<UpdateTeamCommand, Domai
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new DomainException($"Team '{request.TeamId}' not found.");
  
-        if (team.IsDeleted)
+if (team.IsDeleted)
             throw new DomainException("Team is deleted.");
- 
+
         var nameExists = await _teamRepository.ExistsByNameAsync(request.Name, request.TeamId, cancellationToken);
         if (nameExists)
             throw new DomainException($"Team with name '{request.Name}' already exists.");
- 
+
+        team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.EditTeam);
+
         team.Update(request.Name, request.Description, request.Category, request.Tags, request.UserId);
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return team;
@@ -63,13 +65,15 @@ public class DeleteTeamCommandHandler : ICommandHandler<DeleteTeamCommand>
     public DeleteTeamCommandHandler(ITeamRepository teamRepository)
     {
         _teamRepository = teamRepository;
-    }
- 
+}
+
     public async Task<Unit> Handle(DeleteTeamCommand request, CancellationToken cancellationToken)
     {
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new DomainException($"Team '{request.TeamId}' not found.");
- 
+
+        team.EnsureLeader(request.UserId);
+
         team.MarkAsDeleted();
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return Unit.Value;
@@ -89,10 +93,12 @@ public class SetTeamStatusCommandHandler : ICommandHandler<SetTeamStatusCommand,
     {
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new DomainException($"Team '{request.TeamId}' not found.");
- 
+
         if (team.IsDeleted)
             throw new DomainException("Team is deleted.");
- 
+
+        team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.EditTeam);
+
         team.SetStatus(request.Status, request.UserId);
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return team;
@@ -117,6 +123,7 @@ public class AddTeamMemberCommandHandler : ICommandHandler<AddTeamMemberCommand,
             throw new DomainException("Team is deleted.");
  
         var userSnapshot = new UserSnapshot(request.UserId, request.Username, request.AvatarUrl);
+        team.EnsurePermission(request.RequestedByUserId, Domain.Entities.TeamPermission.RemoveMembers);
         team.AddMember(userSnapshot, request.Role);
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return team;
@@ -136,10 +143,12 @@ public class RemoveTeamMemberCommandHandler : ICommandHandler<RemoveTeamMemberCo
     {
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new DomainException($"Team '{request.TeamId}' not found.");
- 
+
         if (team.IsDeleted)
             throw new DomainException("Team is deleted.");
- 
+
+        team.EnsurePermission(request.RequestedByUserId, Domain.Entities.TeamPermission.RemoveMembers);
+
         team.RemoveMember(request.UserId, request.RequestedByUserId);
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return team;
@@ -159,10 +168,12 @@ public class AddRequiredRoleCommandHandler : ICommandHandler<AddRequiredRoleComm
     {
         var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
             ?? throw new DomainException($"Team '{request.TeamId}' not found.");
- 
+
         if (team.IsDeleted)
             throw new DomainException("Team is deleted.");
- 
+
+        team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.EditTeam);
+
         team.AddRequiredRole(request.Role, request.Description, request.UserId);
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return team;
@@ -186,7 +197,34 @@ public class SetTeamAvatarUrlCommandHandler : ICommandHandler<SetTeamAvatarUrlCo
         if (team.IsDeleted)
             throw new DomainException("Team is deleted.");
 
+        team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.EditTeam);
+
         team.SetAvatarUrl(request.AvatarUrl, request.UserId);
+        await _teamRepository.UpdateAsync(team, cancellationToken);
+        return team;
+    }
+}
+
+public class UpdateTeamMemberPermissionsCommandHandler
+    : ICommandHandler<UpdateTeamMemberPermissionsCommand, Domain.Entities.Team>
+{
+    private readonly ITeamRepository _teamRepository;
+
+    public UpdateTeamMemberPermissionsCommandHandler(ITeamRepository teamRepository)
+    {
+        _teamRepository = teamRepository;
+    }
+
+    public async Task<Domain.Entities.Team> Handle(
+        UpdateTeamMemberPermissionsCommand request, CancellationToken cancellationToken)
+    {
+        var team = await _teamRepository.GetByIdAsync(request.TeamId, cancellationToken)
+            ?? throw new DomainException($"Team '{request.TeamId}' not found.");
+
+        if (team.IsDeleted)
+            throw new DomainException("Team is deleted.");
+
+        team.SetMemberPermissions(request.TargetMemberId, request.Permissions, request.UserId);
         await _teamRepository.UpdateAsync(team, cancellationToken);
         return team;
     }

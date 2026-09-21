@@ -1,6 +1,5 @@
 import { FunctionComponent, useState } from "react";
 import { Box, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import styles from "./FrameComponent111.module.css";
 
 export type FrameComponent111Type = {
@@ -14,7 +13,6 @@ const FrameComponent111: FunctionComponent<FrameComponent111Type> = ({
   activeFilter: externalFilter,
   onFilterChange,
 }) => {
-  const navigate = useNavigate();
   const [internalFilter, setInternalFilter] = useState("Всі");
 
   const active = externalFilter ?? internalFilter;

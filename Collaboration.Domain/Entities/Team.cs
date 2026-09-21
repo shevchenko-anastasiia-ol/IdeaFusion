@@ -12,6 +12,15 @@ public enum TeamStatus
     Completed
 }
 
+public static class TeamPermission
+{
+    public const string PublishPosts = "canPublishPosts";
+    public const string EditPosts = "canEditPosts";
+    public const string InviteMembers = "canInviteMembers";
+    public const string RemoveMembers = "canRemoveMembers";
+    public const string EditTeam = "canEditTeam";
+}
+
 public class TeamMember
 {
     [BsonElement("user")]
@@ -23,6 +32,9 @@ public class TeamMember
     [BsonElement("joinedAt")]
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonElement("permissions")]
+    public List<string> Permissions { get; set; } = [];
  
     // Зручний accessor щоб не ламати запити по UserId
     [BsonIgnore]
@@ -66,6 +78,9 @@ public class Team : BaseEntity
     [BsonElement("avatarUrl")]
     [BsonIgnoreIfNull]
     public string? AvatarUrl { get; private set; }
+
+    [BsonElement("openVacancyCount")]
+    public int OpenVacancyCount { get; private set; }
 
     [BsonConstructor]
     private Team() { }
@@ -129,8 +144,68 @@ public class Team : BaseEntity
     {
         var member = Members.FirstOrDefault(m => m.UserId == userId)
             ?? throw new DomainException("Member not found in this team.");
+        if (member.Role == "Owner")
+            throw new DomainException("The team leader cannot be removed.");
         Members.Remove(member);
         MarkAsUpdated(requestedByUserId);
+    }
+
+    public bool HasPermission(string userId, string permission)
+    {
+        var member = Members.FirstOrDefault(m => m.UserId == userId);
+        if (member is null)
+            return false;
+
+        if (member.Role == "Owner")
+            return true;
+
+        if (member.Permissions is null || member.Permissions.Count == 0)
+            return permission == TeamPermission.PublishPosts;
+
+        return member.Permissions.Contains(permission);
+    }
+
+    public void EnsurePermission(string userId, string permission)
+    {
+        if (!HasPermission(userId, permission))
+            throw new DomainException($"You don't have the required permission '{permission}' for this team.");
+    }
+
+    public void EnsureLeader(string userId)
+    {
+        if (!Members.Any(m => m.UserId == userId && m.Role == "Owner"))
+            throw new DomainException("Only the team leader can do this.");
+    }
+
+    public void SetMemberPermissions(string targetMemberId, List<string>? permissions, string actingUserId)
+    {
+        var actor = Members.FirstOrDefault(m => m.UserId == actingUserId)
+            ?? throw new DomainException("You are not a member of this team.");
+
+        if (actor.Role != "Owner")
+            throw new DomainException("Only the team leader can manage member permissions.");
+
+        var member = Members.FirstOrDefault(m => m.UserId == targetMemberId)
+            ?? throw new DomainException("Member not found in this team.");
+
+        if (member.Role == "Owner")
+            throw new DomainException("Cannot change permissions of the team leader.");
+
+        var known = new[]
+        {
+            TeamPermission.PublishPosts, TeamPermission.EditPosts, TeamPermission.InviteMembers,
+            TeamPermission.RemoveMembers, TeamPermission.EditTeam
+        };
+
+        var cleaned = (permissions ?? [])
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => p.Trim())
+            .Where(known.Contains)
+            .Distinct()
+            .ToList();
+
+        member.Permissions = cleaned;
+        MarkAsUpdated(actingUserId);
     }
  
     public void UpdateMemberSnapshot(UserSnapshot updatedUser)
@@ -156,5 +231,20 @@ public class Team : BaseEntity
         SetCategory(category);
         Tags = tags ?? [];
         MarkAsUpdated(userId);
+    }
+
+    public void IncrementOpenVacancyCount(string userId)
+    {
+        OpenVacancyCount++;
+        MarkAsUpdated(userId);
+    }
+
+    public void DecrementOpenVacancyCount(string userId)
+    {
+        if (OpenVacancyCount > 0)
+        {
+            OpenVacancyCount--;
+            MarkAsUpdated(userId);
+        }
     }
 }

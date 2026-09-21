@@ -28,13 +28,6 @@ function getMediaType(url: string): 'image' | 'video' | 'audio' | 'pdf' {
   if (ext === 'pdf') return 'pdf';
   return 'image';
 }
-function cardMedia(urls: string[], fallbackBg: string) {
-  const img = urls.find(u => getMediaType(u) === 'image');
-  if (img) return { style: { backgroundImage: `url("${img}")`, backgroundSize: 'cover', backgroundPosition: 'center' }, icon: null };
-  const t = urls[0] ? getMediaType(urls[0]) : null;
-  return { style: { backgroundColor: fallbackBg, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-           icon: t === 'video' ? '🎬' : t === 'audio' ? '🎵' : t === 'pdf' ? '📄' : null };
-}
 
 const FILTERS = ["Всі", "Дизайн", "Музика", "Арт", "Анімація"];
 const TAG_MAP: Record<string, string[]> = {

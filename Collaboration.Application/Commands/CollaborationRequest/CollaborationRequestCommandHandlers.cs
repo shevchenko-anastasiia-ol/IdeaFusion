@@ -90,6 +90,8 @@ public class AcceptCollaborationRequestCommandHandler
 
         var userSnapshot = new UserSnapshot(collaborationRequest.FromUserId, username, avatarUrl);
 
+        team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.RemoveMembers);
+
         if (!team.Members.Any(m => m.UserId == collaborationRequest.FromUserId))
             team.AddMember(userSnapshot, collaborationRequest.Role);
 
@@ -107,18 +109,27 @@ public class RejectCollaborationRequestCommandHandler
     : ICommandHandler<RejectCollaborationRequestCommand, Domain.Entities.CollaborationRequest>
 {
     private readonly ICollaborationRequestRepository _requestRepository;
- 
-    public RejectCollaborationRequestCommandHandler(ICollaborationRequestRepository requestRepository)
+    private readonly ITeamRepository _teamRepository;
+
+    public RejectCollaborationRequestCommandHandler(
+        ICollaborationRequestRepository requestRepository,
+        ITeamRepository teamRepository)
     {
         _requestRepository = requestRepository;
+        _teamRepository = teamRepository;
     }
- 
+
     public async Task<Domain.Entities.CollaborationRequest> Handle(
         RejectCollaborationRequestCommand request, CancellationToken cancellationToken)
     {
         var collaborationRequest = await _requestRepository.GetByIdAsync(request.RequestId, cancellationToken)
             ?? throw new DomainException($"Collaboration request '{request.RequestId}' not found.");
- 
+
+        var team = await _teamRepository.GetByIdAsync(collaborationRequest.TeamId, cancellationToken)
+            ?? throw new DomainException($"Team '{collaborationRequest.TeamId}' not found.");
+
+        team.EnsurePermission(request.UserId, Domain.Entities.TeamPermission.RemoveMembers);
+
         collaborationRequest.Reject(request.UserId);
         await _requestRepository.UpdateAsync(collaborationRequest, cancellationToken);
         return collaborationRequest;

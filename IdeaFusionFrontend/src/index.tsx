@@ -10,6 +10,7 @@ import {
   StyledEngineProvider,
 } from "@mui/material";
 import { AuthProvider } from "./context/AuthContext";
+import { ChatProvider } from "./context/ChatContext";
 
 import "./global.css";
 
@@ -24,7 +25,9 @@ root.render(
       <ThemeProvider theme={muiTheme}>
         <CssBaseline />
         <AuthProvider>
-          <App />
+          <ChatProvider>
+            <App />
+          </ChatProvider>
         </AuthProvider>
       </ThemeProvider>
     </StyledEngineProvider>

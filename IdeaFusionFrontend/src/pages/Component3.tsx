@@ -5,10 +5,10 @@ import Moderation from "../components/Moderation";
 import styles from "./Component3.module.css";
 import { useAuth } from "../context/AuthContext";
 import { teamsApi, groupInvitationsApi } from "../api/teams";
-import type { TeamEntity, GroupInvitationEntity } from "../api/types";
+import type { TeamEntity, GroupInvitationEntity, PagedResult } from "../api/types";
 import { teamStatusLabel, invitationStatusKey, timeAgo } from "../api/types";
 
-export type Component3Type = {};
+export type Component3Type = Record<string, never>;
 
 const ACCENT_PALETTE = ["#7c5cfc","#00C9A7","#e05555","#ffb347","#29b6f6"];
 function accentFor(name: string): string {
@@ -126,7 +126,7 @@ const Component3: FunctionComponent<Component3Type> = () => {
     if (!user) { setLoading(false); return; }
     Promise.all([
       teamsApi.getByMember(user.id),
-      teamsApi.getPaged(1, 100).then((r: any) => Array.isArray(r) ? r : (r.items ?? [])),
+      teamsApi.getPaged(1, 100).then((r: PagedResult<TeamEntity>) => Array.isArray(r) ? r : (r.items ?? [])),
       groupInvitationsApi.getByUser(user.id),
     ]).then(([my, all, inv]) => {
       setMyTeams(my as TeamEntity[]);

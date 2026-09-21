@@ -46,7 +46,7 @@ const CommentThread: FunctionComponent<{
       await commentsApi.update(comment.commentId, editBody.trim(), user.id);
       setEditing(false);
       onRefresh();
-    } catch {}
+    } catch { /* помилку редагування ігноруємо */ }
     setBusy(false);
   }
 
@@ -71,7 +71,7 @@ const CommentThread: FunctionComponent<{
       setReplyBody('');
       setReplying(false);
       onRefresh();
-    } catch {}
+    } catch { /* помилку відповіді ігноруємо */ }
     setBusy(false);
   }
 
@@ -118,7 +118,7 @@ const CommentThread: FunctionComponent<{
                     title="Видалити"
                     onClick={async () => {
                       setBusy(true);
-                      try { await commentsApi.delete(comment.commentId); onRefresh(); } catch {}
+                      try { await commentsApi.delete(comment.commentId); onRefresh(); } catch { /* помилку видалення ігноруємо */ }
                       setBusy(false);
                     }}
                   >
@@ -320,7 +320,7 @@ const PostDetailPage: FunctionComponent = () => {
     try {
       const refreshed = await aggregatorApi.getPostFull(Number(id));
       setData(refreshed);
-    } catch {}
+    } catch { /* помилку оновлення ігноруємо */ }
   }
 
   const [commentError, setCommentError] = useState<string | null>(null);
@@ -349,8 +349,8 @@ const PostDetailPage: FunctionComponent = () => {
       });
       setBody('');
       await refreshComments();
-    } catch (e: any) {
-      setCommentError(e?.message ?? 'Помилка надсилання коментаря');
+    } catch (e) {
+      setCommentError(e instanceof Error ? e.message : 'Помилка надсилання коментаря');
     }
     setSending(false);
   }
@@ -369,7 +369,7 @@ const PostDetailPage: FunctionComponent = () => {
     </div>
   );
 
-  const { post, comments, commentsCount, viewsCount } = data;
+  const { post, comments, commentsCount } = data;
   const authorName = post.collaboration?.name ?? post.author?.userName ?? "Невідомий";
   const isAuthor = !!user && !!post.author && post.author.userName === (user.userName ?? user.email.split('@')[0]);
   const isAdmin  = user?.roles?.includes('Admin');
@@ -431,7 +431,7 @@ const PostDetailPage: FunctionComponent = () => {
                     try {
                       await api.delete(`/api/post/${post.postId}`);
                       navigate('/home');
-                    } catch (ex: any) { alert(ex.message ?? 'Помилка видалення'); }
+                    } catch (ex) { alert(ex instanceof Error ? ex.message : 'Помилка видалення'); }
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

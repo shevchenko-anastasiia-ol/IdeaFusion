@@ -443,6 +443,54 @@
   transition: color 0.2s;
 }
 .removeBtn:hover { color: #e05555; }
+.memberItem {
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.memberItem:hover { background-color: #252525; }
+.accessBtn {
+  background: none;
+  border: 1px solid #7c5cfc;
+  color: #a48fff;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.accessBtn:hover { background: rgba(124, 92, 252, 0.2); }
+.permsPanel {
+  margin: 4px 8px 8px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #232323;
+  border: 1px solid #2f2f2f;
+}
+.permsTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a9a9a;
+  margin-bottom: 8px;
+}
+.permsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.permCheck {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+}
+.permCheck input {
+  accent-color: #7c5cfc;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
 
 /* ── Required roles ── */
 .rolesList {
@@ -475,6 +523,45 @@
   align-items: center;
 }
 .addRoleRow .input { flex: 1; }
+
+.vacCount {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #666;
+}
+.vacancyItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.vacancyRole {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ccc;
+}
+.vacancySub {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+.vacancyStatus {
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: 30px;
+  white-space: nowrap;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid #2a2a2a;
+  color: #555;
+}
+.vacancyStatus[data-open="true"] {
+  background-color: rgba(0, 201, 167, 0.12);
+  border: 1px solid #00c9a7;
+  color: #00c9a7;
+}
 
 /* ── Portfolio (owner view) ── */
 .portfolioSection {

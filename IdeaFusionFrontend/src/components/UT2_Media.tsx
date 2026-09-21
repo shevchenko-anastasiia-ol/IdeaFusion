@@ -27,7 +27,7 @@ const Media: FunctionComponent<MediaType> = ({ className = "" }) => {
         <label className={styles.label} htmlFor="file-loco-0014-s2-1:347">
           <div className={styles.fileUploadChild} />
           <div className={styles.pngJpgMp4}>
-            Оберіть файли або перетягніть сюди
+            Оберіть файли або перетягніть сюди
             <br />
             PNG, JPG, MP4, MP3, PDF · до 50 МБ
           </div>

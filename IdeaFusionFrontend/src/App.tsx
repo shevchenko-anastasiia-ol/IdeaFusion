@@ -34,6 +34,10 @@ import TeamPublicPage from "./pages/TeamPublicPage";
 import MyInvitationsPage from "./pages/MyInvitationsPage";
 import AllTeamsPage from "./pages/AllTeamsPage";
 
+// Team vacancies
+import VacanciesPage from "./pages/VacanciesPage";
+import VacancyDetailPage from "./pages/VacancyDetailPage";
+
 // Post pages
 import NewPostPage from "./pages/NewPostPage";
 import EditPostPage from "./pages/EditPostPage";
@@ -43,6 +47,9 @@ import AllPostsPage from "./pages/AllPostsPage";
 
 // Auth
 import LoginPage from "./pages/LoginPage";
+
+// Chat
+import ChatWidget from "./components/ChatWidget";
 
 function App() {
   const action = useNavigationType();
@@ -78,9 +85,10 @@ function App() {
   }, [pathname]);
 
   return (
-    <Routes>
-      {/* Auth */}
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <Routes>
+        {/* Auth */}
+        <Route path="/login" element={<LoginPage />} />
 
       {/* Main navigation */}
       <Route path="/" element={<Navigate to="/home" replace />} />
@@ -109,12 +117,18 @@ function App() {
       <Route path="/teams" element={<AllTeamsPage />} />
       <Route path="/teams/:id" element={<TeamDetailPage />} />
 
+      {/* Team vacancies */}
+      <Route path="/vacancies" element={<VacanciesPage />} />
+      <Route path="/vacancies/:id" element={<VacancyDetailPage />} />
+
       {/* Posts */}
       <Route path="/posts/new" element={<NewPostPage />} />
       <Route path="/posts/edit" element={<EditPostPage />} />
       <Route path="/posts/:id" element={<PostDetailPage />} />
       <Route path="/posts"  element={<AllPostsPage />} />
-    </Routes>
+      </Routes>
+      <ChatWidget />
+    </>
   );
 }
 

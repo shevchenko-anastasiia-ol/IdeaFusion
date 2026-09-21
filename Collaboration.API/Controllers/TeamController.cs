@@ -150,11 +150,11 @@ public class TeamController : BaseApiController
  
     // DELETE: api/team/{id}
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(string id, [FromQuery] string requestedByUserId, CancellationToken cancellationToken)
     {
         try
         {
-            await _mediator.Send(new DeleteTeamCommand { TeamId = id, UserId = string.Empty }, cancellationToken);
+            await _mediator.Send(new DeleteTeamCommand { TeamId = id, UserId = requestedByUserId }, cancellationToken);
             return NoContent();
         }
         catch (Exception ex) { return HandleException(ex); }
@@ -214,6 +214,21 @@ public class TeamController : BaseApiController
         try
         {
             if (command.TeamId != id)
+                return BadRequest(new { message = "ID mismatch." });
+
+            var team = await _mediator.Send(command, cancellationToken);
+            return Ok(team);
+        }
+        catch (Exception ex) { return HandleException(ex); }
+    }
+
+    // PATCH: api/team/{id}/members/{memberId}/permissions
+    [HttpPatch("{id}/members/{memberId}/permissions")]
+    public async Task<IActionResult> SetMemberPermissions(string id, string memberId, [FromBody] UpdateTeamMemberPermissionsCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (command.TeamId != id || command.TargetMemberId != memberId)
                 return BadRequest(new { message = "ID mismatch." });
 
             var team = await _mediator.Send(command, cancellationToken);

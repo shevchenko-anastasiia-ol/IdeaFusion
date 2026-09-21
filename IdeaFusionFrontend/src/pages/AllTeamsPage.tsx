@@ -57,8 +57,8 @@ const TeamCard: FunctionComponent<{ team: TeamEntity; isAdmin?: boolean; onDelet
         role: openRole ?? 'Учасник',
       });
       setApplied(true);
-    } catch (ex: any) {
-      setErr(ex.message);
+    } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : String(ex));
     } finally {
       setApplying(false);
     }
@@ -145,7 +145,7 @@ const AllTeamsPage: FunctionComponent = () => {
 
   useEffect(() => {
     teamsApi.getPaged(1, 50)
-      .then(res => setTeams(res.items ?? (res as any)))
+      .then(res => setTeams(res.items ?? (res as unknown as TeamEntity[])))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -155,10 +155,10 @@ const AllTeamsPage: FunctionComponent = () => {
   async function handleDeleteTeam(id: string) {
     if (!confirm('Видалити цю команду назавжди?')) return;
     try {
-      await teamsApi.deleteTeam(id);
+      await teamsApi.deleteTeam(id, me?.id ?? '');
       setTeams(prev => prev.filter(t => t.id !== id));
-    } catch (e: any) {
-      alert(e.message ?? 'Помилка видалення');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Помилка видалення');
     }
   }
 

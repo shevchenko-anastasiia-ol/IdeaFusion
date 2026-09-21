@@ -1,51 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="6967ff9a-7e5e-48e4-b97a-7b6332c6677c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/AggregatorService/HealthChecks/CollaborationServiceHealthCheck.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AggregatorService/HealthChecks/ContentServiceHealthCheck.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ApiGateway/Extentions/MiddlewareExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AppHost/Extensions/KeycloakConfigurationExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/AppHost/Extensions/KeycloakEnvironmentExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Background/Cache/CacheRefreshBackgroundService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/BackgroundJobsExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/CorrelationIdMiddlewareExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/GrpcResilienceExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/JwtExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/LoggingExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/SwaggerExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Health/CacheHealthCheck.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Health/GrpcServiceHealthCheck.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Health/RedisHealthChecksExtensions.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Hybrid/HybridCacheService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Hybrid/IHybridCacheService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Interfaces/ICachePreloader.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Memory/IMemoryCacheService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Memory/MemoryCacheService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Metrics/CacheMetrics.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Metrics/MetricRecorder.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Metrics/TagConstants.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Redis/IRedisCacheService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Redis/RedisCacheService.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ServiceDefaults/Redis/RedisExtensions.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AggregatorService/AggregatorService.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/AggregatorService/AggregatorService.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AggregatorService/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/AggregatorService/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ApiGateway/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ApiGateway/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ApiGateway/Transforms/CorrelationIdTransform.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ApiGateway/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/ApiGateway/appsettings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AppHost/AppHost.cs" beforeDir="false" afterPath="$PROJECT_DIR$/AppHost/AppHost.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/AppHost/AppHost.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/AppHost/AppHost.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Collaboration.API/Helpers/SwaggerExtensions.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ContentAPI/ContentAPI.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/ContentAPI/ContentAPI.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ContentAPI/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ContentAPI/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/IdentityAPI/IdentityAPI.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/IdentityAPI/IdentityAPI.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/IdentityAPI/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/IdentityAPI/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ServiceDefaults/CorrelationIdDelegatingHandler.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ServiceDefaults/CorrelationIdMiddleware.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ServiceDefaults/Middlewares/CorrelationIdMiddleware.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ServiceDefaults/Extensions.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ServiceDefaults/MongoDbTelemetryExtensions.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ServiceDefaults/Extensions/MongoDbTelemetryExtensions.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ServiceDefaults/ServiceDefaults.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/ServiceDefaults/ServiceDefaults.csproj" afterDir="false" />
-    </list>
+    <list default="true" id="6967ff9a-7e5e-48e4-b97a-7b6332c6677c" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -79,12 +38,24 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
     "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "D:/nastya/kyrsova/IdeaFusion",
     "nodejs_package_manager_path": "npm",
+    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-PY-262.10315.174" />
+        <option value="bundled-python-sdk-eff1e8def5f5-5bd6d13a2a75-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-262.10315.174" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="6967ff9a-7e5e-48e4-b97a-7b6332c6677c" name="Changes" comment="" />
@@ -94,6 +65,7 @@
       <updated>1775164467127</updated>
       <workItem from="1775164471778" duration="11000" />
       <workItem from="1778152668097" duration="31000" />
+      <workItem from="1790006193883" duration="21000" />
     </task>
     <servers />
   </component>
@@ -103,23 +75,5 @@
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />
-          <option name="timeStamp" value="1" />
-        </breakpoint>
-        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.Threading.Tasks.TaskCanceledException" breakIfHandledByOtherCode="false" displayValue="System.Threading.Tasks.TaskCanceledException" />
-          <option name="timeStamp" value="2" />
-        </breakpoint>
-        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
-          <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
-          <option name="timeStamp" value="3" />
-        </breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

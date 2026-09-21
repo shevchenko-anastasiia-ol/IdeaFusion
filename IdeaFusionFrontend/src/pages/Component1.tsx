@@ -13,7 +13,7 @@ import { timeAgo } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
 
-export type Component1Type = {};
+export type Component1Type = Record<string, never>;
 
 const PREVIEW_COLORS = ["#2d2d4a","#1a3a2a","#3a1a2a","#1a1a3a","#1a2a3a","#2a1a3a","#0a2a3a","#2a0a0a"];
 const AVATAR_COLORS  = ["#4002aa","#00c9a7","#ff6b6b","#ffb347","#e040fb","#29b6f6","#ef5350","#7c5cfc"];
@@ -214,7 +214,7 @@ const PostCard: FunctionComponent<{ item: PostWithEngagementDto; userAvatarMap: 
               e.stopPropagation();
               if (!confirm('Видалити цей пост назавжди?')) return;
               try { await postsApi.delete(post.postId); onDelete?.(post.postId); }
-              catch (ex: any) { alert(ex.message ?? 'Помилка видалення'); }
+              catch (ex) { alert(ex instanceof Error ? ex.message : 'Помилка видалення'); }
             }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -229,7 +229,7 @@ const PostCard: FunctionComponent<{ item: PostWithEngagementDto; userAvatarMap: 
 
 const PAGE_SIZE = 10;
 
-const Component1: FunctionComponent<Component1Type> = ({}) => {
+const Component1: FunctionComponent<Component1Type> = () => {
   const navigate = useNavigate();
   const { contentUserId } = useAuth();
   const [activeFilter, setActiveFilter] = useState("Всі");

@@ -125,7 +125,7 @@ const PostDetailPage: FunctionComponent = () => {
 
             <div className={styles.commentsList}>
               {comments.map((c, i) => (
-                <div key={i} className={`${styles.comment} ${(c as any).nested ? styles.nested : ""}`}>
+                <div key={i} className={`${styles.comment} {(c as { nested?: boolean }).nested ? styles.nested : ""}`}>
                   <div className={styles.commentAvatar} style={{ backgroundColor: c.bg }}>
                     {c.initials}
                   </div>

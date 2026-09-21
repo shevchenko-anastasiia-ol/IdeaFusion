@@ -38,7 +38,7 @@ const DashboardPage: FunctionComponent = () => {
       .then(setDash)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [contentUserId]);
+  }, [contentUserId, user?.id]);
 
   return (
     <div className={styles.page}>

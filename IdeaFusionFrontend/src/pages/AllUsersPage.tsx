@@ -78,8 +78,8 @@ const AllUsersPage: FunctionComponent = () => {
     try {
       await api.delete<void>(`/api/users/${userId}`);
       setUsers(prev => prev.filter(u => u.id !== userId));
-    } catch (e: any) {
-      alert(e.message ?? 'Помилка видалення');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Помилка видалення');
     }
   }
 

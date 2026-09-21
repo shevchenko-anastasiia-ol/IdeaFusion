@@ -82,6 +82,7 @@ public class CollaborationClient
                     Username = m.User?.Username ?? string.Empty,
                     AvatarUrl = m.User?.AvatarUrl,
                     Role     = m.Role ?? string.Empty,
+                    Permissions = m.Permissions ?? new List<string>(),
                 }).ToList() ?? new List<AggregatorTeamMemberDto>(),
                 RequiredRoles = raw.RequiredRoles?.Select(r => new AggregatorRequiredRoleDto
                 {
@@ -189,6 +190,7 @@ public class CollaborationClient
     {
         public UserSnapshotRaw? User { get; set; }
         public string? Role { get; set; }
+        public List<string>? Permissions { get; set; }
     }
 
     private sealed class UserSnapshotRaw

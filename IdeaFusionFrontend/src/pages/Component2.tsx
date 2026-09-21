@@ -14,7 +14,7 @@ import type { PostWithEngagementDto, TeamEntity, UserDto } from "../api/types";
 import { teamStatusLabel, timeAgo } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 
-export type Component2Type = {};
+export type Component2Type = Record<string, never>;
 
 const PREVIEW_COLORS = ["#2d2d4a","#1a3a2a","#3a1a2a","#1a1a3a","#1a2a3a","#2a1a3a"];
 const AVATAR_PALETTE = ["#4002aa","#00c9a7","#ff6b6b","#ffb347","#e040fb","#29b6f6","#7c5cfc"];
@@ -181,7 +181,7 @@ const PostCard: FunctionComponent<{ item: PostWithEngagementDto; onDelete?: (id:
                 e.stopPropagation();
                 if (!confirm('Видалити цей пост назавжди?')) return;
                 try { await postsApi.delete(post.postId); onDelete?.(post.postId); }
-                catch (ex: any) { alert(ex.message ?? 'Помилка видалення'); }
+                catch (ex) { alert(ex instanceof Error ? ex.message : 'Помилка видалення'); }
               }}
               sx={{ ml: "auto", background: "none", border: "none", cursor: "pointer",
                 color: "#ff6b6b", p: "2px 6px", display: "flex", alignItems: "center" }}>
@@ -257,6 +257,14 @@ const TeamCard: FunctionComponent<{ team: TeamEntity; isAdmin?: boolean; onDelet
       )}
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", pr: isAdmin ? "28px" : 0 }}>
         <Box sx={{ fontSize: 17, fontWeight: 700, color: "#fff", fontFamily: "var(--font-inter)" }}>{team.name}</Box>
+        {(team.openVacancyCount ?? 0) > 0 && (
+          <Box sx={{ fontSize: 11, px: "10px", py: "2px", borderRadius: "30px",
+            background: "rgba(124,92,252,.15)", border: "1px solid #7c5cfc", color: "#a48fff",
+            whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}
+            onClick={e => { e.stopPropagation(); navigate("/vacancies"); }}>
+            Вакансії: {team.openVacancyCount}
+          </Box>
+        )}
         <Box sx={{ fontSize: 11, px: "10px", py: "2px", borderRadius: "30px",
           background: isActive ? "rgba(0,201,167,.15)" : "rgba(124,92,252,.15)",
           border: `1px solid ${isActive ? "#00c9a7" : "#7c5cfc"}`,
@@ -305,6 +313,7 @@ const Component2: FunctionComponent<Component2Type> = () => {
   const [query,          setQuery]          = useState("");
   const [activeType,     setActiveType]     = useState("Всі");
   const [activeCategory, setActiveCategory] = useState("Всі");
+  const [onlyVacancies,  setOnlyVacancies]  = useState(false);
 
   const [posts,   setPosts]   = useState<PostWithEngagementDto[]>([]);
   const [teams,   setTeams]   = useState<TeamEntity[]>([]);
@@ -341,18 +350,18 @@ const Component2: FunctionComponent<Component2Type> = () => {
     try {
       await api.delete<void>(`/api/users/${userId}`);
       setUsers(prev => prev.filter(u => u.id !== userId));
-    } catch (e: any) {
-      alert(e.message ?? 'Помилка видалення');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Помилка видалення');
     }
   }
 
   async function handleDeleteTeam(id: string) {
     if (!confirm('Видалити цю команду назавжди?')) return;
     try {
-      await teamsApi.deleteTeam(id);
+      await teamsApi.deleteTeam(id, me?.id ?? '');
       setTeams(prev => prev.filter(t => t.id !== id));
-    } catch (e: any) {
-      alert(e.message ?? 'Помилка видалення');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Помилка видалення');
     }
   }
 
@@ -366,7 +375,9 @@ const Component2: FunctionComponent<Component2Type> = () => {
     return categoryOk && match(query, p.post.title, p.post.description ?? "", p.post.tags.join(' '), p.post.author?.userName ?? "", p.post.collaboration?.name ?? "");
   });
   const filteredUsers = users.filter(u => match(query, u.userName ?? "", u.fullName ?? "", u.email ?? "", u.specialization ?? ""));
-  const filteredTeams = teams.filter(t => match(query, t.name, t.description ?? "", t.category ?? "", t.tags.join(' ')));
+  const filteredTeams = teams.filter(t =>
+    (!onlyVacancies || (t.openVacancyCount ?? 0) > 0) &&
+    match(query, t.name, t.description ?? "", t.category ?? "", t.tags.join(' ')));
 
   return (
     <Box className={styles.div}>
@@ -378,6 +389,7 @@ const Component2: FunctionComponent<Component2Type> = () => {
           <GroupComponent11
             onTypeChange={setActiveType}
             onCategoryChange={setActiveCategory}
+            onVacanciesChange={setOnlyVacancies}
           />
         </section>
 

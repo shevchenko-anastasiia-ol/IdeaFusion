@@ -45,6 +45,7 @@ public class DatabaseSeeder : IDataSeeder
             await SeedGroupInvitationsAsync(cancellationToken);
             await SeedTeamPostsAsync(cancellationToken);
             await SeedRealUserTeamsAsync(cancellationToken);
+            await SeedVacanciesAsync(cancellationToken);
             await SeedRealUserInvitationsAsync(cancellationToken);
             await SeedRealUserCollaborationRequestsAsync(cancellationToken);
 
@@ -486,6 +487,59 @@ public class DatabaseSeeder : IDataSeeder
                 await _context.GroupInvitations.InsertOneAsync(inv, cancellationToken: cancellationToken);
                 _logger.LogInformation("RealDataSeeder: invited user {UserId} to '{Team}' as {Role}", invitedId, teamName, role);
             }
+        }
+    }
+
+    // ── Demo vacancies ───────────────────────────────────────────────────────
+
+    private async Task SeedVacanciesAsync(CancellationToken cancellationToken)
+    {
+        var demoVacancies = new[]
+        {
+            ("Indie Game Dev Crew",     "2D Artist",        "Анімація та спрайти персонажів для інді-гри у стилі pixel art.", "Досвід з Aseprite, розуміння pixel art, портфоліо."),
+            ("Soundwave Collective",    "Sound Engineer",   "Зведення та мастеринг треків для дебютного EP.",                 "Досвід з Ableton або Pro Tools, звукорежисура від 2 років."),
+            ("Visual Stories",          "Videographer",     "Зйомка короткометражного фільму та комерційних проєктів.",        "Камери Sony/Canon, знання DaVinci Resolve."),
+            ("Motion & Design Lab",     "Motion Designer",  "Анімований контент та брендинг для клієнтів.",                   "After Effects, Cinema 4D, наявність портфоліо."),
+            ("UX Collective",           "Illustrator",      "Ілюстрації для веб-продуктів та айдентики.",                       "Figma, векторна графіка, досвід у UI-проєктах."),
+            ("PixelCraft Studio",       "Rigger",           "Rigging персонажів у Blender для анімації та ігор.",              "Blender, знання принципів анімації."),
+        };
+
+        foreach (var (teamName, role, description, requirements) in demoVacancies)
+        {
+            var team = await _context.Teams
+                .Find(t => t.Name == teamName && !t.IsDeleted)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (team == null)
+            {
+                _logger.LogWarning("Seeder: team '{Name}' not found — skipping vacancy", teamName);
+                continue;
+            }
+
+            var alreadyExists = await _context.TeamVacancies
+                .Find(v => v.TeamId == team.Id && v.Role == role && !v.IsDeleted)
+                .AnyAsync(cancellationToken);
+
+            if (alreadyExists) continue;
+
+            var vacancy = new TeamVacancy(
+                teamId: team.Id,
+                teamName: team.Name,
+                category: team.Category,
+                tags: team.Tags,
+                role: role,
+                creatorUserId: "system",
+                description: description,
+                requirements: requirements,
+                teamAvatarUrl: team.AvatarUrl);
+
+            await _context.TeamVacancies.InsertOneAsync(vacancy, cancellationToken: cancellationToken);
+
+            team.IncrementOpenVacancyCount("system");
+            await _context.Teams.ReplaceOneAsync(
+                t => t.Id == team.Id, team, cancellationToken: cancellationToken);
+
+            _logger.LogInformation("Seeder: inserted vacancy '{Role}' for '{Team}'", role, teamName);
         }
     }
 }

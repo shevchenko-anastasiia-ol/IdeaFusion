@@ -42,8 +42,8 @@ const LoginPage: FunctionComponent = () => {
         setSuccess(true);
         setTab("login");
       }
-    } catch (ex: any) {
-      setError(ex.message ?? 'Помилка');
+    } catch (ex) {
+      setError(ex instanceof Error ? ex.message : 'Помилка');
     } finally {
       setLoading(false);
     }

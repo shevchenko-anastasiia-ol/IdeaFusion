@@ -33,5 +33,14 @@ public class MongoDbContext
     public IMongoCollection<TeamPost> TeamPosts
         => _database.GetCollection<TeamPost>("TeamPosts");
  
+    public IMongoCollection<ChatMessage> ChatMessages
+        => _database.GetCollection<ChatMessage>("ChatMessages");
+
+    public IMongoCollection<TeamVacancy> TeamVacancies
+        => _database.GetCollection<TeamVacancy>("TeamVacancies");
+
+    public IMongoCollection<VacancyApplication> VacancyApplications
+        => _database.GetCollection<VacancyApplication>("VacancyApplications");
+ 
     public IClientSessionHandle StartSession() => _database.Client.StartSession();
 }

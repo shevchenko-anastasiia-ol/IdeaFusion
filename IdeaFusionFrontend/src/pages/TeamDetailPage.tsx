@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import FrameComponent2 from "../components/FrameComponent2";
 import Moderation from "../components/Moderation";
 import { teamsApi, collaborationRequestsApi } from "../api/teams";
+import { vacanciesApi } from "../api/vacancies";
 import { aggregatorApi } from "../api/aggregator";
 import { authApi } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
@@ -11,9 +12,11 @@ import type {
   AggregatorTeamPostDto,
   CollaborationRequestEntity,
   TeamEntity,
+  TeamMemberEntity,
+  TeamVacancyEntity,
   UserDto,
 } from "../api/types";
-import { initials, teamStatusLabel, timeAgo } from "../api/types";
+import { initials, teamStatusLabel, timeAgo, vacancyStatusLabel, TEAM_PERMISSIONS, hasPermission } from "../api/types";
 import styles from "./TeamDetailPage.module.css";
 
 const PALETTE = ["#7c5cfc", "#ff6b6b", "#3fcca0", "#ffb347", "#29b6f6", "#e040fb"];
@@ -30,13 +33,6 @@ function getMediaType(url: string): 'image' | 'video' | 'audio' | 'pdf' {
   if (ext === 'pdf') return 'pdf';
   return 'image';
 }
-function cardMedia(urls: string[], fallbackBg: string) {
-  const img = urls.find(u => getMediaType(u) === 'image');
-  if (img) return { style: { backgroundImage: `url("${img}")`, backgroundSize: 'cover', backgroundPosition: 'center' }, icon: null };
-  const t = urls[0] ? getMediaType(urls[0]) : null;
-  return { style: { backgroundColor: fallbackBg, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-           icon: t === 'video' ? '🎬' : t === 'audio' ? '🎵' : t === 'pdf' ? '📄' : null };
-}
 
 const STATUS_OPTIONS = [
   { value: 0, label: "Активна" },
@@ -49,6 +45,36 @@ function statusNum(status: number | string): number {
   if (status === "Active") return 0;
   if (status === "Searching") return 1;
   return 2;
+}
+
+function effectivePermissions(member: TeamMemberEntity): string[] {
+  const perms = member.permissions ?? [];
+  return perms.length === 0 ? ["canPublishPosts"] : perms;
+}
+
+function PermissionToggles({ member, onChange }: { member: TeamMemberEntity; onChange: (perms: string[]) => void }) {
+  const effective = effectivePermissions(member);
+  return (
+    <div className={styles.permsGrid}>
+      {TEAM_PERMISSIONS.map((p) => {
+        const checked = effective.includes(p.key);
+        return (
+          <label key={p.key} className={styles.permCheck}>
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => {
+                onChange(
+                  checked ? effective.filter((k) => k !== p.key) : [...effective, p.key]
+                );
+              }}
+            />
+            <span>{p.label}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
 }
 
 const TeamDetailPage: FunctionComponent = () => {
@@ -83,6 +109,18 @@ const TeamDetailPage: FunctionComponent = () => {
   const [userAvatarMap, setUserAvatarMap] = useState<Map<string, string>>(new Map());
   const [userEmailMap,  setUserEmailMap]  = useState<Map<string, string>>(new Map());
 
+  // Team vacancies state
+  const [teamVacancies, setTeamVacancies] = useState<TeamVacancyEntity[]>([]);
+  const [showAddVacancy, setShowAddVacancy] = useState(false);
+  const [newVacRole, setNewVacRole] = useState("");
+  const [newVacDesc, setNewVacDesc] = useState("");
+  const [newVacReq, setNewVacReq] = useState("");
+  const [vacSaving, setVacSaving] = useState(false);
+  const [vacMsg, setVacMsg] = useState<string | null>(null);
+
+  // Member permissions editing
+  const [editingPermsUserId, setEditingPermsUserId] = useState<string | null>(null);
+
   useEffect(() => {
     api.get<UserDto[]>('/api/users')
       .then(users => {
@@ -107,6 +145,11 @@ const TeamDetailPage: FunctionComponent = () => {
     team && user && team.members.some((m) => m.user.userId === user.id)
   );
 
+  const canEditTeam = hasPermission(team, user?.id, "canEditTeam");
+  const canManageMembers = hasPermission(team, user?.id, "canRemoveMembers");
+  const canPublishPosts = hasPermission(team, user?.id, "canPublishPosts");
+  const showManagement = isOwner || canEditTeam || canManageMembers;
+
   // Reset all state and reload when team ID changes
   useEffect(() => {
     if (!id) return;
@@ -116,12 +159,14 @@ const TeamDetailPage: FunctionComponent = () => {
     setPosts([]);
     setRequests([]);
     setMyRequest(null);
+    setTeamVacancies([]);
 
     Promise.all([
       teamsApi.getById(id),
       aggregatorApi.getTeamFull(id).catch(() => null),
+      vacanciesApi.getByTeam(id, 1, 50).catch(() => null),
     ])
-      .then(([t, full]) => {
+      .then(([t, full, vacs]) => {
         setTeam(t);
         setEditName(t.name);
         setEditDesc(t.description);
@@ -129,6 +174,7 @@ const TeamDetailPage: FunctionComponent = () => {
         setEditTags(t.tags.join(", "));
         setEditStatus(statusNum(t.status));
         if (full) setPosts(full.posts);
+        if (vacs) setTeamVacancies(vacs.items);
 
       })
       .catch((e) => setError(e.message))
@@ -149,7 +195,7 @@ const TeamDetailPage: FunctionComponent = () => {
   }, [id, user, team, isMember]);
 
   function loadRequests() {
-    if (!id || !isOwner) return;
+    if (!id || !canManageMembers) return;
     setRequestsError(null);
     collaborationRequestsApi
       .getByTeam(id)
@@ -159,11 +205,11 @@ const TeamDetailPage: FunctionComponent = () => {
       .catch((e) => setRequestsError(e?.message ?? 'Помилка завантаження запитів'));
   }
 
-  // Load pending requests for owner
+  // Load pending requests for users who can manage members
   useEffect(() => {
     loadRequests();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isOwner]);
+  }, [id, canManageMembers]);
 
   async function handleSave() {
     if (!team || !user) return;
@@ -246,6 +292,47 @@ const TeamDetailPage: FunctionComponent = () => {
     }
   }
 
+  async function handleCreateVacancy() {
+    if (!team || !user || !newVacRole.trim()) return;
+    setVacSaving(true);
+    setVacMsg(null);
+    try {
+      await vacanciesApi.create({
+        teamId: team.id,
+        userId: user.id,
+        role: newVacRole.trim(),
+        description: newVacDesc.trim() || undefined,
+        requirements: newVacReq.trim() || undefined,
+      });
+      setNewVacRole("");
+      setNewVacDesc("");
+      setNewVacReq("");
+      setShowAddVacancy(false);
+      const vacs = await vacanciesApi.getByTeam(team.id, 1, 50);
+      setTeamVacancies(vacs.items);
+      const updated = await teamsApi.getById(team.id);
+      setTeam(updated);
+    } catch (e: unknown) {
+      setVacMsg(e instanceof Error ? e.message : "Помилка");
+    } finally {
+      setVacSaving(false);
+    }
+  }
+
+  async function handleCloseVacancy(vacancyId: string) {
+    if (!user) return;
+    if (!confirm("Закрити цю вакансію?")) return;
+    try {
+      await vacanciesApi.close({ vacancyId, userId: user.id });
+      if (team) {
+        const vacs = await vacanciesApi.getByTeam(team.id, 1, 50);
+        setTeamVacancies(vacs.items);
+      }
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Помилка");
+    }
+  }
+
   async function handleAcceptRequest(reqId: string) {
     if (!user || !id) return;
     try {
@@ -264,6 +351,21 @@ const TeamDetailPage: FunctionComponent = () => {
     try {
       await collaborationRequestsApi.reject(reqId, { requestId: reqId, userId: user.id });
       setRequests((rs) => rs.filter((r) => r.id !== reqId));
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Помилка");
+    }
+  }
+
+  async function handleSavePermissions(targetMemberId: string, draft: string[]) {
+    if (!team || !user) return;
+    try {
+      const updated = await teamsApi.setMemberPermissions(team.id, {
+        teamId: team.id,
+        targetMemberId,
+        permissions: draft,
+        userId: user.id,
+      });
+      setTeam(updated);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Помилка");
     }
@@ -290,8 +392,8 @@ const TeamDetailPage: FunctionComponent = () => {
   const teamInits = initials(team.name);
   const accent = accentFor(team.id);
 
-  // ── OWNER VIEW ─────────────────────────────────────────────────────────────
-  if (isOwner) {
+  // ── LEADER / MANAGEMENT VIEW ─────────────────────────────────────────────
+  if (showManagement) {
     return (
       <div className={styles.page}>
         <FrameComponent2 />
@@ -314,6 +416,7 @@ const TeamDetailPage: FunctionComponent = () => {
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={avatarUploading}
                 title="Змінити фото команди"
+                style={canEditTeam ? undefined : { display: "none" }}
               >
                 {avatarUploading ? "…" : "✎"}
               </button>
@@ -339,6 +442,8 @@ const TeamDetailPage: FunctionComponent = () => {
             <div className={styles.leftCol}>
               <div className={styles.card}>
                 <h3 className={styles.cardTitle}>Інформація про команду</h3>
+                {canEditTeam ? (
+                  <>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Назва</label>
                   <input className={styles.input} value={editName} onChange={(e) => setEditName(e.target.value)} />
@@ -367,12 +472,13 @@ const TeamDetailPage: FunctionComponent = () => {
                   <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
                     {saving ? "Збереження..." : "Зберегти зміни"}
                   </button>
+                  {isOwner && (
                   <button
                     className={styles.deleteTeamBtn}
                     onClick={async () => {
                       if (!confirm(`Видалити команду «${team.name}»? Цю дію не можна скасувати.`)) return;
                       try {
-                        await teamsApi.deleteTeam(team.id);
+                        await teamsApi.deleteTeam(team.id, user?.id ?? '');
                         navigate("/team/new", { replace: true });
                       } catch (e: unknown) {
                         alert(e instanceof Error ? e.message : "Помилка видалення");
@@ -381,11 +487,17 @@ const TeamDetailPage: FunctionComponent = () => {
                   >
                     Видалити команду
                   </button>
+                  )}
                 </div>
                 {saveMsg && <span className={styles.saveMsg}>{saveMsg}</span>}
+                  </>
+                ) : (
+                  <p className={styles.aboutText}>{team.description}</p>
+                )}
               </div>
 
-              {/* Pending requests — always visible for owner */}
+              {/* Pending requests — for users who can manage members */}
+              {canManageMembers && (
               <div className={styles.card}>
                 <div className={styles.requestsHeader}>
                   <span style={{ color: "#ccc", fontWeight: 600 }}>
@@ -442,6 +554,7 @@ const TeamDetailPage: FunctionComponent = () => {
                   );
                 })}
               </div>
+              )}
             </div>
 
             {/* Right column */}
@@ -450,30 +563,48 @@ const TeamDetailPage: FunctionComponent = () => {
                 <h3 className={styles.cardTitle}>Учасники команди</h3>
                 <div className={styles.membersList}>
                   {team.members.map((m, i) => (
-                    <div key={i} className={styles.memberRow}>
-                      <div
-                        style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}
-                        onClick={() => navigate(`/users/${m.user.userId}`)}
-                      >
-                        {(m.user.avatarUrl ?? userAvatarMap.get(m.user.username)) ? (
-                          <img src={m.user.avatarUrl ?? userAvatarMap.get(m.user.username)} alt="" className={styles.memberAvatar} style={{ objectFit: "cover" }} />
+                    <div key={i} className={styles.memberItem}>
+                      <div className={styles.memberRow}>
+                        <div
+                          style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}
+                          onClick={() => navigate(`/users/${m.user.userId}`)}
+                        >
+                          {(m.user.avatarUrl ?? userAvatarMap.get(m.user.username)) ? (
+                            <img src={m.user.avatarUrl ?? userAvatarMap.get(m.user.username)} alt="" className={styles.memberAvatar} style={{ objectFit: "cover" }} />
+                          ) : (
+                            <div className={styles.memberAvatar} style={{ backgroundColor: accentFor(m.user.userId) }}>
+                              {initials(m.user.username)}
+                            </div>
+                          )}
+                          <div className={styles.memberInfo}>
+                            <div className={styles.memberName}>{m.user.username}</div>
+                            <div className={styles.memberRole}>{m.role}</div>
+                          </div>
+                        </div>
+                        {m.role === "Owner" ? (
+                          <span className={styles.leaderBadge}>Лідер</span>
                         ) : (
-                          <div className={styles.memberAvatar} style={{ backgroundColor: accentFor(m.user.userId) }}>
-                            {initials(m.user.username)}
+                          <div className={styles.memberBtns}>
+                            {isOwner && (
+                              <button
+                                className={styles.accessBtn}
+                                onClick={() => setEditingPermsUserId(editingPermsUserId === m.user.userId ? null : m.user.userId)}
+                              >
+                                {editingPermsUserId === m.user.userId ? "Скасувати" : "Доступ"}
+                              </button>
+                            )}
+                            {canManageMembers && (
+                              <button className={styles.removeBtn} onClick={() => handleRemoveMember(m.user.userId)}>
+                                Видалити
+                              </button>
+                            )}
                           </div>
                         )}
-                        <div className={styles.memberInfo}>
-                          <div className={styles.memberName}>{m.user.username}</div>
-                          <div className={styles.memberRole}>{m.role}</div>
-                        </div>
                       </div>
-                      {m.role === "Owner" ? (
-                        <span className={styles.leaderBadge}>Лідер</span>
-                      ) : (
-                        <div className={styles.memberBtns}>
-                          <button className={styles.removeBtn} onClick={() => handleRemoveMember(m.user.userId)}>
-                            Видалити
-                          </button>
+                      {isOwner && m.role !== "Owner" && editingPermsUserId === m.user.userId && (
+                        <div className={styles.permsPanel}>
+                          <div className={styles.permsTitle}>Права учасника</div>
+                          <PermissionToggles member={m} onChange={(perms) => handleSavePermissions(m.user.userId, perms)} />
                         </div>
                       )}
                     </div>
@@ -490,7 +621,7 @@ const TeamDetailPage: FunctionComponent = () => {
                   {team.requiredRoles.map((r, i) => (
                     <div key={i} className={styles.roleItem}>{r.role}</div>
                   ))}
-                  {showAddRole ? (
+                  {canEditTeam && (showAddRole ? (
                     <div className={styles.addRoleRow}>
                       <input
                         className={styles.input}
@@ -504,7 +635,67 @@ const TeamDetailPage: FunctionComponent = () => {
                     </div>
                   ) : (
                     <button className={styles.addRoleBtn} onClick={() => setShowAddRole(true)}>+ Додати нову роль</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.card}>
+                <h3 className={styles.cardTitle}>
+                  Вакансії
+                  <span className={styles.vacCount}>
+                    {teamVacancies.filter(v => vacancyStatusLabel(v.status) === "Відкрита").length} відкрита(их)
+                  </span>
+                </h3>
+                <div className={styles.rolesList}>
+                  {teamVacancies.length === 0 && (
+                    <p className={styles.emptyText}>Вакансій поки немає</p>
                   )}
+                  {teamVacancies.map((v, i) => {
+                    const open = vacancyStatusLabel(v.status) === "Відкрита";
+                    return (
+                      <div key={i} className={styles.vacancyItem}>
+                        <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => navigate(`/vacancies/${v.id}`)}>
+                          <div className={styles.vacancyRole}>{v.role}</div>
+                          {v.requirements && <div className={styles.vacancySub}>З вимогами</div>}
+                        </div>
+                        <span className={styles.vacancyStatus} data-open={open}>{vacancyStatusLabel(v.status)}</span>
+                        {isOwner && open && (
+                          <button className={styles.rejectBtn} onClick={() => handleCloseVacancy(v.id)}>Закрити</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {isOwner && showAddVacancy ? (
+                    <div>
+                      <div className={styles.addRoleRow}>
+                        <input
+                          className={styles.input}
+                          placeholder="Роль (напр. 2D артист)"
+                          value={newVacRole}
+                          onChange={(e) => setNewVacRole(e.target.value)}
+                        />
+                        <button className={styles.acceptBtn} disabled={vacSaving} onClick={handleCreateVacancy}>Створити</button>
+                        <button className={styles.rejectBtn} onClick={() => setShowAddVacancy(false)}>✕</button>
+                      </div>
+                      <input
+                        className={styles.input}
+                        style={{ marginTop: 10 }}
+                        placeholder="Опис задачі"
+                        value={newVacDesc}
+                        onChange={(e) => setNewVacDesc(e.target.value)}
+                      />
+                      <input
+                        className={styles.input}
+                        style={{ marginTop: 10 }}
+                        placeholder="Вимоги до кандидата"
+                        value={newVacReq}
+                        onChange={(e) => setNewVacReq(e.target.value)}
+                      />
+                    </div>
+                  ) : isOwner ? (
+                    <button className={styles.addRoleBtn} onClick={() => setShowAddVacancy(true)}>+ Створити вакансію</button>
+                  ) : null}
+                  {vacMsg && <p style={{ color: "#ff6b6b", fontSize: 13, margin: "8px 0 0" }}>{vacMsg}</p>}
                 </div>
               </div>
             </div>
@@ -514,6 +705,11 @@ const TeamDetailPage: FunctionComponent = () => {
           <div className={styles.portfolioSection}>
             <div className={styles.portfolioHeader}>
               <h2 className={styles.portfolioTitle}>Портфоліо команди</h2>
+              {canPublishPosts && (
+                <button className={styles.addRoleBtn} onClick={() => navigate("/post/new")}>
+                  + Публікувати пост
+                </button>
+              )}
             </div>
             {posts.length === 0 ? (
               <p className={styles.emptyText}>Публікацій поки немає</p>

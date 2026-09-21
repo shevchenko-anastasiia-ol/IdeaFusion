@@ -69,3 +69,11 @@ public class SetTeamAvatarUrlCommand : ICommand<Domain.Entities.Team>
     public string? AvatarUrl { get; init; }
     public string UserId { get; init; } = default!;
 }
+
+public class UpdateTeamMemberPermissionsCommand : ICommand<Domain.Entities.Team>
+{
+    public string TeamId { get; init; } = default!;
+    public string TargetMemberId { get; init; } = default!;
+    public List<string> Permissions { get; init; } = [];
+    public string UserId { get; init; } = default!;
+}

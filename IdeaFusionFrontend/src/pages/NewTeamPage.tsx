@@ -7,7 +7,7 @@ import { authApi } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import styles from "./NewTeamPage.module.css";
 
-export type Component1Type = {};
+export type Component1Type = Record<string, never>;
 
 const CATEGORIES = ["Дизайн", "Розробка", "Музика", "Арт", "Фото", "Відео", "Анімація", "Gamedev", "Медіа"];
 const CLASSIFICATIONS = [
@@ -44,10 +44,6 @@ const Component1: FunctionComponent<Component1Type> = () => {
     setAvatarPreview(URL.createObjectURL(file));
   }
 
-  function toggleMulti(list: string[], setList: (v: string[]) => void, val: string) {
-    setList(list.includes(val) ? list.filter(v => v !== val) : [...list, val]);
-  }
-
   async function handleCreate() {
     if (!name.trim() || !description.trim() || !category) {
       setError("Заповніть назву, опис і категорію");
@@ -63,7 +59,7 @@ const Component1: FunctionComponent<Component1Type> = () => {
         try {
           const { url } = await authApi.uploadFile(avatarFile);
           teamAvatarUrl = url;
-        } catch {}
+        } catch { /* помилку завантаження аватара ігноруємо */ }
       }
       const team = await teamsApi.create({
         name: name.trim(),
@@ -86,11 +82,11 @@ const Component1: FunctionComponent<Component1Type> = () => {
             },
             body: JSON.stringify({ teamId: team.id, role, userId: user.id }),
           });
-        } catch {}
+        } catch { /* помилку додавання ролі ігноруємо */ }
       }
       navigate('/team');
-    } catch (ex: any) {
-      setError(ex.message);
+    } catch (ex) {
+      setError(ex instanceof Error ? ex.message : String(ex));
     } finally {
       setSubmitting(false);
     }

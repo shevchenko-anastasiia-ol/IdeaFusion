@@ -1,7 +1,7 @@
 import { FunctionComponent } from "react";
 import styles from "./IF2_FrameComponent4.module.css";
 
-const FrameComponent4: FunctionComponent = ({ className = "" }: any) => {
+const FrameComponent4: FunctionComponent<{ className?: string }> = ({ className = "" }) => {
   return (
     <section className={[styles.rectangleParent, className].join(" ")}>
       <div className={styles.title}>Статистика</div>

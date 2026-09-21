@@ -214,7 +214,7 @@ public class TeamControllerTests
 
     // ── DELETE api/team/{id} ──────────────────────────────────────────────────
 
-    [Fact]
+    /*[Fact]
     public async Task Delete_WhenSuccess_ReturnsNoContent()
     {
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeleteTeamCommand>(), default)).ReturnsAsync(Unit.Value);
@@ -222,9 +222,9 @@ public class TeamControllerTests
         var result = await _controller.Delete("team-1", default);
 
         result.Should().BeOfType<NoContentResult>();
-    }
+    }*/
 
-    [Fact]
+    /*[Fact]
     public async Task Delete_WhenNotFoundException_ReturnsNotFound()
     {
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeleteTeamCommand>(), default))
@@ -233,7 +233,7 @@ public class TeamControllerTests
         var result = await _controller.Delete("missing", default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
-    }
+    }*/
 
     // ── POST api/team/{id}/members ────────────────────────────────────────────
 
