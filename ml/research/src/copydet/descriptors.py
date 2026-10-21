@@ -90,12 +90,16 @@ class CLIP:
         self.batch_size = batch_size
 
     def embed(self, paths: Sequence[Path]) -> np.ndarray:
-        chunks = []
+        chunks = [
+            self.embed_images([load_rgb(p) for p in paths[i : i + self.batch_size]])
+            for i in tqdm(range(0, len(paths), self.batch_size), desc=self.name)
+        ]
+        return np.concatenate(chunks) if chunks else np.empty((0, 0), np.float32)
+
+    def embed_images(self, images: Sequence) -> np.ndarray:
         with self._torch.inference_mode():
-            for i in tqdm(range(0, len(paths), self.batch_size), desc=self.name):
-                batch = self._torch.stack([self.transform(load_rgb(p)) for p in paths[i : i + self.batch_size]])
-                chunks.append(self.model.encode_image(batch).float().numpy())
-        return _l2(np.concatenate(chunks)) if chunks else np.empty((0, 0), np.float32)
+            batch = self._torch.stack([self.transform(img) for img in images])
+            return _l2(self.model.encode_image(batch).float().numpy())
 
 
 def _l2(x: np.ndarray) -> np.ndarray:

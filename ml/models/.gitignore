@@ -1,0 +1,2 @@
+# ~100 MB, published by Meta; fetched by download_weights.py and checked against manifest.json.
+*.torchscript.pt
