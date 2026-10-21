@@ -60,6 +60,16 @@ def test_evaluate_operating_points_and_negatives():
     assert r2["operating_points"]["p99_from_val"]["hard_negative_fpr"]["same_artist"] == 0.5
 
 
+def test_threshold_at_fpr():
+    from copydet.evaluation import _threshold_at_fpr
+
+    score = np.array([0.9, 0.8, 0.7, 0.6, 0.5])
+    neg = np.array([False, True, False, True, True])
+    t = _threshold_at_fpr(score, neg, 0.34)  # one of three negatives may fire
+    assert 0.6 < t <= 0.6 + 1e-6
+    assert ((score >= t) & neg).sum() == 1
+
+
 def test_search_and_normalisation():
     refs = np.eye(3, dtype=np.float32)
     queries = np.array([[0.9, 0.1, 0], [0, 0, 1]], dtype=np.float32)

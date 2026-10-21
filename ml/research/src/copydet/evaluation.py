@@ -12,7 +12,11 @@ Metrics
     - `p99`: the lowest threshold with precision >= 0.99 (a wrong top-1 match or any negative
       above the threshold is a false positive); reports recall overall and per modification type,
       and the false-match rate on hard negatives per kind;
-    - `r80`: the threshold where 80% of positives are found; how many hard negatives fire there.
+    - `r80`: the threshold where 80% of positives are found; how many hard negatives fire there;
+    - `fpr1`: the threshold where at most 1% of hard negatives fire; the recall there is the
+      main number for the platform, since accusing an honest author is worse than a miss.
+      (`p99` depends on the positive/negative ratio: with 10x more positives it tolerates
+      ~10% of negatives firing, so it understates false accusations.)
   For the test split the threshold is also taken from val and transferred, which is what a
   deployed system does (pitfall "thresholds tuned on the test images", section 1.4.3).
 * ROC-AUC of top-1 scores: correctly matched copies vs hard negatives.
@@ -87,6 +91,16 @@ def _threshold_at_precision(score: np.ndarray, correct: np.ndarray, target: floa
     return float(thresholds[ok.max()]) if len(ok) else math.inf
 
 
+def _threshold_at_fpr(score: np.ndarray, is_negative: np.ndarray, target: float) -> float:
+    """Lowest threshold at which at most `target` of the hard negatives fire."""
+    neg = np.sort(score[is_negative])[::-1]
+    allowed = math.floor(target * len(neg))
+    if allowed >= len(neg):  # also covers "no negatives"
+        return -math.inf
+    # Just above the first negative that must not fire.
+    return float(np.nextafter(neg[allowed], np.inf))
+
+
 def _threshold_at_recall(score: np.ndarray, correct: np.ndarray, is_pos: np.ndarray, target: float) -> float:
     hits = np.sort(score[correct & is_pos])[::-1]
     need = math.ceil(target * int(is_pos.sum()))
@@ -139,6 +153,8 @@ def evaluate(retr: Retrieval, gt: np.ndarray, queries: pd.DataFrame, transfer_th
     thresholds = {
         "p99": _threshold_at_precision(score, correct, 0.99),
         "r80": _threshold_at_recall(score, correct, is_pos, 0.80),
+        # The platform's main operating point: at most 1% of honest same-artist works accused.
+        "fpr1": _threshold_at_fpr(score, neg, 0.01) if neg.any() else -math.inf,
     }
     result = {
         "n_queries": int(len(gt)),
