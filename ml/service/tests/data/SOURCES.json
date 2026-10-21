@@ -1,0 +1,50 @@
+[
+  {
+    "file": "work0.jpg",
+    "artist": "adalbert-erdeli",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work1.jpg",
+    "artist": "albert-lynch",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work2.jpg",
+    "artist": "aleksandr-deyneka",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work3.jpg",
+    "artist": "aleksey-antropov",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work4.jpg",
+    "artist": "alessandro-vittoria",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work5.jpg",
+    "artist": "alfred-parsons",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work6.jpg",
+    "artist": "arthur-segal",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  },
+  {
+    "file": "work7.jpg",
+    "artist": "arthur-verona",
+    "source": "ArtBench-10 public-domain subset (alfredplpl/artbench-pd-256x256)",
+    "license": "public domain"
+  }
+]
