@@ -63,10 +63,16 @@ class SSCD:
 
     def embed(self, paths: Sequence[Path]) -> np.ndarray:
         out = np.empty((len(paths), 512), dtype=np.float32)
+        for i, p in enumerate(tqdm(paths, desc=self.name)):
+            out[i] = self.embed_images([load_rgb(p)])[0]
+        return out
+
+    def embed_images(self, images: Sequence) -> np.ndarray:
+        """Embed in-memory PIL images (one forward each: sizes differ under small_288)."""
+        out = np.empty((len(images), 512), dtype=np.float32)
         with self._torch.inference_mode():
-            for i, p in enumerate(tqdm(paths, desc=self.name)):
-                x = self.transform(load_rgb(p)).unsqueeze(0)
-                out[i] = self.model(x)[0].numpy()
+            for i, img in enumerate(images):
+                out[i] = self.model(self.transform(img).unsqueeze(0))[0].numpy()
         return _l2(out)
 
 

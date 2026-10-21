@@ -1,0 +1,22 @@
+# Stage 3, strategy A: projection head over frozen SSCD. Every variant x seed is trained,
+# the epoch is chosen on val, and test is evaluated with thresholds transferred from val.
+seeds: [0, 1, 2]
+normalize: true          # SSCD background score normalisation (best baseline)
+
+defaults:
+  hidden: 1024
+  dropout: 0.1
+  lr: 0.001
+  weight_decay: 0.0001
+  epochs: 30
+  patience: 8
+  artists_per_batch: 32
+  per_artist: 8
+  batch_size: 256
+  tau: 0.05
+  margin: 0.2
+
+variants:
+  infonce_artist: {loss: infonce, sampler: artist}   # main: InfoNCE with same-artist hard negatives
+  infonce_random: {loss: infonce, sampler: random}   # ablation: no hard negatives in the batch
+  triplet_artist: {loss: triplet, sampler: artist}   # alternative loss, same batches
