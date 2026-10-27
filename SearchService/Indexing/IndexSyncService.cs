@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Npgsql;
 using SearchService.Data;
+using SearchService.Feed;
 using SearchService.Personal;
 
 namespace SearchService.Indexing;
@@ -23,6 +24,8 @@ public sealed class IndexSyncService(
     IndexSyncTrigger trigger,
     TagCatalogCache catalogCache,
     SubscriptionMatcher subscriptions,
+    IInteractionSource interactions,
+    InterestProfileWriter profiles,
     Microsoft.Extensions.Options.IOptions<SearchIndexOptions> options,
     ILogger<IndexSyncService> logger) : BackgroundService
 {
@@ -103,6 +106,18 @@ public sealed class IndexSyncService(
             {
                 logger.LogWarning(ex, "Search index: vocabulary, tag or role rebuild failed");
             }
+        }
+
+        // Interactions change without the documents changing, so the interest profiles are rebuilt every cycle.
+        try
+        {
+            await profiles.SyncAsync(await interactions.ReadAllAsync(ct), ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Search feed: interactions could not be read, the previous profiles are kept");
+            try { await writer.RecordFailureAsync("interaction", ex.Message, ct); }
+            catch (Exception inner) { logger.LogDebug(inner, "Cannot record the failure of interactions"); }
         }
 
         // New documents may match saved searches with notify on.
