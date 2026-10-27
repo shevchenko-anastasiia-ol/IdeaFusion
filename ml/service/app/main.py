@@ -3,6 +3,7 @@
     POST   /v1/check                   check an image (upload or MinIO object) against the index
     POST   /v1/index                   add a published image to the index
     DELETE /v1/index/posts/{post_id}   remove a deleted/archived post from the index
+    DELETE /v1/index                   empty the index (before a full rebuild)
     POST   /v1/checks                  record a check result for the moderation queue
     GET    /v1/checks                  moderation queue (filter by zone/status)
     GET    /v1/checks/{id}             one check
@@ -176,6 +177,12 @@ def register_routes(app: FastAPI) -> None:
         except Exception as exc:
             raise HTTPException(422, f"cannot index image: {exc}") from exc
         return {"indexed": req.media_id, "index_size": svc.store.count()}
+
+    @app.delete("/v1/index")
+    def clear_index(svc: Services = Depends(get_services)):
+        """Empty the index before a full rebuild, so that every work is compared only with
+        the works published before it (the copy is flagged, not the original)."""
+        return {"deleted": svc.store.clear()}
 
     @app.delete("/v1/index/posts/{post_id}")
     def delete_post(post_id: int, svc: Services = Depends(get_services)):

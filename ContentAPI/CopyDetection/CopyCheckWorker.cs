@@ -1,5 +1,7 @@
+using ContentDAL.Data;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
+using Microsoft.EntityFrameworkCore;
 
 namespace ContentAPI.CopyDetection;
 
@@ -48,13 +50,16 @@ public sealed class CopyCheckWorker : BackgroundService
 public sealed class CopyJobProcessor
 {
     private readonly IUnitOfWork _uow;
+    private readonly ContentDbContext _db;
     private readonly IImageCopyClient _client;
     private readonly IAuthorshipFilter _authorship;
     private readonly ILogger<CopyJobProcessor> _logger;
 
-    public CopyJobProcessor(IUnitOfWork uow, IImageCopyClient client, IAuthorshipFilter authorship, ILogger<CopyJobProcessor> logger)
+    public CopyJobProcessor(IUnitOfWork uow, ContentDbContext db, IImageCopyClient client, IAuthorshipFilter authorship,
+        ILogger<CopyJobProcessor> logger)
     {
         _uow = uow;
+        _db = db;
         _client = client;
         _authorship = authorship;
         _logger = logger;
@@ -62,14 +67,61 @@ public sealed class CopyJobProcessor
 
     public async Task ProcessAsync(CopyJob job, CancellationToken ct)
     {
-        if (job.Kind == CopyJobKind.RemovePost)
+        switch (job.Kind)
         {
-            var removed = await _client.DeletePostAsync(job.PostId, ct);
-            _logger.LogInformation("Removed {Count} image(s) of post {PostId} from the copy index", removed, job.PostId);
-            return;
+            case CopyJobKind.RemovePost:
+                var removed = await _client.DeletePostAsync(job.PostId, ct);
+                _logger.LogInformation("Removed {Count} image(s) of post {PostId} from the copy index", removed, job.PostId);
+                break;
+            case CopyJobKind.ReindexAll:
+                await ReindexAllAsync(ct);
+                break;
+            default:
+                await IndexPostAsync(job.PostId, ct);
+                break;
         }
+    }
 
-        var post = await _uow.PostRepository.GetByIdAsync(job.PostId, ct);
+    /// <summary>
+    /// Rebuilds the index from scratch, oldest post first: each upload is compared only with
+    /// the works published before it, so it is the copy, not the original, that lands in the
+    /// moderation queue (on a populated index the original would match its own later copy).
+    /// One failing post does not stop the run; re-running it is safe (the ML service does not
+    /// duplicate or reopen checks of the same pair).
+    /// </summary>
+    private async Task ReindexAllAsync(CancellationToken ct)
+    {
+        // Ids only: the status filter happens per post in IndexPostAsync, which reads it the
+        // same way the rest of the service does.
+        var posts = await _db.Posts.AsNoTracking()
+            .Where(p => !p.IsDeleted)
+            .OrderBy(p => p.CreatedAt)
+            .ThenBy(p => p.PostId)
+            .Select(p => p.PostId)
+            .ToListAsync(ct);
+        var cleared = await _client.ClearIndexAsync(ct);
+        _logger.LogInformation("Copy index rebuild: {Count} post(s), {Cleared} old index entries removed", posts.Count, cleared);
+
+        var failed = 0;
+        foreach (var postId in posts)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                await IndexPostAsync(postId, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                failed++;
+                _logger.LogError(ex, "Copy index rebuild: post {PostId} failed", postId);
+            }
+        }
+        _logger.LogInformation("Copy index rebuild finished: {Done} post(s), {Failed} failed", posts.Count - failed, failed);
+    }
+
+    private async Task IndexPostAsync(int postId, CancellationToken ct)
+    {
+        var post = await _uow.PostRepository.GetByIdAsync(postId, ct);
         if (post is null || post.Status != PostStatus.Published)
             return;
 

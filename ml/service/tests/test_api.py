@@ -1,4 +1,5 @@
-"""End-to-end API behaviour with the real model, an in-memory index and fake MinIO."""
+"""End-to-end API behaviour with the real model and fake MinIO, on both index backends
+(in memory, and Postgres + pgvector in Docker)."""
 
 from __future__ import annotations
 
@@ -9,16 +10,15 @@ from PIL import ImageOps
 from app.config import Settings
 from app.images import DictSource
 from app.main import Services, create_app
-from app.store import MemoryStore
 from tests.conftest import artwork, jpeg_bytes
 
 OWNERS = ["alice", "bob", "carol", "dave", "erin", "frank"]
 
 
 @pytest.fixture()
-def client(detector):
+def client(detector, store):
     images = DictSource()
-    services = Services(detector, MemoryStore(), images, Settings(database=""))
+    services = Services(detector, store, images, Settings(database=""))
     with TestClient(create_app(services)) as c:
         for i, owner in enumerate(OWNERS):
             images.put("posts", f"media/{i}.jpg", jpeg_bytes(artwork(i)), "image/jpeg")

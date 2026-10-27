@@ -9,6 +9,9 @@ public enum CopyJobKind
 
     /// <summary>Remove the post's images from the index (deleted or archived post).</summary>
     RemovePost,
+
+    /// <summary>Check and index every published post, oldest first (posts that predate the index).</summary>
+    ReindexAll,
 }
 
 public sealed record CopyJob(CopyJobKind Kind, int PostId);

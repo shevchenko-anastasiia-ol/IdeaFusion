@@ -69,6 +69,7 @@ class CheckRecord:
 class Store(Protocol):
     def upsert(self, fp: Fingerprint) -> None: ...
     def delete_post(self, post_id: int) -> int: ...
+    def clear(self) -> int: ...
     def search(self, embedding: np.ndarray, k: int, exclude_users: Sequence[str] = (), exclude_teams: Sequence[str] = ()) -> list[Candidate]: ...
     def count(self) -> int: ...
     def add_check(self, rec: CheckRecord) -> int: ...
@@ -94,6 +95,12 @@ class MemoryStore:
                 del self._fps[m]
             return len(ids)
 
+    def clear(self) -> int:
+        with self._lock:
+            n = len(self._fps)
+            self._fps.clear()
+            return n
+
     def search(self, embedding, k, exclude_users=(), exclude_teams=()) -> list[Candidate]:
         with self._lock:
             fps = [
@@ -111,6 +118,9 @@ class MemoryStore:
 
     def add_check(self, rec: CheckRecord) -> int:
         with self._lock:
+            for c in self._checks.values():
+                if _same_pair(c, rec):
+                    return c.id
             rec.id = len(self._checks) + 1
             self._checks[rec.id] = rec
             return rec.id
@@ -176,11 +186,34 @@ _CHECK_COLS = ("id, media_id, post_id, owner_user_id, team_id, bucket, object_na
                "matched_media_id, matched_post_id, result, status, decided_by, decided_at, created_at")
 
 
+def ensure_database(conninfo: str) -> None:
+    """Create the service's database when it does not exist yet. Aspire's AddDatabase only
+    declares it, so on a fresh (or older) Postgres volume the first start has to create it."""
+    import psycopg
+    from psycopg import sql
+    from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+    params = conninfo_to_dict(conninfo)
+    dbname = params.get("dbname") or "postgres"
+    try:
+        psycopg.connect(conninfo, connect_timeout=10).close()
+        return
+    except psycopg.OperationalError as exc:
+        if "does not exist" not in str(exc):
+            raise
+    with psycopg.connect(make_conninfo(conninfo, dbname="postgres"), autocommit=True, connect_timeout=10) as conn:
+        try:
+            conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(dbname)))
+        except psycopg.errors.DuplicateDatabase:
+            pass  # another replica created it in the meantime
+
+
 class PgStore:
     def __init__(self, conninfo: str, ef_search: int = 100):
         from pgvector.psycopg import register_vector
         from psycopg_pool import ConnectionPool
 
+        ensure_database(conninfo)
         with __import__("psycopg").connect(conninfo, autocommit=True) as conn:
             conn.execute(SCHEMA)
 
@@ -208,6 +241,10 @@ class PgStore:
         with self.pool.connection() as conn:
             return conn.execute("DELETE FROM image_fingerprint WHERE post_id = %s", (post_id,)).rowcount
 
+    def clear(self) -> int:
+        with self.pool.connection() as conn:
+            return conn.execute("DELETE FROM image_fingerprint").rowcount
+
     def search(self, embedding, k, exclude_users=(), exclude_teams=()) -> list[Candidate]:
         # Vectors are L2-normalised, so the inner product is the cosine similarity.
         with self.pool.connection() as conn:
@@ -220,7 +257,7 @@ class PgStore:
         return [
             Candidate(
                 media_id=r[0], post_id=r[1], owner_user_id=r[2], team_id=r[3], bucket=r[4], object_name=r[5],
-                phash=r[6], phash_mirror=r[7], embedding=np.asarray(r[8]), clip=None if r[9] is None else np.asarray(r[9]),
+                phash=r[6], phash_mirror=r[7], embedding=_vec(r[8]), clip=None if r[9] is None else _vec(r[9]),
                 model_version=r[10], similarity=float(r[11]),
             )
             for r in rows
@@ -232,6 +269,13 @@ class PgStore:
 
     def add_check(self, rec: CheckRecord) -> int:
         with self.pool.connection() as conn:
+            existing = conn.execute(
+                "SELECT id FROM copy_check WHERE media_id IS NOT DISTINCT FROM %s "
+                "AND matched_media_id IS NOT DISTINCT FROM %s ORDER BY id LIMIT 1",
+                (rec.media_id, rec.matched_media_id),
+            ).fetchone()
+            if existing and rec.media_id is not None:
+                return existing[0]
             return conn.execute(
                 "INSERT INTO copy_check (media_id, post_id, owner_user_id, team_id, bucket, object_name, zone, match_type, "
                 "score, matched_media_id, matched_post_id, result) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
@@ -260,6 +304,23 @@ class PgStore:
                 (decision, moderator, check_id),
             ).fetchone()
         return _check(r) if r else None
+
+
+def _vec(value) -> np.ndarray:
+    """pgvector's psycopg adapter returns its own Vector type, not a numpy array."""
+    if hasattr(value, "to_numpy"):
+        value = value.to_numpy()
+    return np.asarray(value, dtype=np.float32)
+
+
+def _same_pair(existing: CheckRecord, new: CheckRecord) -> bool:
+    """A re-check of the same upload against the same work (e.g. a repeated index rebuild)
+    must not put a second card in the moderation queue, nor reopen one a moderator decided."""
+    return (
+        new.media_id is not None
+        and existing.media_id == new.media_id
+        and existing.matched_media_id == new.matched_media_id
+    )
 
 
 def _check(r) -> CheckRecord:
