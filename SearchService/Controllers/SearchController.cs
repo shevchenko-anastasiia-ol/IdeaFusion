@@ -17,26 +17,23 @@ public sealed class SearchController(
     NpgsqlDataSource indexDb) : ControllerBase
 {
     /// <summary>Search posts, teams, vacancies and people. Typos, the wrong keyboard layout and transliteration are tolerated.</summary>
-    /// <param name="q">The query; empty lists the newest documents.</param>
-    /// <param name="kind">post, team, vacancy or user.</param>
-    /// <param name="category">A category name, e.g. "Музика".</param>
-    /// <param name="tag">Tag filter, repeatable; any spelling or synonym ("3-д", "#3D").</param>
-    /// <param name="tagMode">any (default): documents with at least one of the tags; all: with every tag.</param>
     [HttpGet]
-    public async Task<ActionResult<SearchResponse>> Search(
-        [FromQuery] string? q, [FromQuery] string? kind, [FromQuery] string? category,
-        [FromQuery(Name = "tag")] string[]? tag, [FromQuery] TagMatch tagMode = TagMatch.Any,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
-        CancellationToken ct = default)
+    public async Task<ActionResult<SearchResponse>> Search([FromQuery] SearchQueryParameters query, CancellationToken ct = default)
     {
-        if (kind is not null && !DocumentKinds.All.Contains(kind.Trim().ToLowerInvariant()))
+        if (query.Kind is not null && !DocumentKinds.All.Contains(query.Kind.Trim().ToLowerInvariant()))
             return BadRequest(new { error = $"kind must be one of: {string.Join(", ", DocumentKinds.All)}" });
+        if (query.From is { } from && query.To is { } to && from >= to)
+            return BadRequest(new { error = "from must be earlier than to" });
         if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
 
-        return await search.SearchAsync(new SearchRequest
+        try
         {
-            Query = q, Kind = kind, Category = category, Tags = tag ?? [], TagMode = tagMode, Page = page, PageSize = pageSize,
-        }, ct);
+            return await search.SearchAsync(query.ToRequest(), ct);
+        }
+        catch (InvalidCursorException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     /// <summary>Autocomplete: completions of the last word and the best few documents.</summary>

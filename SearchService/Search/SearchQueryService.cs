@@ -47,12 +47,23 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
     /// <param name="SameLexeme">The vocabulary word is an inflection of the typed word ("ілюстраціями" and "ілюстрація").</param>
     private sealed record Candidate(int Token, string Term, string Translit, int Dist, int DocFreq, bool SameLexeme);
 
+    private const int TagFacetSize = 15;
+
+    /// <exception cref="InvalidCursorException">The cursor is malformed or belongs to another sort order.</exception>
     public async Task<SearchResponse> SearchAsync(SearchRequest request, CancellationToken ct)
     {
-        var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
         var raw = Clip(request.Query);
-        var kind = string.IsNullOrWhiteSpace(request.Kind) ? null : request.Kind.Trim().ToLowerInvariant();
+
+        SearchCursor? cursor = null;
+        if (!string.IsNullOrWhiteSpace(request.Cursor))
+        {
+            cursor = SearchCursor.TryDecode(request.Cursor) ?? throw new InvalidCursorException("The cursor is not valid");
+            if (cursor.Sort != request.Sort) throw new InvalidCursorException("The cursor belongs to another sort order");
+        }
+        var page = cursor is null ? Math.Max(1, request.Page) : 1;
+        // The popularity decay is computed against one instant for all pages of a listing.
+        var asOf = cursor?.AsOf ?? DateTime.UtcNow;
 
         await using var conn = await index.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
@@ -64,45 +75,95 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         var p = new DynamicParameters();
         var (query, match, score) = BuildMatch(plan, p);
         var filters = BuildFilters(request, await catalogs.GetAsync(ct), p);
-        p.Add("kind", kind);
-        p.Add("limit", pageSize);
+        string Where(string? except = null) =>
+            $"({match})" + string.Concat(filters.Where(f => f.Key != except).Select(f => " AND " + f.Value));
+
+        var sortKey = request.Sort switch
+        {
+            SearchSort.Relevance when plan.Tokens.Count > 0 => score,
+            SearchSort.Popular => """
+                (d.views + 3 * d.likes + 4 * d.saves + 2 * d.open_vacancies)
+                * exp(-ln(2) * greatest(extract(epoch FROM (@asOf - d.created_at)), 0) / 86400 / 14)
+                """,
+            _ => "0",
+        };
+        p.Add("asOf", asOf);
+        p.Add("limit", pageSize + 1); // one more to know whether a next page exists
         p.Add("offset", (page - 1) * pageSize);
+        p.Add("ck", cursor?.Key);
+        p.Add("cc", cursor?.CreatedAt);
+        p.Add("ci", cursor?.Id);
 
         var hitsSql = $"""
-            WITH q AS (SELECT {query} AS tsq)
-            SELECT d.id, d.kind, d.source_id AS SourceId, d.title, d.subtitle, left(d.body, 240) AS Snippet,
-                   d.tags, d.categories, d.image_url AS ImageUrl, d.owner_id AS OwnerId, d.team_id AS TeamId,
-                   d.created_at AS CreatedAt, d.likes, d.saves, d.views, d.open_vacancies AS OpenVacancies,
-                   ({score})::float8 AS Score
-            FROM search_documents d, q
-            WHERE ({match}) {filters} AND (@kind::text IS NULL OR d.kind = @kind)
-            ORDER BY Score DESC, d.created_at DESC, d.id
+            WITH q AS (SELECT {query} AS tsq),
+            ranked AS (
+                SELECT d.id, d.kind, d.source_id AS SourceId, d.title, d.subtitle, left(d.body, 240) AS Snippet,
+                       d.tags, d.categories, d.image_url AS ImageUrl, d.owner_id AS OwnerId, d.team_id AS TeamId,
+                       d.created_at AS CreatedAt, d.likes, d.saves, d.views, d.open_vacancies AS OpenVacancies,
+                       ({score})::float8 AS Score, ({sortKey})::float8 AS SortKey
+                FROM search_documents d, q
+                WHERE {Where()}
+            )
+            SELECT * FROM ranked
+            WHERE @ck::float8 IS NULL OR (SortKey, CreatedAt, id) < (@ck::float8, @cc::timestamptz, @ci::text)
+            ORDER BY SortKey DESC, CreatedAt DESC, id DESC
             LIMIT @limit OFFSET @offset
             """;
         var hits = (await conn.QueryAsync<SearchHit>(new CommandDefinition(hitsSql, p, tx, cancellationToken: ct))).ToList();
 
-        var countsSql = $"""
-            WITH q AS (SELECT {query} AS tsq)
-            SELECT d.kind, count(*)::int
-            FROM search_documents d, q
-            WHERE ({match}) {filters}
-            GROUP BY d.kind
-            """;
-        var counts = (await conn.QueryAsync<(string Kind, int N)>(new CommandDefinition(countsSql, p, tx, cancellationToken: ct)))
-            .ToDictionary(c => c.Kind, c => c.N);
+        string? next = null;
+        if (hits.Count > pageSize)
+        {
+            hits.RemoveAt(hits.Count - 1);
+            var last = hits[^1];
+            next = new SearchCursor(request.Sort, last.SortKey, last.CreatedAt, last.Id, asOf).Encode();
+        }
 
+        var facets = await FacetsAsync(conn, tx, query, Where, p, ct);
         await tx.CommitAsync(ct);
 
+        var kind = filters.ContainsKey("kind") ? request.Kind!.Trim().ToLowerInvariant() : null;
         return new SearchResponse
         {
             Query = raw,
             DidYouMean = plan.DidYouMean,
             Page = page,
             PageSize = pageSize,
-            Total = kind is null ? counts.Values.Sum() : counts.GetValueOrDefault(kind),
-            KindCounts = counts,
+            Sort = request.Sort,
+            Total = kind is null ? facets.Kinds.Values.Sum() : facets.Kinds.GetValueOrDefault(kind),
+            Facets = facets,
             Items = hits,
+            NextCursor = next,
         };
+    }
+
+    /// <summary>Kind, category and tag counts; each ignores its own filter (disjunctive facets).</summary>
+    private static async Task<SearchFacets> FacetsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string query,
+        Func<string?, string> where, DynamicParameters p, CancellationToken ct)
+    {
+        var sql = $"""
+            WITH q AS (SELECT {query} AS tsq)
+            SELECT d.kind, count(*)::int FROM search_documents d, q WHERE {where("kind")} GROUP BY d.kind;
+
+            WITH q AS (SELECT {query} AS tsq)
+            SELECT c, count(*)::int AS n
+            FROM search_documents d, q, unnest(d.categories) AS c
+            WHERE {where("category")}
+            GROUP BY c ORDER BY n DESC, c;
+
+            WITH q AS (SELECT {query} AS tsq)
+            SELECT k, coalesce(t.label, k), count(*)::int AS n
+            FROM search_documents d, q, unnest(d.tag_keys) AS k
+            LEFT JOIN search_tags t ON t.key = k
+            WHERE {where("tags")}
+            GROUP BY k, t.label ORDER BY n DESC, k
+            LIMIT {TagFacetSize};
+            """;
+        await using var grid = await conn.QueryMultipleAsync(new CommandDefinition(sql, p, tx, cancellationToken: ct));
+        var kinds = (await grid.ReadAsync<(string Kind, int N)>()).ToDictionary(x => x.Kind, x => x.N);
+        var categories = (await grid.ReadAsync<(string Value, int Count)>()).Select(x => new FacetValue(x.Value, x.Count)).ToList();
+        var tags = (await grid.ReadAsync<(string Key, string Label, int Count)>()).Select(x => new TagFacet(x.Key, x.Label, x.Count)).ToList();
+        return new SearchFacets { Kinds = kinds, Categories = categories, Tags = tags };
     }
 
     /// <summary>Completions of the last word from the vocabulary and the best few documents.</summary>
@@ -327,22 +388,64 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         return (tsq.ToString(), match, score);
     }
 
-    private static string BuildFilters(SearchRequest request, TagCatalog catalog, DynamicParameters p)
+    /// <summary>The request's filters as named SQL conditions, so that a facet can leave its own one out.</summary>
+    private static Dictionary<string, string> BuildFilters(SearchRequest request, TagCatalog catalog, DynamicParameters p)
     {
-        var sql = new StringBuilder();
+        var filters = new Dictionary<string, string>();
+        if (!string.IsNullOrWhiteSpace(request.Kind))
+        {
+            p.Add("kind", request.Kind.Trim().ToLowerInvariant());
+            filters["kind"] = "d.kind = @kind";
+        }
         if (!string.IsNullOrWhiteSpace(request.Category))
         {
             p.Add("category", request.Category.Trim());
-            sql.Append(" AND d.categories @> ARRAY[@category]::text[]");
+            filters["category"] = "d.categories @> ARRAY[@category]::text[]";
         }
         // Any spelling or synonym of a tag selects the same documents: "#3D", "3-д" and "3d" are one tag.
         var tags = request.Tags.Select(catalog.Key).Where(k => k.Length > 0).Distinct().ToArray();
         if (tags.Length > 0)
         {
             p.Add("tags", PgArray.Of(tags));
-            sql.Append(request.TagMode == TagMatch.All ? " AND d.tag_keys @> @tags" : " AND d.tag_keys && @tags");
+            filters["tags"] = request.TagMode == TagMatch.All ? "d.tag_keys @> @tags" : "d.tag_keys && @tags";
         }
-        return sql.ToString();
+        if (request.From is { } from)
+        {
+            p.Add("from", DateTime.SpecifyKind(from, from.Kind == DateTimeKind.Unspecified ? DateTimeKind.Utc : from.Kind).ToUniversalTime());
+            filters["from"] = "d.created_at >= @from";
+        }
+        if (request.To is { } to)
+        {
+            p.Add("to", DateTime.SpecifyKind(to, to.Kind == DateTimeKind.Unspecified ? DateTimeKind.Utc : to.Kind).ToUniversalTime());
+            filters["to"] = "d.created_at < @to";
+        }
+        if (request.MinLikes is > 0)
+        {
+            p.Add("minLikes", request.MinLikes.Value);
+            filters["minLikes"] = "d.likes >= @minLikes";
+        }
+        if (request.HasOpenVacancies)
+            filters["openVacancies"] = "(d.kind <> 'team' OR d.open_vacancies > 0)";
+
+        var role = TextNormalizer.Normalize(request.Role);
+        if (role.Length > 0)
+        {
+            // Fuzzy, like the query: "аніматор" matches "Аніматор 2D", "ilustrator" matches "Illustrator".
+            p.Add("role", role);
+            p.Add("roleLatin", TextNormalizer.Transliterate(role));
+            filters["role"] = "(@role <% d.role_text OR @roleLatin <% d.role_text)";
+        }
+        if (!string.IsNullOrWhiteSpace(request.AuthorId))
+        {
+            p.Add("author", request.AuthorId.Trim());
+            filters["author"] = "d.owner_id = @author";
+        }
+        if (!string.IsNullOrWhiteSpace(request.TeamId))
+        {
+            p.Add("team", request.TeamId.Trim());
+            filters["team"] = "d.team_id = @team";
+        }
+        return filters;
     }
 
     private static string Clip(string? query)
