@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Npgsql;
 using SearchService.Data;
+using SearchService.Personal;
 
 namespace SearchService.Indexing;
 
@@ -21,6 +22,7 @@ public sealed class IndexSyncService(
     SearchIndexWriter writer,
     IndexSyncTrigger trigger,
     TagCatalogCache catalogCache,
+    SubscriptionMatcher subscriptions,
     Microsoft.Extensions.Options.IOptions<SearchIndexOptions> options,
     ILogger<IndexSyncService> logger) : BackgroundService
 {
@@ -100,6 +102,20 @@ public sealed class IndexSyncService(
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 logger.LogWarning(ex, "Search index: vocabulary, tag or role rebuild failed");
+            }
+        }
+
+        // New documents may match saved searches with notify on.
+        if (changed > 0)
+        {
+            try
+            {
+                var notified = await subscriptions.RunAsync(ct);
+                if (notified > 0) logger.LogInformation("Search subscriptions: {Count} notifications", notified);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                logger.LogWarning(ex, "Search subscriptions could not be matched");
             }
         }
 

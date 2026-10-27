@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using SearchService.Indexing;
+using SearchService.Personal;
 using SearchService.Search;
+using ServiceDefaults.Extensions;
 using ServiceDefaults.Security;
 
 namespace SearchService.Controllers;
@@ -14,7 +16,9 @@ namespace SearchService.Controllers;
 public sealed class SearchController(
     SearchQueryService search,
     IndexSyncTrigger sync,
-    NpgsqlDataSource indexDb) : ControllerBase
+    NpgsqlDataSource indexDb,
+    PersonalSearchStore personal,
+    ILogger<SearchController> logger) : ControllerBase
 {
     /// <summary>Search posts, teams, vacancies and people. Typos, the wrong keyboard layout and transliteration are tolerated.</summary>
     [HttpGet]
@@ -26,14 +30,19 @@ public sealed class SearchController(
             return BadRequest(new { error = "from must be earlier than to" });
         if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
 
+        var request = query.ToRequest();
+        SearchResponse response;
         try
         {
-            return await search.SearchAsync(query.ToRequest(), ct);
+            response = await search.SearchAsync(request, ct);
         }
         catch (InvalidCursorException ex)
         {
             return BadRequest(new { error = ex.Message });
         }
+
+        await RememberAsync(request, response, ct);
+        return response;
     }
 
     /// <summary>Autocomplete: completions of the last word and the best few documents.</summary>
@@ -89,6 +98,25 @@ public sealed class SearchController(
     {
         sync.Request();
         return Accepted();
+    }
+
+    /// <summary>
+    /// Adds a new search to the caller's history: the first page only, and only when something was asked for.
+    /// History is a convenience, so a failure here never fails the search; the query itself is not logged.
+    /// </summary>
+    private async Task RememberAsync(SearchRequest request, SearchResponse response, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(request.Cursor) || request.Page > 1 || User.TryGetUserId() is not { } userId) return;
+        var filters = SearchFilters.Of(request);
+        if (string.IsNullOrWhiteSpace(request.Query) && filters.IsEmpty) return;
+        try
+        {
+            await personal.RecordAsync(userId.ToString(), request.Query, filters, response.Total, ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning("Search history could not be saved: {Error}", ex.GetType().Name);
+        }
     }
 
     private ObjectResult IndexNotReady() =>
