@@ -52,6 +52,14 @@ public sealed class SearchController(
         return Ok(await search.TagsAsync(q, limit, ct));
     }
 
+    /// <summary>Role autocomplete for the role filter, by any spelling or synonym; an empty q lists the most asked-for roles.</summary>
+    [HttpGet("roles")]
+    public async Task<ActionResult<IReadOnlyList<RoleSuggestion>>> Roles([FromQuery] string? q, [FromQuery] int limit = 10, CancellationToken ct = default)
+    {
+        if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
+        return Ok(await search.RolesAsync(q, limit, ct));
+    }
+
     /// <summary>Categories (derived from tags) with document counts, for the filter list.</summary>
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<CategoryCount>>> Categories(CancellationToken ct)

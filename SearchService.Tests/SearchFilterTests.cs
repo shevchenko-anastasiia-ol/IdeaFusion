@@ -21,8 +21,9 @@ public sealed class SearchFilterTests(SearchDatabaseFixture db) : IClassFixture<
     [SkippableFact]
     public async Task Role_filter_is_fuzzy_and_works_in_both_scripts()
     {
-        Ids(await Search(new() { Role = "художник" })).Should().Equal(Docs.ModelerVacancy.Id);
-        Ids(await Search(new() { Role = "khudozhnyk" })).Should().Equal(Docs.ModelerVacancy.Id);
+        // The team matches too: it has an open vacancy for this role.
+        Ids(await Search(new() { Role = "художник" })).Should().BeEquivalentTo([Docs.ModelerVacancy.Id, Docs.AnimationTeam.Id]);
+        Ids(await Search(new() { Role = "khudozhnyk", Kind = "vacancy" })).Should().Equal(Docs.ModelerVacancy.Id);
         Ids(await Search(new() { Role = "аніматор" })).Should().Equal(Docs.AnimationTeam.Id);
         Ids(await Search(new() { Role = "ілюстраторка", Kind = "user" })).Should().Equal(Docs.Olena.Id);
     }

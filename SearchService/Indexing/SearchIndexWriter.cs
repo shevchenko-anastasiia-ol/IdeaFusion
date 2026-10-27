@@ -34,10 +34,17 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
             .Concat(categories)
             .Distinct(StringComparer.OrdinalIgnoreCase));
         var norm = TextNormalizer.Normalize(string.Join(' ', doc.Title, doc.Subtitle, tagText, doc.Body));
-        // Both scripts in one string, so the fuzzy role filter accepts "художник" and "khudozhnyk".
-        var roleNorm = TextNormalizer.Normalize(string.Join(' ', doc.Roles));
-        var roleText = roleNorm.Length == 0 ? "" : $"{roleNorm} {TextNormalizer.Transliterate(roleNorm)}";
-        return new IndexRow(doc, keys, categories.ToArray(), tagText, roleText, norm, TextNormalizer.Transliterate(norm));
+        return new IndexRow(doc, keys, categories.ToArray(), tagText, RoleText(doc.Roles, catalog), norm, TextNormalizer.Transliterate(norm));
+    }
+
+    /// <summary>
+    /// Text the fuzzy role filter compares with: each role keeps its own words in order, then their synonyms
+    /// from the role directory; both scripts go in one string, so "дизайнер", "designer" and "dyzainer" all match.
+    /// </summary>
+    public static string RoleText(IEnumerable<string> roles, TagCatalog catalog)
+    {
+        var norm = string.Join(' ', roles.Select(r => string.Join(' ', TextNormalizer.Tokenize(r).Concat(catalog.RoleWords(r)).Distinct())));
+        return norm.Length == 0 ? "" : $"{norm} {TextNormalizer.Transliterate(norm)}";
     }
 
     /// <summary>
@@ -110,10 +117,10 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 created_at = EXCLUDED.created_at, likes = EXCLUDED.likes, saves = EXCLUDED.saves,
                 views = EXCLUDED.views, open_vacancies = EXCLUDED.open_vacancies,
                 norm_text = EXCLUDED.norm_text, translit_text = EXCLUDED.translit_text, indexed_at = now()
-            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.roles, d.categories, d.tag_text, d.image_url, d.owner_id, d.team_id,
+            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.roles, d.categories, d.tag_text, d.role_text, d.image_url, d.owner_id, d.team_id,
                    d.created_at, d.likes, d.saves, d.views, d.open_vacancies)
                   IS DISTINCT FROM
-                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.roles, EXCLUDED.categories, EXCLUDED.tag_text,
+                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.roles, EXCLUDED.categories, EXCLUDED.tag_text, EXCLUDED.role_text,
                    EXCLUDED.image_url, EXCLUDED.owner_id, EXCLUDED.team_id, EXCLUDED.created_at, EXCLUDED.likes,
                    EXCLUDED.saves, EXCLUDED.views, EXCLUDED.open_vacancies)
             """, ct);
@@ -239,6 +246,58 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
             await writer.CompleteAsync(ct);
         }
         await tx.CommitAsync(ct);
+    }
+
+    /// <summary>Rebuilds the roles in use (search_roles) from vacancies, teams and people.</summary>
+    public async Task RebuildRolesAsync(TagCatalog catalog, CancellationToken ct)
+    {
+        await using var conn = await index.OpenConnectionAsync(ct);
+
+        var roles = new Dictionary<string, RoleUse>();
+        await using (var cmd = new NpgsqlCommand("SELECT kind, roles FROM search_documents WHERE cardinality(roles) > 0", conn))
+        await using (var reader = await cmd.ExecuteReaderAsync(ct))
+        {
+            while (await reader.ReadAsync(ct))
+            {
+                var kind = reader.GetString(0);
+                foreach (var role in reader.GetFieldValue<string[]>(1).Select(r => r.Trim()).Distinct())
+                {
+                    var key = string.Join(' ', TextNormalizer.Tokenize(role));
+                    if (key.Length == 0) continue;
+                    if (!roles.TryGetValue(key, out var r)) roles[key] = r = new RoleUse();
+                    r.Spellings[role] = r.Spellings.GetValueOrDefault(role) + 1;
+                    if (kind == DocumentKinds.Vacancy) r.Vacancies++;
+                    else if (kind == DocumentKinds.Team) r.Teams++;
+                    else r.People++;
+                }
+            }
+        }
+
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        await Exec(conn, tx, "DELETE FROM search_roles", ct);
+        await using (var writer = await conn.BeginBinaryImportAsync(
+                         "COPY search_roles (key, label, role_text, vacancies, teams, people) FROM STDIN (FORMAT BINARY)", ct))
+        {
+            foreach (var (key, r) in roles)
+            {
+                var label = r.Spellings.OrderByDescending(s => s.Value).ThenBy(s => s.Key, StringComparer.Ordinal).First().Key;
+                await writer.StartRowAsync(ct);
+                await writer.WriteAsync(key, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(label, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(RoleText([label], catalog), NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(r.Vacancies, NpgsqlDbType.Integer, ct);
+                await writer.WriteAsync(r.Teams, NpgsqlDbType.Integer, ct);
+                await writer.WriteAsync(r.People, NpgsqlDbType.Integer, ct);
+            }
+            await writer.CompleteAsync(ct);
+        }
+        await tx.CommitAsync(ct);
+    }
+
+    private sealed class RoleUse
+    {
+        public Dictionary<string, int> Spellings { get; } = [];
+        public int Vacancies, Teams, People;
     }
 
     private static Task WriteNullable(NpgsqlBinaryImporter writer, string? value, CancellationToken ct) =>
