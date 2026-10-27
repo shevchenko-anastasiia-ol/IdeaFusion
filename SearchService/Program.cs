@@ -44,6 +44,7 @@ builder.Services.AddSingleton<ISearchSource>(new VacancySource(collaboration));
 builder.Services.Configure<SearchIndexOptions>(builder.Configuration.GetSection("Search"));
 builder.Services.AddSingleton<IndexSyncTrigger>();
 builder.Services.AddSingleton<SearchIndexWriter>();
+builder.Services.AddSingleton<TagCatalogCache>();
 builder.Services.AddSingleton<SearchQueryService>();
 builder.Services.AddHostedService<IndexSyncService>();
 

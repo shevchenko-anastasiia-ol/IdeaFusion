@@ -38,10 +38,11 @@ public sealed class SearchDatabaseFixture : IAsyncLifetime
         await SearchMigrations.ApplyAsync(Index, NullLogger.Instance, default);
 
         var writer = new SearchIndexWriter(Index);
-        var categories = await writer.LoadTagCategoriesAsync(default);
+        var catalog = await writer.LoadTagCatalogAsync(default);
         foreach (var group in SampleDocuments.All.GroupBy(d => d.Kind))
-            await writer.SyncKindAsync(group.Key, group.Select(d => SearchIndexWriter.BuildRow(d, categories)).ToList(), default);
+            await writer.SyncKindAsync(group.Key, group.Select(d => SearchIndexWriter.BuildRow(d, catalog)).ToList(), default);
         await writer.RebuildTermsAsync(default);
+        await writer.RebuildTagsAsync(catalog, default);
     }
 
     public async Task DisposeAsync()
@@ -106,7 +107,7 @@ public sealed class SearchIntegrationTests(SearchDatabaseFixture db) : IClassFix
     private SearchQueryService Service()
     {
         Skip.If(db.SkipReason is not null, db.SkipReason);
-        return new SearchQueryService(db.Index!);
+        return new SearchQueryService(db.Index!, new TagCatalogCache(db.Index!));
     }
 
     private Task<SearchResponse> Search(string q, string? kind = null, string? category = null) =>
@@ -215,22 +216,70 @@ public sealed class SearchIntegrationTests(SearchDatabaseFixture db) : IClassFix
         s.Documents.Should().NotBeEmpty();
     }
 
+    private Task<SearchResponse> ByTags(TagMatch mode, params string[] tags) =>
+        Service().SearchAsync(new SearchRequest { Tags = tags, TagMode = mode, Kind = "post" }, default);
+
+    [SkippableFact]
+    public async Task Tag_filter_accepts_any_spelling_or_synonym()
+    {
+        var expected = new[] { SampleDocuments.TestPost.Id, SampleDocuments.BookIllustration.Id };
+        Ids(await ByTags(TagMatch.Any, "illustration")).Should().BeEquivalentTo(expected);
+        Ids(await ByTags(TagMatch.Any, "#Illustration")).Should().BeEquivalentTo(expected);
+        Ids(await ByTags(TagMatch.Any, "ілюстрація")).Should().BeEquivalentTo(expected);
+    }
+
+    [SkippableFact]
+    public async Task Tag_filter_all_requires_every_tag_and_any_one_of_them()
+    {
+        Ids(await ByTags(TagMatch.All, "ілюстрація", "WIP")).Should().Equal(SampleDocuments.TestPost.Id);
+        Ids(await ByTags(TagMatch.Any, "music", "wip")).Should().BeEquivalentTo([SampleDocuments.Song.Id, SampleDocuments.TestPost.Id]);
+        (await ByTags(TagMatch.All, "music", "wip")).Total.Should().Be(0);
+    }
+
+    [SkippableFact]
+    public async Task Query_word_finds_documents_tagged_with_its_synonym()
+    {
+        // TestPost is in English and tagged "illustration"; the query is the Ukrainian synonym.
+        Ids(await Search("ілюстрація")).Should().Contain(SampleDocuments.TestPost.Id);
+    }
+
+    [SkippableTheory]
+    [InlineData("ілюс")]
+    [InlineData("ilustr")]
+    [InlineData("#Illus")]
+    [InlineData("шдгіек")] // "ilustr" typed with the Ukrainian layout
+    public async Task Tag_autocomplete_offers_the_tag_by_any_name(string typed)
+    {
+        var tags = await Service().TagsAsync(typed, 5, default);
+        tags.Should().NotBeEmpty();
+        tags[0].Key.Should().Be("illustration");
+        tags[0].Documents.Should().Be(2);
+    }
+
+    [SkippableFact]
+    public async Task Tag_autocomplete_normalizes_3d_spellings_and_lists_popular_tags_without_a_query()
+    {
+        (await Service().TagsAsync("3-д", 5, default)).Should().Contain(t => t.Key == "3d");
+        var popular = await Service().TagsAsync("", 3, default);
+        popular[0].Key.Should().Be("illustration");
+    }
+
     [SkippableFact]
     public async Task Resync_removes_documents_the_source_no_longer_has()
     {
         Skip.If(db.SkipReason is not null, db.SkipReason);
         var writer = new SearchIndexWriter(db.Index!);
-        var categories = await writer.LoadTagCategoriesAsync(default);
+        var catalog = await writer.LoadTagCatalogAsync(default);
         var temporary = SampleDocuments.Olena with { SourceId = "8f1d6a8e-0000-0000-0000-000000000002", Title = "Тимчасовий Користувач" };
 
-        await writer.SyncKindAsync("user", [SearchIndexWriter.BuildRow(SampleDocuments.Olena, categories), SearchIndexWriter.BuildRow(temporary, categories)], default);
+        await writer.SyncKindAsync("user", [SearchIndexWriter.BuildRow(SampleDocuments.Olena, catalog), SearchIndexWriter.BuildRow(temporary, catalog)], default);
         (await Search("тимчасовий", kind: "user")).Total.Should().Be(1);
 
-        var changed = await writer.SyncKindAsync("user", [SearchIndexWriter.BuildRow(SampleDocuments.Olena, categories)], default);
+        var changed = await writer.SyncKindAsync("user", [SearchIndexWriter.BuildRow(SampleDocuments.Olena, catalog)], default);
         changed.Should().Be(1);
         (await Search("тимчасовий", kind: "user")).Total.Should().Be(0);
 
         // Nothing changed: nothing is rewritten.
-        (await writer.SyncKindAsync("user", [SearchIndexWriter.BuildRow(SampleDocuments.Olena, categories)], default)).Should().Be(0);
+        (await writer.SyncKindAsync("user", [SearchIndexWriter.BuildRow(SampleDocuments.Olena, catalog)], default)).Should().Be(0);
     }
 }

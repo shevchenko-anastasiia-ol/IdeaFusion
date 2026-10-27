@@ -20,6 +20,7 @@ public sealed class IndexSyncService(
     IEnumerable<ISearchSource> sources,
     SearchIndexWriter writer,
     IndexSyncTrigger trigger,
+    TagCatalogCache catalogCache,
     Microsoft.Extensions.Options.IOptions<SearchIndexOptions> options,
     ILogger<IndexSyncService> logger) : BackgroundService
 {
@@ -57,14 +58,15 @@ public sealed class IndexSyncService(
     {
         var started = Stopwatch.StartNew();
         var changed = 0;
-        IReadOnlyDictionary<string, string[]> tagCategories;
+        TagCatalog catalog;
         try
         {
-            tagCategories = await writer.LoadTagCategoriesAsync(ct);
+            catalog = await writer.LoadTagCatalogAsync(ct);
+            catalogCache.Set(catalog);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            logger.LogError(ex, "Cannot read tag categories; search index sync skipped");
+            logger.LogError(ex, "Cannot read the tag catalog; search index sync skipped");
             return;
         }
 
@@ -73,7 +75,7 @@ public sealed class IndexSyncService(
             try
             {
                 var docs = await source.ReadAllAsync(ct);
-                var rows = docs.Select(d => SearchIndexWriter.BuildRow(d, tagCategories)).ToList();
+                var rows = docs.Select(d => SearchIndexWriter.BuildRow(d, catalog)).ToList();
                 var n = await writer.SyncKindAsync(source.Kind, rows, ct);
                 changed += n;
                 if (n > 0) logger.LogInformation("Search index: {Kind} {Changed} changed of {Total}", source.Kind, n, rows.Count);
@@ -91,11 +93,12 @@ public sealed class IndexSyncService(
             try
             {
                 await writer.RebuildTermsAsync(ct);
+                await writer.RebuildTagsAsync(catalog, ct);
                 trigger.TermsBuilt = true;
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
-                logger.LogWarning(ex, "Search index: vocabulary rebuild failed");
+                logger.LogWarning(ex, "Search index: vocabulary or tag rebuild failed");
             }
         }
 
