@@ -1,0 +1,65 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MongoDB.Driver;
+using Npgsql;
+using SearchService.Data;
+using SearchService.Indexing;
+using SearchService.Search;
+using ServiceDefaults.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+builder.AddOpenTelemetryTracing();
+builder.Services.AddCorrelationIdForwarding();
+
+builder.Services
+    .AddKeycloakAuthentication(builder.Configuration)
+    .AddIdeaFusionAuthorization();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerWithKeycloak(builder.Configuration, "Search API");
+
+string Required(string name) =>
+    builder.Configuration.GetConnectionString(name)
+    ?? throw new InvalidOperationException($"Connection string '{name}' is missing");
+
+// searchdb is the only database written to; the sources are opened read-only.
+var indexDb = NpgsqlDataSource.Create(Required("searchdb"));
+builder.Services.AddSingleton(indexDb);
+builder.Services.AddSingleton<ISearchSource>(new ContentPostSource(SearchDatabase.ReadOnly(Required("contentdb"))));
+builder.Services.AddSingleton<ISearchSource>(new IdentityUserSource(SearchDatabase.ReadOnly(Required("identityservicedb"))));
+
+var collaboration = new MongoClient(Required("collaboration-db"))
+    .GetDatabase(builder.Configuration["Search:CollaborationDatabase"] ?? "collaboration-db");
+builder.Services.AddSingleton<ISearchSource>(new TeamSource(collaboration));
+builder.Services.AddSingleton<ISearchSource>(new VacancySource(collaboration));
+
+builder.Services.Configure<SearchIndexOptions>(builder.Configuration.GetSection("Search"));
+builder.Services.AddSingleton<IndexSyncTrigger>();
+builder.Services.AddSingleton<SearchIndexWriter>();
+builder.Services.AddSingleton<SearchQueryService>();
+builder.Services.AddHostedService<IndexSyncService>();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(Required("searchdb"), name: "searchdb", tags: ["db", "ready"]);
+
+var app = builder.Build();
+
+app.UseSwaggerWithKeycloak();
+app.UseCorrelationId();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapHealthChecks("/health").AllowAnonymous();
+app.MapControllers();
+
+await app.RunAsync();
+
+public partial class Program { }
