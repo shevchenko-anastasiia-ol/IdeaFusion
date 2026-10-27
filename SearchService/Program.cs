@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using Npgsql;
 using SearchService.Data;
 using SearchService.Indexing;
+using SearchService.Personal;
 using SearchService.Search;
 using ServiceDefaults.Extensions;
 
@@ -22,6 +23,8 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        // "new", "popular", "all" in bodies and responses, the same words as in the query string.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithKeycloak(builder.Configuration, "Search API");
@@ -46,6 +49,8 @@ builder.Services.AddSingleton<IndexSyncTrigger>();
 builder.Services.AddSingleton<SearchIndexWriter>();
 builder.Services.AddSingleton<TagCatalogCache>();
 builder.Services.AddSingleton<SearchQueryService>();
+builder.Services.AddSingleton<PersonalSearchStore>();
+builder.Services.AddSingleton<SubscriptionMatcher>();
 builder.Services.AddHostedService<IndexSyncService>();
 
 builder.Services.AddHealthChecks()

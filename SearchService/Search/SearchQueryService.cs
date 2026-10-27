@@ -485,6 +485,16 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
             p.Add("team", request.TeamId.Trim());
             filters["team"] = "d.team_id = @team";
         }
+        if (request.IndexedAfter is { } after)
+        {
+            p.Add("indexedAfter", DateTime.SpecifyKind(after, DateTimeKind.Utc));
+            filters["indexedAfter"] = "d.first_indexed_at > @indexedAfter";
+        }
+        if (!string.IsNullOrWhiteSpace(request.ExcludeOwnerId))
+        {
+            p.Add("excludeOwner", request.ExcludeOwnerId);
+            filters["excludeOwner"] = "d.owner_id IS DISTINCT FROM @excludeOwner";
+        }
         return filters;
     }
 

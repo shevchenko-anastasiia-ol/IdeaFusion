@@ -37,6 +37,12 @@ public sealed record SearchRequest
 
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
+
+    /// <summary>Only documents that entered the index after this moment (subscriptions; not exposed in the API).</summary>
+    public DateTime? IndexedAfter { get; init; }
+
+    /// <summary>Leave out this user's own documents (subscriptions; not exposed in the API).</summary>
+    public string? ExcludeOwnerId { get; init; }
 }
 
 public enum SearchSort
