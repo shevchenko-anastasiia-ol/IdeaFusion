@@ -6,7 +6,7 @@ namespace SearchService.Search;
 /// <summary>
 /// Keyset position: the (sort key, created_at, id) of the last item shown. The next page starts
 /// strictly after it, so documents indexed in between do not shift or repeat results the way an
-/// offset would. <see cref="AsOf"/> freezes the clock of the popularity decay for the whole listing.
+/// offset would. <see cref="AsOf"/> is when the listing started.
 /// </summary>
 public sealed record SearchCursor(SearchSort Sort, double Key, DateTime CreatedAt, string Id, DateTime AsOf)
 {

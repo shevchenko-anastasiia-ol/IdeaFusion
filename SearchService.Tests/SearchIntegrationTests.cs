@@ -51,6 +51,8 @@ public sealed class SearchDatabaseFixture : IAsyncLifetime
         if (_server is null || Index is null) return;
         await Index.DisposeAsync();
         NpgsqlConnection.ClearAllPools();
+        // SEARCH_TEST_KEEP_DB=1 leaves the database for profiling (e.g. after the benchmark).
+        if (Environment.GetEnvironmentVariable("SEARCH_TEST_KEEP_DB") == "1") return;
         await using var admin = new NpgsqlConnection(_server);
         await admin.OpenAsync();
         await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS {_database} WITH (FORCE)", admin);

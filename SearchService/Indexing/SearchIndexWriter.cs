@@ -12,7 +12,9 @@ public sealed record IndexRow(
     string TagText,
     string RoleText,
     string NormText,
-    string TranslitText);
+    string HeadNorm,
+    string HeadTranslit,
+    double PopularityKey);
 
 /// <summary>Writes snapshots of the sources into searchdb.</summary>
 public sealed class SearchIndexWriter(NpgsqlDataSource index)
@@ -34,8 +36,22 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
             .Concat(categories)
             .Distinct(StringComparer.OrdinalIgnoreCase));
         var norm = TextNormalizer.Normalize(string.Join(' ', doc.Title, doc.Subtitle, tagText, doc.Body));
-        return new IndexRow(doc, keys, categories.ToArray(), tagText, RoleText(doc.Roles, catalog), norm, TextNormalizer.Transliterate(norm));
+        // The fuzzy trigram leg only looks at the head: short, so word_similarity stays cheap on large indexes.
+        var head = TextNormalizer.Normalize(string.Join(' ', doc.Title, doc.Subtitle, tagText));
+        return new IndexRow(doc, keys, categories.ToArray(), tagText, RoleText(doc.Roles, catalog), norm,
+            head, TextNormalizer.Transliterate(head), PopularityKey(doc));
     }
+
+    public static readonly TimeSpan PopularHalfLife = TimeSpan.FromDays(14);
+
+    /// <summary>
+    /// The "popular" order key: the logarithm of (1 + reactions) halved every <see cref="PopularHalfLife"/> of age,
+    /// with reactions weighed view 1, like 3, save 4, open vacancy 2. It does not depend on the current moment,
+    /// so it is stored and indexed.
+    /// </summary>
+    public static double PopularityKey(SourceDocument d) =>
+        Math.Log(1 + d.Views + 3.0 * d.Likes + 4.0 * d.Saves + 2.0 * d.OpenVacancies)
+        + (DateTime.SpecifyKind(d.CreatedAt, DateTimeKind.Utc) - DateTime.UnixEpoch).TotalSeconds * Math.Log(2) / PopularHalfLife.TotalSeconds;
 
     /// <summary>
     /// Text the fuzzy role filter compares with: each role keeps its own words in order, then their synonyms
@@ -62,13 +78,14 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 id text, kind text, source_id text, title text, subtitle text, body text,
                 tags text[], tag_keys text[], categories text[], tag_text text, roles text[], role_text text, image_url text, owner_id text, team_id text,
                 created_at timestamptz, likes int, saves int, views int, open_vacancies int,
-                norm_text text, translit_text text
+                norm_text text, head_norm text, head_translit text, popularity_key float8
             ) ON COMMIT DROP
             """, ct);
 
         await using (var writer = await conn.BeginBinaryImportAsync("""
             COPY incoming (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, roles, role_text, image_url,
-                           owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text)
+                           owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text,
+                           head_norm, head_translit, popularity_key)
             FROM STDIN (FORMAT BINARY)
             """, ct))
         {
@@ -97,7 +114,9 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 await writer.WriteAsync(d.Views, NpgsqlDbType.Integer, ct);
                 await writer.WriteAsync(d.OpenVacancies, NpgsqlDbType.Integer, ct);
                 await writer.WriteAsync(row.NormText, NpgsqlDbType.Text, ct);
-                await writer.WriteAsync(row.TranslitText, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(row.HeadNorm, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(row.HeadTranslit, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(row.PopularityKey, NpgsqlDbType.Double, ct);
             }
             await writer.CompleteAsync(ct);
         }
@@ -105,9 +124,9 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
         // Unchanged rows are left alone, so their tsvector is not recomputed every cycle.
         var upserted = await Exec(conn, tx, """
             INSERT INTO search_documents AS d (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, roles, role_text,
-                image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text)
+                image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, head_norm, head_translit, popularity_key)
             SELECT id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, roles, role_text,
-                image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text
+                image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, head_norm, head_translit, popularity_key
             FROM incoming
             ON CONFLICT (id) DO UPDATE SET
                 title = EXCLUDED.title, subtitle = EXCLUDED.subtitle, body = EXCLUDED.body,
@@ -116,11 +135,12 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 image_url = EXCLUDED.image_url, owner_id = EXCLUDED.owner_id, team_id = EXCLUDED.team_id,
                 created_at = EXCLUDED.created_at, likes = EXCLUDED.likes, saves = EXCLUDED.saves,
                 views = EXCLUDED.views, open_vacancies = EXCLUDED.open_vacancies,
-                norm_text = EXCLUDED.norm_text, translit_text = EXCLUDED.translit_text, indexed_at = now()
-            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.roles, d.categories, d.tag_text, d.role_text, d.image_url, d.owner_id, d.team_id,
+                norm_text = EXCLUDED.norm_text, popularity_key = EXCLUDED.popularity_key,
+                head_norm = EXCLUDED.head_norm, head_translit = EXCLUDED.head_translit, indexed_at = now()
+            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.roles, d.categories, d.tag_text, d.role_text, d.head_norm, d.popularity_key, d.image_url, d.owner_id, d.team_id,
                    d.created_at, d.likes, d.saves, d.views, d.open_vacancies)
                   IS DISTINCT FROM
-                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.roles, EXCLUDED.categories, EXCLUDED.tag_text, EXCLUDED.role_text,
+                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.roles, EXCLUDED.categories, EXCLUDED.tag_text, EXCLUDED.role_text, EXCLUDED.head_norm, EXCLUDED.popularity_key,
                    EXCLUDED.image_url, EXCLUDED.owner_id, EXCLUDED.team_id, EXCLUDED.created_at, EXCLUDED.likes,
                    EXCLUDED.saves, EXCLUDED.views, EXCLUDED.open_vacancies)
             """, ct);

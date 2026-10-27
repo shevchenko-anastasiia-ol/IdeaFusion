@@ -35,7 +35,7 @@ string Required(string name) =>
     ?? throw new InvalidOperationException($"Connection string '{name}' is missing");
 
 // searchdb is the only database written to; the sources are opened read-only.
-var indexDb = NpgsqlDataSource.Create(Required("searchdb"));
+var indexDb = SearchDatabase.IndexSource(Required("searchdb"));
 builder.Services.AddSingleton(indexDb);
 var contentDb = SearchDatabase.ReadOnly(Required("contentdb"));
 builder.Services.AddSingleton<ISearchSource>(new ContentPostSource(contentDb));
@@ -57,6 +57,7 @@ builder.Services.AddSingleton<SubscriptionMatcher>();
 builder.Services.AddSingleton<InterestProfileWriter>();
 builder.Services.AddSingleton<FeedService>();
 builder.Services.AddSingleton<FeedEventLog>();
+builder.Services.AddSingleton<SearchMetrics>();
 builder.Services.AddHostedService<IndexSyncService>();
 
 builder.Services.AddHealthChecks()

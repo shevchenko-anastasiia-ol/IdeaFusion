@@ -194,6 +194,8 @@ export const searchApi = {
   tags: (q: string, limit = 10) => api.get<TagSuggestion[]>(`${BASE}/tags?q=${encodeURIComponent(q)}&limit=${limit}`),
   roles: (q: string, limit = 10) => api.get<RoleSuggestion[]>(`${BASE}/roles?q=${encodeURIComponent(q)}&limit=${limit}`),
   categories: () => api.get<CategoryCount[]>(`${BASE}/categories`),
+  /** A result was opened from the search page (0-based position), for the click-in-top-3 metric. */
+  click: (kind: SearchKind, position: number) => api.post<void>(`${BASE}/clicks`, { kind, position }),
 
   history: (q = "", limit = 10) => api.get<HistoryEntry[]>(`${BASE}/history?q=${encodeURIComponent(q)}&limit=${limit}`),
   deleteHistory: (id: number) => api.delete<void>(`${BASE}/history/${id}`),
