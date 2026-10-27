@@ -129,3 +129,12 @@ public enum TagMatch { Any, All }
 /// <param name="Label">Display name.</param>
 /// <param name="Documents">Indexed documents with this tag.</param>
 public sealed record TagSuggestion(string Key, string Label, int Documents);
+
+/// <summary>A role in use: how many open vacancies ask for it, teams need it and people have it.</summary>
+public sealed class RoleSuggestion
+{
+    public string Label { get; init; } = "";
+    public int Vacancies { get; init; }
+    public int Teams { get; init; }
+    public int People { get; init; }
+}

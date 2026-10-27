@@ -4,13 +4,16 @@ using SearchService.Normalization;
 namespace SearchService.Indexing;
 
 /// <summary>
-/// What the index knows about tags: synonym groups (tag_synonyms) and categories (tag_categories).
+/// What the index knows about tags: synonym groups (tag_synonyms) and categories (tag_categories),
+/// plus the role directory (role_synonyms) used to widen role_text.
 /// Every tag is reduced to a canonical key: its <see cref="TextNormalizer.TagKey"/>, replaced by the
 /// key of its group's canonical tag when it has synonyms ("ілюстрація" → "illustration").
 /// </summary>
 public sealed class TagCatalog
 {
     public static readonly TagCatalog Empty = Build([], []);
+
+    private Dictionary<string, string[]> _roleGroups = [];
 
     private readonly Dictionary<string, string> _canonicalByKey;
     private readonly Dictionary<string, string[]> _namesByCanonical;
@@ -34,7 +37,8 @@ public sealed class TagCatalog
 
     /// <param name="synonyms">(term, canonical term) rows of tag_synonyms.</param>
     /// <param name="categories">(tag, category) rows of tag_categories.</param>
-    public static TagCatalog Build(IEnumerable<(string Term, string Canonical)> synonyms, IEnumerable<(string Tag, string Category)> categories)
+    public static TagCatalog Build(IEnumerable<(string Term, string Canonical)> synonyms, IEnumerable<(string Tag, string Category)> categories,
+        IEnumerable<(string Term, string Canonical)>? roleSynonyms = null)
     {
         var canonicalByKey = new Dictionary<string, string>();
         var names = new Dictionary<string, List<string>>();
@@ -65,12 +69,23 @@ public sealed class TagCatalog
             set.Add(category);
         }
 
+        // Role words: every word of a group knows the whole group ("дизайнер" → designer, дизайнер, дизайнерка).
+        var roleGroups = (roleSynonyms ?? [])
+            .Select(r => (Term: TextNormalizer.Normalize(r.Term), Canonical: TextNormalizer.Normalize(r.Canonical)))
+            .Where(r => r.Term.Length > 0 && r.Canonical.Length > 0)
+            .GroupBy(r => r.Canonical)
+            .Select(g => g.Select(r => r.Term).Prepend(g.Key).Distinct().ToArray())
+            .SelectMany(group => group.Select(word => (word, group)))
+            .GroupBy(x => x.word)
+            .ToDictionary(g => g.Key, g => g.SelectMany(x => x.group).Distinct().ToArray());
+
         return new TagCatalog(
             canonicalByKey,
             names.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray()),
             labels,
             categoriesByCanonical.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray()),
-            categoryNames);
+            categoryNames)
+        { _roleGroups = roleGroups };
     }
 
     public static async Task<TagCatalog> LoadAsync(NpgsqlDataSource index, CancellationToken ct)
@@ -85,7 +100,12 @@ public sealed class TagCatalog
         await using (var reader = await cmd.ExecuteReaderAsync(ct))
             while (await reader.ReadAsync(ct)) categories.Add((reader.GetString(0), reader.GetString(1)));
 
-        return Build(synonyms, categories);
+        var roles = new List<(string, string)>();
+        await using (var cmd = index.CreateCommand("SELECT term, canonical FROM role_synonyms"))
+        await using (var reader = await cmd.ExecuteReaderAsync(ct))
+            while (await reader.ReadAsync(ct)) roles.Add((reader.GetString(0), reader.GetString(1)));
+
+        return Build(synonyms, categories, roles);
     }
 
     /// <summary>Canonical key of a tag as written, or "" for a tag without letters or digits.</summary>
@@ -104,6 +124,10 @@ public sealed class TagCatalog
     /// <summary>Keys of every name that leads to this canonical key: its synonyms' keys and the key itself.</summary>
     public IEnumerable<string> NameKeys(string canonicalKey) =>
         Synonyms(canonicalKey).Select(TextNormalizer.TagKey).Append(canonicalKey).Distinct();
+
+    /// <summary>The normalized words of a role with their synonyms: "Motion Designer" → motion, моушн, designer, дизайнер, …</summary>
+    public IEnumerable<string> RoleWords(string? role) =>
+        TextNormalizer.Tokenize(role).SelectMany(w => _roleGroups.GetValueOrDefault(w) ?? [w]).Distinct();
 
     /// <summary>Categories of a tag (by canonical key); a team's own category may also be a category name.</summary>
     public IEnumerable<string> Categories(string tagOrCategory)

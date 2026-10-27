@@ -43,6 +43,7 @@ public sealed class SearchDatabaseFixture : IAsyncLifetime
             await writer.SyncKindAsync(group.Key, group.Select(d => SearchIndexWriter.BuildRow(d, catalog)).ToList(), default);
         await writer.RebuildTermsAsync(default);
         await writer.RebuildTagsAsync(catalog, default);
+        await writer.RebuildRolesAsync(catalog, default);
     }
 
     public async Task DisposeAsync()

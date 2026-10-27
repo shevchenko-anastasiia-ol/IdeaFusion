@@ -61,4 +61,24 @@ public class TagCatalogTests
         row.Categories.Should().BeEquivalentTo("Арт", "UI/UX");
         row.TagText.Should().Contain("ілюстрація").And.Contain("illustration").And.Contain("ui-ux");
     }
+
+    private static readonly TagCatalog Roles = TagCatalog.Build([], [],
+        [("designer", "designer"), ("дизайнер", "designer"), ("дизайнерка", "designer"), ("motion", "motion"), ("моушн", "motion")]);
+
+    [Fact]
+    public void RoleWords_add_synonyms_of_every_word_and_keep_unknown_words()
+    {
+        Roles.RoleWords("Motion Designer").Should().BeEquivalentTo(["motion", "моушн", "designer", "дизайнер", "дизайнерка"]);
+        Roles.RoleWords("Дизайнерка інтер'єрів").Should().BeEquivalentTo(["designer", "дизайнер", "дизайнерка", "інтерєрів"]);
+        Roles.RoleWords(null).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RoleText_keeps_the_role_first_and_carries_both_scripts()
+    {
+        var text = SearchIndexWriter.RoleText(["Motion Designer"], Roles);
+        text.Should().StartWith("motion designer ");
+        text.Should().Contain("дизайнер").And.Contain("dyzainer");
+        SearchIndexWriter.RoleText([], Roles).Should().BeEmpty();
+    }
 }

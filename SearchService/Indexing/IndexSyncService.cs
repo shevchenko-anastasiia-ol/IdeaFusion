@@ -94,11 +94,12 @@ public sealed class IndexSyncService(
             {
                 await writer.RebuildTermsAsync(ct);
                 await writer.RebuildTagsAsync(catalog, ct);
+                await writer.RebuildRolesAsync(catalog, ct);
                 trigger.TermsBuilt = true;
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
-                logger.LogWarning(ex, "Search index: vocabulary or tag rebuild failed");
+                logger.LogWarning(ex, "Search index: vocabulary, tag or role rebuild failed");
             }
         }
 

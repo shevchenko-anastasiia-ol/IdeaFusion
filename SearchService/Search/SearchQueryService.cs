@@ -244,6 +244,38 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         return rows.ToList();
     }
 
+    /// <summary>
+    /// Role autocomplete for the role filter: roles in use whose words or their synonyms resemble the query
+    /// in either script or keyboard layout. An empty query lists the most asked-for roles.
+    /// </summary>
+    public async Task<IReadOnlyList<RoleSuggestion>> RolesAsync(string? query, int limit, CancellationToken ct)
+    {
+        limit = Math.Clamp(limit, 1, 50);
+        var forms = new[] { TextNormalizer.Normalize(query), TextNormalizer.Normalize(TextNormalizer.SwapLayout(query)) }
+            .Where(f => f.Length > 0).Distinct().ToList();
+        forms.AddRange(forms.Select(TextNormalizer.Transliterate).ToList());
+
+        await using var conn = await index.OpenConnectionAsync(ct);
+        const string columns = "label AS Label, vacancies AS Vacancies, teams AS Teams, people AS People";
+        if (forms.Count == 0)
+        {
+            return (await conn.QueryAsync<RoleSuggestion>(new CommandDefinition(
+                $"SELECT {columns} FROM search_roles ORDER BY vacancies DESC, teams + people DESC, label LIMIT @limit",
+                new { limit }, cancellationToken: ct))).ToList();
+        }
+
+        return (await conn.QueryAsync<RoleSuggestion>(new CommandDefinition($"""
+            SELECT {columns}
+            FROM search_roles r
+            CROSS JOIN LATERAL (SELECT max(word_similarity(f, r.role_text)) AS sim,
+                                       bool_or(r.role_text LIKE f || '%' OR r.role_text LIKE '% ' || f || '%') AS prefix
+                                FROM unnest(@forms) AS f) m
+            WHERE m.prefix OR m.sim >= 0.5
+            ORDER BY m.prefix DESC, m.sim DESC, r.vacancies DESC, r.teams + r.people DESC, r.label
+            LIMIT @limit
+            """, new { forms = PgArray.Of(forms.Distinct().ToArray()), limit }, cancellationToken: ct))).ToList();
+    }
+
     /// <summary>Splits the query into words and finds the closest vocabulary words for each.</summary>
     internal static async Task<QueryPlan> PlanAsync(NpgsqlConnection conn, NpgsqlTransaction? tx, string raw, CancellationToken ct)
     {
@@ -430,10 +462,18 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         var role = TextNormalizer.Normalize(request.Role);
         if (role.Length > 0)
         {
-            // Fuzzy, like the query: "аніматор" matches "Аніматор 2D", "ilustrator" matches "Illustrator".
+            // Fuzzy, like the query, and widened by the role directory: "аніматор" matches "Аніматор 2D",
+            // "ilustrator" matches "Illustrator", "дизайнер" matches "Motion Designer". A team also matches
+            // by the roles of its open vacancies: "a team looking for an illustrator".
             p.Add("role", role);
             p.Add("roleLatin", TextNormalizer.Transliterate(role));
-            filters["role"] = "(@role <% d.role_text OR @roleLatin <% d.role_text)";
+            filters["role"] = """
+                (@role <% d.role_text OR @roleLatin <% d.role_text
+                 OR (d.kind = 'team' AND EXISTS (
+                     SELECT 1 FROM search_documents v
+                     WHERE v.kind = 'vacancy' AND v.team_id = d.team_id
+                       AND (@role <% v.role_text OR @roleLatin <% v.role_text))))
+                """;
         }
         if (!string.IsNullOrWhiteSpace(request.AuthorId))
         {
