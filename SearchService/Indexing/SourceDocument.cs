@@ -20,6 +20,9 @@ public sealed record SourceDocument
     public string? Body { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
 
+    /// <summary>Roles the document is about: vacancy role, specialization, a team's required roles.</summary>
+    public IReadOnlyList<string> Roles { get; init; } = [];
+
     /// <summary>Category names the source stores itself (a team's category), mapped like tags.</summary>
     public IReadOnlyList<string> CategoryHints { get; init; } = [];
 

@@ -70,7 +70,7 @@ internal static class SampleDocuments
     {
         Kind = DocumentKinds.Post, SourceId = "2", Title = "Ілюстрація для дитячої книжки",
         Body = "Малюю ілюстрації аквареллю для видавництва", Tags = ["illustration"], Subtitle = "Олена Коваленко",
-        CreatedAt = Day.AddDays(1), Likes = 10,
+        CreatedAt = Day.AddDays(1), Likes = 10, OwnerId = "8f1d6a8e-0000-0000-0000-000000000001",
     };
     public static readonly SourceDocument Song = new()
     {
@@ -85,21 +85,29 @@ internal static class SampleDocuments
     public static readonly SourceDocument AnimationTeam = new()
     {
         Kind = DocumentKinds.Team, SourceId = "650000000000000000000001", Title = "Команда аніматорів",
-        Body = "Шукаємо людей для короткого мультфільму", Tags = ["animation"], CategoryHints = ["Анімація"],
-        CreatedAt = Day, OpenVacancies = 1,
+        Body = "Шукаємо людей для короткого мультфільму", Tags = ["animation"], CategoryHints = ["Анімація"], Roles = ["Аніматор 2D"],
+        CreatedAt = Day, OpenVacancies = 1, TeamId = "650000000000000000000001",
     };
     public static readonly SourceDocument ModelerVacancy = new()
     {
         Kind = DocumentKinds.Vacancy, SourceId = "650000000000000000000002", Title = "3D художник",
         Subtitle = "Команда аніматорів", Body = "Моделювання персонажів у Blender", Tags = ["3d"], CreatedAt = Day,
+        Roles = ["3D художник"], TeamId = "650000000000000000000001",
     };
     public static readonly SourceDocument Olena = new()
     {
         Kind = DocumentKinds.User, SourceId = "8f1d6a8e-0000-0000-0000-000000000001", Title = "Олена Коваленко",
         Subtitle = "olena_k · Ілюстраторка", Body = "Ілюстраторка", CreatedAt = Day,
+        Roles = ["Ілюстраторка"], OwnerId = "8f1d6a8e-0000-0000-0000-000000000001",
     };
 
-    public static readonly SourceDocument[] All = [TestPost, BookIllustration, Song, BrushTesting, AnimationTeam, ModelerVacancy, Olena];
+    public static readonly SourceDocument PoetsTeam = new()
+    {
+        Kind = DocumentKinds.Team, SourceId = "650000000000000000000003", Title = "Гурток поетів",
+        Body = "Читаємо вірші щочетверга", Tags = ["poetry"], CreatedAt = Day, OpenVacancies = 0,
+    };
+
+    public static readonly SourceDocument[] All = [TestPost, BookIllustration, Song, BrushTesting, AnimationTeam, ModelerVacancy, Olena, PoetsTeam];
 }
 
 public sealed class SearchIntegrationTests(SearchDatabaseFixture db) : IClassFixture<SearchDatabaseFixture>
@@ -180,7 +188,7 @@ public sealed class SearchIntegrationTests(SearchDatabaseFixture db) : IClassFix
     {
         (await Search("олена", kind: "user")).Items.Should().ContainSingle(i => i.Id == SampleDocuments.Olena.Id);
         (await Search("olena kovalenko", kind: "user")).Items.Should().ContainSingle(i => i.Id == SampleDocuments.Olena.Id);
-        (await Search("коваленко")).KindCounts.Should().ContainKey("user");
+        (await Search("коваленко")).Facets.Kinds.Should().ContainKey("user");
     }
 
     [SkippableFact]
@@ -188,8 +196,8 @@ public sealed class SearchIntegrationTests(SearchDatabaseFixture db) : IClassFix
     {
         var r = await Search("аніматорів", kind: "vacancy");
         r.Items.Should().OnlyContain(i => i.Kind == "vacancy");
-        r.KindCounts.Should().ContainKey("team").And.ContainKey("vacancy");
-        r.Total.Should().Be(r.KindCounts["vacancy"]);
+        r.Facets.Kinds.Should().ContainKey("team").And.ContainKey("vacancy");
+        r.Total.Should().Be(r.Facets.Kinds["vacancy"]);
     }
 
     [SkippableFact]

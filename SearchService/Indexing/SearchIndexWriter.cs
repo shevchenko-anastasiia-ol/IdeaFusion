@@ -10,6 +10,7 @@ public sealed record IndexRow(
     string[] TagKeys,
     string[] Categories,
     string TagText,
+    string RoleText,
     string NormText,
     string TranslitText);
 
@@ -33,7 +34,10 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
             .Concat(categories)
             .Distinct(StringComparer.OrdinalIgnoreCase));
         var norm = TextNormalizer.Normalize(string.Join(' ', doc.Title, doc.Subtitle, tagText, doc.Body));
-        return new IndexRow(doc, keys, categories.ToArray(), tagText, norm, TextNormalizer.Transliterate(norm));
+        // Both scripts in one string, so the fuzzy role filter accepts "художник" and "khudozhnyk".
+        var roleNorm = TextNormalizer.Normalize(string.Join(' ', doc.Roles));
+        var roleText = roleNorm.Length == 0 ? "" : $"{roleNorm} {TextNormalizer.Transliterate(roleNorm)}";
+        return new IndexRow(doc, keys, categories.ToArray(), tagText, roleText, norm, TextNormalizer.Transliterate(norm));
     }
 
     /// <summary>
@@ -49,14 +53,14 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
         await Exec(conn, tx, """
             CREATE TEMP TABLE incoming (
                 id text, kind text, source_id text, title text, subtitle text, body text,
-                tags text[], tag_keys text[], categories text[], tag_text text, image_url text, owner_id text, team_id text,
+                tags text[], tag_keys text[], categories text[], tag_text text, roles text[], role_text text, image_url text, owner_id text, team_id text,
                 created_at timestamptz, likes int, saves int, views int, open_vacancies int,
                 norm_text text, translit_text text
             ) ON COMMIT DROP
             """, ct);
 
         await using (var writer = await conn.BeginBinaryImportAsync("""
-            COPY incoming (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, image_url,
+            COPY incoming (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, roles, role_text, image_url,
                            owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text)
             FROM STDIN (FORMAT BINARY)
             """, ct))
@@ -75,6 +79,8 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 await writer.WriteAsync(row.TagKeys, NpgsqlDbType.Array | NpgsqlDbType.Text, ct);
                 await writer.WriteAsync(row.Categories, NpgsqlDbType.Array | NpgsqlDbType.Text, ct);
                 await writer.WriteAsync(row.TagText, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(d.Roles.ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(row.RoleText, NpgsqlDbType.Text, ct);
                 await WriteNullable(writer, d.ImageUrl, ct);
                 await WriteNullable(writer, d.OwnerId, ct);
                 await WriteNullable(writer, d.TeamId, ct);
@@ -91,22 +97,23 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
 
         // Unchanged rows are left alone, so their tsvector is not recomputed every cycle.
         var upserted = await Exec(conn, tx, """
-            INSERT INTO search_documents AS d (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text,
+            INSERT INTO search_documents AS d (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, roles, role_text,
                 image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text)
-            SELECT id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text,
+            SELECT id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, roles, role_text,
                 image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text
             FROM incoming
             ON CONFLICT (id) DO UPDATE SET
                 title = EXCLUDED.title, subtitle = EXCLUDED.subtitle, body = EXCLUDED.body,
                 tags = EXCLUDED.tags, tag_keys = EXCLUDED.tag_keys, categories = EXCLUDED.categories, tag_text = EXCLUDED.tag_text,
+                roles = EXCLUDED.roles, role_text = EXCLUDED.role_text,
                 image_url = EXCLUDED.image_url, owner_id = EXCLUDED.owner_id, team_id = EXCLUDED.team_id,
                 created_at = EXCLUDED.created_at, likes = EXCLUDED.likes, saves = EXCLUDED.saves,
                 views = EXCLUDED.views, open_vacancies = EXCLUDED.open_vacancies,
                 norm_text = EXCLUDED.norm_text, translit_text = EXCLUDED.translit_text, indexed_at = now()
-            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.categories, d.tag_text, d.image_url, d.owner_id, d.team_id,
+            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.roles, d.categories, d.tag_text, d.image_url, d.owner_id, d.team_id,
                    d.created_at, d.likes, d.saves, d.views, d.open_vacancies)
                   IS DISTINCT FROM
-                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.categories, EXCLUDED.tag_text,
+                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.roles, EXCLUDED.categories, EXCLUDED.tag_text,
                    EXCLUDED.image_url, EXCLUDED.owner_id, EXCLUDED.team_id, EXCLUDED.created_at, EXCLUDED.likes,
                    EXCLUDED.saves, EXCLUDED.views, EXCLUDED.open_vacancies)
             """, ct);

@@ -48,6 +48,7 @@ public sealed class IdentityUserSource(NpgsqlDataSource identityDb) : ISearchSou
                 // The user name is searchable too ("olena_k"), the specialization is the role people look for.
                 Subtitle = TextParts.Join(fullName is null ? null : name, r.Specialization),
                 Body = r.Specialization,
+                Roles = string.IsNullOrWhiteSpace(r.Specialization) ? [] : [r.Specialization],
                 ImageUrl = r.AvatarUrl,
                 OwnerId = r.Id.ToString(),
                 CreatedAt = r.CreatedAt,

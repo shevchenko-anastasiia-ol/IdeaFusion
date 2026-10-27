@@ -51,6 +51,7 @@ public sealed class TeamSource(IMongoDatabase db) : ISearchSource
                 Subtitle = TextParts.Join(category, Bson.Str(t, "status")),
                 Body = TextParts.Lines(roles.Prepend(Bson.Str(t, "description"))),
                 Tags = Bson.Strings(t, "tags"),
+                Roles = RequiredRoles(t),
                 CategoryHints = category is null ? [] : [category],
                 ImageUrl = Bson.Str(t, "avatarUrl"),
                 TeamId = t["_id"].ToString(),
@@ -59,6 +60,12 @@ public sealed class TeamSource(IMongoDatabase db) : ISearchSource
             };
         }).Where(d => d.Title.Length > 0).ToList();
     }
+
+    private static string[] RequiredRoles(BsonDocument team) =>
+        team.TryGetValue("requiredRoles", out var r) && r.IsBsonArray
+            ? r.AsBsonArray.OfType<BsonDocument>().Select(x => Bson.Str(x, "role")).OfType<string>()
+                .Where(x => x.Length > 0).Distinct().ToArray()
+            : [];
 }
 
 public sealed class VacancySource(IMongoDatabase db) : ISearchSource
@@ -79,6 +86,7 @@ public sealed class VacancySource(IMongoDatabase db) : ISearchSource
                 Subtitle = TextParts.Join(Bson.Str(v, "teamName"), category),
                 Body = TextParts.Lines([Bson.Str(v, "description"), Bson.Str(v, "requirements")]),
                 Tags = Bson.Strings(v, "tags"),
+                Roles = Bson.Str(v, "role") is { Length: > 0 } role ? [role] : [],
                 CategoryHints = category is null ? [] : [category],
                 ImageUrl = Bson.Str(v, "teamAvatarUrl"),
                 TeamId = Bson.Str(v, "teamId"),
