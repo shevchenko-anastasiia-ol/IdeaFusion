@@ -18,6 +18,7 @@ public sealed class SearchController(
     IndexSyncTrigger sync,
     NpgsqlDataSource indexDb,
     PersonalSearchStore personal,
+    SearchMetrics metrics,
     ILogger<SearchController> logger) : ControllerBase
 {
     /// <summary>Search posts, teams, vacancies and people. Typos, the wrong keyboard layout and transliteration are tolerated.</summary>
@@ -31,6 +32,7 @@ public sealed class SearchController(
         if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
 
         var request = query.ToRequest();
+        var started = System.Diagnostics.Stopwatch.StartNew();
         SearchResponse response;
         try
         {
@@ -42,6 +44,7 @@ public sealed class SearchController(
         }
 
         await RememberAsync(request, response, ct);
+        await MeasureAsync(request, response, started.Elapsed, ct);
         return response;
     }
 
@@ -117,6 +120,43 @@ public sealed class SearchController(
         {
             logger.LogWarning("Search history could not be saved: {Error}", ex.GetType().Name);
         }
+    }
+
+    /// <summary>Counts a new search (not its further pages) for the quality metrics.</summary>
+    private async Task MeasureAsync(SearchRequest request, SearchResponse response, TimeSpan duration, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(request.Cursor) || request.Page > 1) return;
+        try
+        {
+            await metrics.RecordQueryAsync(request.Kind?.Trim().ToLowerInvariant(), !string.IsNullOrWhiteSpace(request.Query),
+                response.DidYouMean is not null, response.Total, duration, ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning("Search metrics could not be saved: {Error}", ex.GetType().Name);
+        }
+    }
+
+    /// <summary>A result was opened from the search page; the position is 0-based.</summary>
+    [HttpPost("clicks")]
+    public async Task<IActionResult> Click([FromBody] SearchClick click, CancellationToken ct)
+    {
+        if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
+        if (!DocumentKinds.All.Contains(click.Kind) || click.Position is < 0 or > 10_000)
+            return BadRequest(new { error = "kind and a non-negative position are required" });
+        await metrics.RecordClickAsync(click.Kind, click.Position, ct);
+        return NoContent();
+    }
+
+    public sealed record SearchClick(string Kind, int Position);
+
+    /// <summary>Quality metrics over the last <paramref name="days"/> days: zero results, latency, clicks, indexing lag, feed.</summary>
+    [HttpGet("metrics")]
+    [Authorize(Policy = IdeaFusionPolicies.RequireModerator)]
+    public async Task<ActionResult<SearchQualityReport>> Metrics([FromQuery] int days = 7, CancellationToken ct = default)
+    {
+        if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
+        return await metrics.ReportAsync(Math.Clamp(days, 1, 90), ct);
     }
 
     private ObjectResult IndexNotReady() =>

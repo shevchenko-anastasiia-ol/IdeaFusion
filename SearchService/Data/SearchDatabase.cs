@@ -25,6 +25,39 @@ public sealed class SearchDatabase
         };
         return NpgsqlDataSource.Create(builder);
     }
+
+    /// <summary>Connections kept open to searchdb, each with the Ukrainian dictionary already loaded.</summary>
+    public const int WarmConnections = 4;
+
+    /// <summary>
+    /// searchdb with a minimum pool: Postgres loads the hunspell dictionary (~25 MB) into every new session,
+    /// which costs about 0.4 s on its first full-text query. Kept-open, warmed connections spare searches that.
+    /// </summary>
+    public static NpgsqlDataSource IndexSource(string connectionString)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
+        if (builder.MinPoolSize < WarmConnections) builder.MinPoolSize = WarmConnections;
+        return NpgsqlDataSource.Create(builder);
+    }
+
+    /// <summary>Opens the minimum pool at once and loads the dictionary into each of its sessions.</summary>
+    public static async Task WarmUpAsync(NpgsqlDataSource index, CancellationToken ct)
+    {
+        var connections = new List<NpgsqlConnection>();
+        try
+        {
+            for (var i = 0; i < WarmConnections; i++) connections.Add(await index.OpenConnectionAsync(ct));
+            await Task.WhenAll(connections.Select(async c =>
+            {
+                await using var cmd = new NpgsqlCommand("SELECT to_tsvector('ideafusion', 'прогрів пошуку')", c);
+                await cmd.ExecuteScalarAsync(ct);
+            }));
+        }
+        finally
+        {
+            foreach (var c in connections) await c.DisposeAsync();
+        }
+    }
 }
 
 /// <summary>Applies Data/Migrations/NNN_*.sql in order, each once, under an advisory lock.</summary>

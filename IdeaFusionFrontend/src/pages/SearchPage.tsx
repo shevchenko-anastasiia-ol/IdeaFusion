@@ -160,7 +160,10 @@ const SearchPage: FunctionComponent = () => {
                     Нічого не знайдено. Спробуйте інше слово{hasFilters ? " або скиньте фільтри" : ""}.
                   </Box>
                 )}
-                {result.items.map(hit => <SearchHitCard key={hit.id} hit={hit} onTagClick={addTag} />)}
+                {result.items.map((hit, n) => (
+                  <SearchHitCard key={hit.id} hit={hit} onTagClick={addTag}
+                    onOpen={() => { searchApi.click(hit.kind, n).catch(() => undefined); }} />
+                ))}
                 {result.nextCursor && (
                   <Button onClick={loadMore} disabled={loadingMore}
                     sx={{ alignSelf: "center", color: "#a48fff", textTransform: "none", fontSize: 15 }}>

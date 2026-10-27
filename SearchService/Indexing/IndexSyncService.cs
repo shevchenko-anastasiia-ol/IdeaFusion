@@ -3,6 +3,7 @@ using Npgsql;
 using SearchService.Data;
 using SearchService.Feed;
 using SearchService.Personal;
+using SearchService.Search;
 
 namespace SearchService.Indexing;
 
@@ -26,9 +27,12 @@ public sealed class IndexSyncService(
     SubscriptionMatcher subscriptions,
     IInteractionSource interactions,
     InterestProfileWriter profiles,
+    SearchMetrics metrics,
     Microsoft.Extensions.Options.IOptions<SearchIndexOptions> options,
     ILogger<IndexSyncService> logger) : BackgroundService
 {
+    private DateTime _prunedAt = DateTime.MinValue;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await MigrateWithRetryAsync(stoppingToken);
@@ -48,6 +52,8 @@ public sealed class IndexSyncService(
             try
             {
                 await SearchMigrations.ApplyAsync(indexDb, logger, ct);
+                // Searches should not pay for loading the dictionary into new sessions.
+                await SearchDatabase.WarmUpAsync(indexDb, ct);
                 trigger.MarkSchemaReady();
                 return;
             }
@@ -131,6 +137,19 @@ public sealed class IndexSyncService(
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 logger.LogWarning(ex, "Search subscriptions could not be matched");
+            }
+        }
+
+        if (DateTime.UtcNow - _prunedAt > TimeSpan.FromHours(1))
+        {
+            try
+            {
+                await metrics.PruneAsync(ct);
+                _prunedAt = DateTime.UtcNow;
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                logger.LogWarning(ex, "Old search metrics could not be pruned");
             }
         }
 

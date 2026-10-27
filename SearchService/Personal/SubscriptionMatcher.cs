@@ -42,7 +42,7 @@ public sealed class SubscriptionMatcher(NpgsqlDataSource index, SearchQueryServi
             {
                 var request = SearchFilters.FromJson(s.Filters).ToRequest(s.Query) with
                 {
-                    Sort = SearchSort.New, PageSize = MaxPerCycle, IndexedAfter = s.CheckedAt, ExcludeOwnerId = s.UserId,
+                    Sort = SearchSort.New, PageSize = MaxPerCycle, IndexedAfter = s.CheckedAt, ExcludeOwnerId = s.UserId, SkipFacets = true,
                 };
                 var hits = (await search.SearchAsync(request, ct)).Items;
                 foreach (var hit in hits)

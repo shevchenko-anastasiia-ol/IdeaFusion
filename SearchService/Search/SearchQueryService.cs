@@ -14,8 +14,8 @@ namespace SearchService.Search;
 /// layout and transliterated, and the closest known words are searched too ("tesr", "еуые" and "тест"
 /// all reach "test");</item>
 /// <item>full-text search with Ukrainian morphology ("ілюстраціями" finds "ілюстрація");</item>
-/// <item>trigram word similarity on the normalized and on the transliterated text, for words the
-/// vocabulary does not know.</item>
+/// <item>prefixes ("ілюс", "тест" for "тестування") and, for words the vocabulary does not know,
+/// trigram word similarity with the document's head (title, subtitle, tags) in both scripts.</item>
 /// </list>
 /// </summary>
 public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache catalogs)
@@ -27,11 +27,21 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
     /// <summary>Minimal word similarity of the trigram leg (pg_trgm.word_similarity_threshold).</summary>
     private const double WordSimilarityThreshold = 0.5;
 
+    /// <summary>
+    /// Per search: the trigram threshold, and the page cost of an index that sits in memory or on SSD. With the
+    /// default random_page_cost (4, spinning disks) Postgres reads the whole table for a common word instead of
+    /// the full-text index, which on 50 000 documents is three times slower.
+    /// </summary>
+    private static readonly string SetSimilarityThreshold =
+        "SET LOCAL pg_trgm.word_similarity_threshold = " + WordSimilarityThreshold.ToString(CultureInfo.InvariantCulture)
+        + "; SET LOCAL random_page_cost = 1.1";
+
     /// <param name="Typed">The word as typed, normalized.</param>
     /// <param name="Swapped">The same keys in the other keyboard layout, normalized.</param>
     /// <param name="SearchForms">Words searched for this word: as typed plus the closest vocabulary words.</param>
     /// <param name="Correction">The vocabulary word to suggest instead, when the typed word looks misspelled.</param>
-    internal sealed record TokenPlan(string Typed, string? Swapped, IReadOnlyList<string> SearchForms, string? Correction);
+    /// <param name="Resolved">The vocabulary knows the word or a close one; otherwise it is matched by prefix and trigrams.</param>
+    internal sealed record TokenPlan(string Typed, string? Swapped, IReadOnlyList<string> SearchForms, string? Correction, bool Resolved = true);
 
     internal sealed record QueryPlan(IReadOnlyList<TokenPlan> Tokens)
     {
@@ -42,12 +52,22 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
 
         /// <summary>What the trigram leg compares with documents: the corrected query.</summary>
         public string Phrase => string.Join(' ', Tokens.Select(t => t.Correction ?? t.Typed));
+
+        /// <summary>
+        /// Some word is unknown to the vocabulary (a prefix being typed, a rare misspelling), so the fuzzy trigram
+        /// leg is needed. When every word resolves, full-text search over the vocabulary forms finds everything
+        /// the trigram leg would, at a fraction of the cost.
+        /// </summary>
+        public bool NeedsFuzzy => Tokens.Any(t => !t.Resolved);
     }
 
     /// <param name="SameLexeme">The vocabulary word is an inflection of the typed word ("ілюстраціями" and "ілюстрація").</param>
     private sealed record Candidate(int Token, string Term, string Translit, int Dist, int DocFreq, bool SameLexeme);
 
     private const int TagFacetSize = 15;
+
+    /// <summary>Known words this long also match as prefixes; shorter ones would match too much ("арт", "art").</summary>
+    private const int MinPrefixLength = 4;
 
     /// <exception cref="InvalidCursorException">The cursor is malformed or belongs to another sort order.</exception>
     public async Task<SearchResponse> SearchAsync(SearchRequest request, CancellationToken ct)
@@ -62,32 +82,30 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
             if (cursor.Sort != request.Sort) throw new InvalidCursorException("The cursor belongs to another sort order");
         }
         var page = cursor is null ? Math.Max(1, request.Page) : 1;
-        // The popularity decay is computed against one instant for all pages of a listing.
+        // When the listing started; carried by the cursor so that all its pages share it.
         var asOf = cursor?.AsOf ?? DateTime.UtcNow;
 
         await using var conn = await index.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(
-            "SET LOCAL pg_trgm.word_similarity_threshold = " + WordSimilarityThreshold.ToString(CultureInfo.InvariantCulture),
+            SetSimilarityThreshold,
             transaction: tx, cancellationToken: ct));
 
         var plan = await PlanAsync(conn, tx, raw, ct);
         var p = new DynamicParameters();
-        var (query, match, score) = BuildMatch(plan, p);
+        var (query, exact, match, score) = BuildMatch(plan, p, fuzzy: !request.NoFuzzy);
         var filters = BuildFilters(request, await catalogs.GetAsync(ct), p);
-        string Where(string? except = null) =>
-            $"({match})" + string.Concat(filters.Where(f => f.Key != except).Select(f => " AND " + f.Value));
+        var where = $"({match})" + string.Concat(filters.Values.Select(f => " AND " + f));
 
         var sortKey = request.Sort switch
         {
             SearchSort.Relevance when plan.Tokens.Count > 0 => score,
-            SearchSort.Popular => """
-                (d.views + 3 * d.likes + 4 * d.saves + 2 * d.open_vacancies)
-                * exp(-ln(2) * greatest(extract(epoch FROM (@asOf - d.created_at)), 0) / 86400 / 14)
-                """,
+            // Stored with each document (see SearchIndexWriter.PopularityKey) and indexed. A listing walks that
+            // index; with words, "+ 0" keeps Postgres from walking it hoping to meet a rare word soon, and it
+            // sorts the full-text matches instead.
+            SearchSort.Popular => plan.Tokens.Count > 0 ? "d.popularity_key + 0" : "d.popularity_key",
             _ => "0",
         };
-        p.Add("asOf", asOf);
         p.Add("limit", pageSize + 1); // one more to know whether a next page exists
         p.Add("offset", (page - 1) * pageSize);
         p.Add("ck", cursor?.Key);
@@ -95,20 +113,24 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         p.Add("ci", cursor?.Id);
 
         var hitsSql = $"""
-            WITH q AS (SELECT {query} AS tsq),
+            WITH q AS (SELECT {query} AS tsq, {exact} AS exact),
             ranked AS (
                 SELECT d.id, d.kind, d.source_id AS SourceId, d.title, d.subtitle, left(d.body, 240) AS Snippet,
                        d.tags, d.categories, d.image_url AS ImageUrl, d.owner_id AS OwnerId, d.team_id AS TeamId,
                        d.created_at AS CreatedAt, d.likes, d.saves, d.views, d.open_vacancies AS OpenVacancies,
                        ({score})::float8 AS Score, ({sortKey})::float8 AS SortKey
                 FROM search_documents d, q
-                WHERE {Where()}
+                WHERE {where}
             )
             SELECT * FROM ranked
             WHERE @ck::float8 IS NULL OR (SortKey, CreatedAt, id) < (@ck::float8, @cc::timestamptz, @ci::text)
             ORDER BY SortKey DESC, CreatedAt DESC, id DESC
             LIMIT @limit OFFSET @offset
             """;
+        // Facets run at the same time on a connection of their own, so a search costs the slower of the two.
+        var facetsTask = request.SkipFacets
+            ? Task.FromResult(new SearchFacets())
+            : FacetsOnOwnConnectionAsync(query, match, filters, new DynamicParameters(p), ct);
         var hits = (await conn.QueryAsync<SearchHit>(new CommandDefinition(hitsSql, p, tx, cancellationToken: ct))).ToList();
 
         string? next = null;
@@ -119,8 +141,8 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
             next = new SearchCursor(request.Sort, last.SortKey, last.CreatedAt, last.Id, asOf).Encode();
         }
 
-        var facets = await FacetsAsync(conn, tx, query, Where, p, ct);
         await tx.CommitAsync(ct);
+        var facets = await facetsTask;
 
         var kind = filters.ContainsKey("kind") ? request.Kind!.Trim().ToLowerInvariant() : null;
         return new SearchResponse
@@ -130,43 +152,76 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
             Page = page,
             PageSize = pageSize,
             Sort = request.Sort,
-            Total = kind is null ? facets.Kinds.Values.Sum() : facets.Kinds.GetValueOrDefault(kind),
+            Total = request.SkipFacets ? hits.Count : kind is null ? facets.Kinds.Values.Sum() : facets.Kinds.GetValueOrDefault(kind),
             Facets = facets,
             Items = hits,
             NextCursor = next,
         };
     }
 
-    /// <summary>Kind, category and tag counts; each ignores its own filter (disjunctive facets).</summary>
-    private static async Task<SearchFacets> FacetsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string query,
-        Func<string?, string> where, DynamicParameters p, CancellationToken ct)
+    private static readonly string[] FacetFilters = ["kind", "category", "tags"];
+
+    private async Task<SearchFacets> FacetsOnOwnConnectionAsync(string query, string match,
+        IReadOnlyDictionary<string, string> filters, DynamicParameters p, CancellationToken ct)
     {
-        var sql = $"""
-            WITH q AS (SELECT {query} AS tsq)
-            SELECT d.kind, count(*)::int FROM search_documents d, q WHERE {where("kind")} GROUP BY d.kind;
-
-            WITH q AS (SELECT {query} AS tsq)
-            SELECT c, count(*)::int AS n
-            FROM search_documents d, q, unnest(d.categories) AS c
-            WHERE {where("category")}
-            GROUP BY c ORDER BY n DESC, c;
-
-            WITH q AS (SELECT {query} AS tsq)
-            SELECT k, coalesce(t.label, k), count(*)::int AS n
-            FROM search_documents d, q, unnest(d.tag_keys) AS k
-            LEFT JOIN search_tags t ON t.key = k
-            WHERE {where("tags")}
-            GROUP BY k, t.label ORDER BY n DESC, k
-            LIMIT {TagFacetSize};
-            """;
-        await using var grid = await conn.QueryMultipleAsync(new CommandDefinition(sql, p, tx, cancellationToken: ct));
-        var kinds = (await grid.ReadAsync<(string Kind, int N)>()).ToDictionary(x => x.Kind, x => x.N);
-        var categories = (await grid.ReadAsync<(string Value, int Count)>()).Select(x => new FacetValue(x.Value, x.Count)).ToList();
-        var tags = (await grid.ReadAsync<(string Key, string Label, int Count)>()).Select(x => new TagFacet(x.Key, x.Label, x.Count)).ToList();
-        return new SearchFacets { Kinds = kinds, Categories = categories, Tags = tags };
+        await using var conn = await index.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(SetSimilarityThreshold, transaction: tx, cancellationToken: ct));
+        var facets = await FacetsAsync(conn, tx, query, match, filters, p, ct);
+        await tx.CommitAsync(ct);
+        return facets;
     }
 
-    /// <summary>Completions of the last word from the vocabulary and the best few documents.</summary>
+    private sealed class FacetRow
+    {
+        public string Facet { get; init; } = "";
+        public string Key { get; init; } = "";
+        public string? Label { get; init; }
+        public int N { get; init; }
+    }
+
+    /// <summary>
+    /// Kind, category and tag counts; each ignores its own filter (disjunctive facets). The matching documents
+    /// are read once, with a flag per facet filter, and all three facets are counted from that one pass.
+    /// </summary>
+    private static async Task<SearchFacets> FacetsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string query,
+        string match, IReadOnlyDictionary<string, string> filters, DynamicParameters p, CancellationToken ct)
+    {
+        string Flag(string name) => filters.GetValueOrDefault(name, "TRUE");
+        var where = $"({match})" + string.Concat(filters.Where(f => !FacetFilters.Contains(f.Key)).Select(f => " AND " + f.Value));
+        var sql = $"""
+            WITH q AS (SELECT {query} AS tsq),
+            m AS MATERIALIZED (
+                SELECT d.kind, d.categories, d.tag_keys,
+                       ({Flag("kind")}) AS k_ok, ({Flag("category")}) AS c_ok, ({Flag("tags")}) AS t_ok
+                FROM search_documents d, q
+                WHERE {where}
+            )
+            SELECT 'kind' AS Facet, m.kind AS Key, NULL::text AS Label, count(*)::int AS N
+            FROM m WHERE m.c_ok AND m.t_ok GROUP BY m.kind
+            UNION ALL
+            SELECT 'category', c, NULL, count(*)::int
+            FROM m, unnest(m.categories) AS c WHERE m.k_ok AND m.t_ok GROUP BY c
+            UNION ALL
+            (SELECT 'tag', k, coalesce(t.label, k), count(*)::int AS n
+             FROM m CROSS JOIN unnest(m.tag_keys) AS k
+             LEFT JOIN search_tags t ON t.key = k
+             WHERE m.k_ok AND m.c_ok
+             GROUP BY k, t.label ORDER BY n DESC, k
+             LIMIT {TagFacetSize})
+            """;
+        var rows = (await conn.QueryAsync<FacetRow>(new CommandDefinition(sql, p, tx, cancellationToken: ct))).ToList();
+        return new SearchFacets
+        {
+            Kinds = rows.Where(r => r.Facet == "kind").ToDictionary(r => r.Key, r => r.N),
+            Categories = rows.Where(r => r.Facet == "category").OrderByDescending(r => r.N).ThenBy(r => r.Key, StringComparer.Ordinal)
+                .Select(r => new FacetValue(r.Key, r.N)).ToList(),
+            Tags = rows.Where(r => r.Facet == "tag").OrderByDescending(r => r.N).ThenBy(r => r.Key, StringComparer.Ordinal)
+                .Select(r => new TagFacet(r.Key, r.Label ?? r.Key, r.N)).ToList(),
+        };
+    }
+
+    /// <summary>Completions of the last word from the vocabulary, matching tags and the most popular few matching documents.</summary>
     public async Task<SuggestResponse> SuggestAsync(string? query, int limit, CancellationToken ct)
     {
         var raw = Clip(query);
@@ -178,23 +233,40 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         var head = string.Join(' ', words[..^1]);
         limit = Math.Clamp(limit, 1, 20);
 
+        // The three parts are independent, so they run at the same time on their own connections.
+        var termsTask = CompletionsAsync(last, swapped, limit, ct);
+        var tagsTask = TagsAsync(raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)[^1], 5, ct);
+        var documentsTask = SuggestDocumentsAsync(raw, words.Length > 1 ? last : null, ct);
+        await Task.WhenAll(termsTask, tagsTask, documentsTask);
+
+        return new SuggestResponse
+        {
+            Completions = (await termsTask).Select(t => head.Length == 0 ? t : $"{head} {t}").ToList(),
+            Documents = await documentsTask,
+            Tags = await tagsTask,
+        };
+    }
+
+    private async Task<IEnumerable<string>> CompletionsAsync(string last, string swapped, int limit, CancellationToken ct)
+    {
         await using var conn = await index.OpenConnectionAsync(ct);
-        var terms = await conn.QueryAsync<string>(new CommandDefinition("""
+        return await conn.QueryAsync<string>(new CommandDefinition("""
             SELECT term FROM search_terms
             WHERE term LIKE @prefix || '%' OR translit LIKE @latin || '%'
                OR (@swapped <> '' AND term LIKE @swapped || '%')
             ORDER BY (term = @prefix) DESC, doc_freq DESC, length(term), term
             LIMIT @limit
             """, new { prefix = last, latin = TextNormalizer.Transliterate(last), swapped, limit }, cancellationToken: ct));
+    }
 
-        var tags = await TagsAsync(raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)[^1], 5, ct);
-        var documents = await SearchAsync(new SearchRequest { Query = raw, PageSize = 5 }, ct);
-        return new SuggestResponse
-        {
-            Completions = terms.Select(t => head.Length == 0 ? t : $"{head} {t}").ToList(),
-            Documents = documents.Items,
-            Tags = tags,
-        };
+    /// <summary>The most popular few documents with all the words, or, failing that, with the word being typed.</summary>
+    private async Task<IReadOnlyList<SearchHit>> SuggestDocumentsAsync(string raw, string? lastWord, CancellationToken ct)
+    {
+        SearchRequest Request(string q) => new() { Query = q, PageSize = 5, SkipFacets = true, NoFuzzy = true, Sort = SearchSort.Popular };
+        var documents = await SearchAsync(Request(raw), ct);
+        if (documents.Items.Count == 0 && lastWord is not null)
+            documents = await SearchAsync(Request(lastWord), ct);
+        return documents.Items;
     }
 
     /// <summary>
@@ -322,7 +394,8 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         {
             var (typed, swapped) = words[i];
             var mine = candidates.Where(c => c.Token == i).ToList();
-            tokens.Add(Resolve(typed, swapped, mine));
+            // Short words and numbers are not corrected; full-text search alone handles them.
+            tokens.Add(IsCorrectable(typed) ? Resolve(typed, swapped, mine) : new TokenPlan(typed, swapped, [typed], null));
         }
         return new QueryPlan(tokens);
     }
@@ -330,10 +403,10 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
     private static TokenPlan Resolve(string typed, string? swapped, IReadOnlyList<Candidate> candidates)
     {
         var searchForms = new List<string> { typed };
-        if (candidates.Count == 0) return new TokenPlan(typed, swapped, searchForms, null);
+        if (candidates.Count == 0) return new TokenPlan(typed, swapped, searchForms, null, Resolved: false);
 
         var bestDist = candidates.Min(c => c.Dist);
-        if (bestDist > AllowedDistance(typed)) return new TokenPlan(typed, swapped, searchForms, null);
+        if (bestDist > AllowedDistance(typed)) return new TokenPlan(typed, swapped, searchForms, null, Resolved: false);
 
         // Every equally close word is searched: "test" typed and both "test" and "тест" in the index.
         var best = candidates.Where(c => c.Dist == bestDist)
@@ -383,41 +456,67 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
     }
 
     /// <summary>
-    /// SQL fragments of the query: the tsquery (every word must match in one of its forms),
-    /// the match condition and the relevance score. Words go in as parameters.
+    /// SQL fragments of the query: the tsquery (every word must match in one of its forms or prefixes),
+    /// the same without prefixes (exact words rank first), the match condition and the relevance score.
+    /// Words go in as parameters.
     /// </summary>
-    private static (string Query, string Match, string Score) BuildMatch(QueryPlan plan, DynamicParameters p)
+    private static (string Query, string Exact, string Match, string Score) BuildMatch(QueryPlan plan, DynamicParameters p, bool fuzzy = true)
     {
-        if (plan.Tokens.Count == 0) return ("NULL::tsquery", "TRUE", "0");
+        if (plan.Tokens.Count == 0) return ("NULL::tsquery", "NULL::tsquery", "TRUE", "0");
 
         var tsq = new StringBuilder();
+        var exact = new StringBuilder();
         for (var i = 0; i < plan.Tokens.Count; i++)
         {
-            if (i > 0) tsq.Append(" && ");
-            tsq.Append('(');
-            var forms = plan.Tokens[i].SearchForms;
-            for (var j = 0; j < forms.Count; j++)
+            var token = plan.Tokens[i];
+            var words = new List<string>();
+            for (var j = 0; j < token.SearchForms.Count; j++)
             {
-                if (j > 0) tsq.Append(" || ");
-                var name = $"f{i}_{j}";
-                p.Add(name, forms[j]);
-                tsq.Append($"plainto_tsquery('ideafusion', @{name})");
+                p.Add($"f{i}_{j}", token.SearchForms[j]);
+                words.Add($"plainto_tsquery('ideafusion', @f{i}_{j})");
             }
-            tsq.Append(')');
+            var all = new List<string>(words);
+            if (!token.Resolved || token.Typed.Length >= MinPrefixLength)
+            {
+                // A word also matches as a prefix: an unknown one is often still being typed ("ілюс" reaches
+                // "ілюстрація"), and a longer known one reaches its derivatives ("тест" finds "тестування",
+                // which morphology keeps as a lemma of its own). Normalized words hold only letters and digits,
+                // so they are safe as a tsquery lexeme.
+                var prefixes = (token.Resolved ? [token.Typed] : new[] { token.Typed, token.Swapped }).OfType<string>().ToList();
+                for (var j = 0; j < prefixes.Count; j++)
+                {
+                    p.Add($"x{i}_{j}", prefixes[j]);
+                    all.Add($"to_tsquery('simple', @x{i}_{j} || ':*')");
+                }
+            }
+            if (i > 0)
+            {
+                tsq.Append(" && ");
+                exact.Append(" && ");
+            }
+            tsq.Append('(').AppendJoin(" || ", all).Append(')');
+            exact.Append('(').AppendJoin(" || ", words).Append(')');
         }
 
         var phrase = plan.Phrase;
         p.Add("phrase", phrase);
         p.Add("latin", TextNormalizer.Transliterate(phrase));
 
-        const string match = "d.fts @@ q.tsq OR @phrase <% d.norm_text OR @latin <% d.translit_text";
-        // Full-text rank in [0, 1) dominates; similarity orders fuzzy-only matches; popularity breaks near-ties.
-        const string score = """
-            ts_rank_cd(d.fts, q.tsq, 32)
-            + 0.5 * greatest(word_similarity(@phrase, d.norm_text), word_similarity(@latin, d.translit_text))
-            + 0.02 * ln(1 + d.likes + 2 * d.saves)
+        // Full-text rank in [0, 1) dominates, with a bonus when the words match exactly rather than as prefixes;
+        // similarity orders fuzzy-only matches; popularity breaks near-ties. The trigram leg compares with the
+        // short head only, and only when a word is unknown to the vocabulary.
+        const string rank = "ts_rank_cd(d.fts, q.tsq, 32) + CASE WHEN d.fts @@ q.exact THEN 0.3 ELSE 0 END";
+        const string popularity = "0.02 * ln(1 + d.likes + 2 * d.saves)";
+        if (!fuzzy || !plan.NeedsFuzzy)
+            return (tsq.ToString(), exact.ToString(), "d.fts @@ q.tsq", $"{rank} + {popularity}");
+
+        const string match = "d.fts @@ q.tsq OR @phrase <% d.head_norm OR @latin <% d.head_translit";
+        const string score = $"""
+            {rank}
+            + 0.5 * greatest(word_similarity(@phrase, d.head_norm), word_similarity(@latin, d.head_translit))
+            + {popularity}
             """;
-        return (tsq.ToString(), match, score);
+        return (tsq.ToString(), exact.ToString(), match, score);
     }
 
     /// <summary>The request's filters as named SQL conditions, so that a facet can leave its own one out.</summary>
@@ -467,12 +566,12 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
             // by the roles of its open vacancies: "a team looking for an illustrator".
             p.Add("role", role);
             p.Add("roleLatin", TextNormalizer.Transliterate(role));
+            // IN-subqueries rather than a per-row EXISTS: each runs once through the trigram index on role_text.
             filters["role"] = """
-                (@role <% d.role_text OR @roleLatin <% d.role_text
-                 OR (d.kind = 'team' AND EXISTS (
-                     SELECT 1 FROM search_documents v
-                     WHERE v.kind = 'vacancy' AND v.team_id = d.team_id
-                       AND (@role <% v.role_text OR @roleLatin <% v.role_text))))
+                (d.id IN (SELECT r.id FROM search_documents r WHERE @role <% r.role_text OR @roleLatin <% r.role_text)
+                 OR (d.kind = 'team' AND d.team_id IN (
+                     SELECT v.team_id FROM search_documents v
+                     WHERE v.kind = 'vacancy' AND (@role <% v.role_text OR @roleLatin <% v.role_text))))
                 """;
         }
         if (!string.IsNullOrWhiteSpace(request.AuthorId))

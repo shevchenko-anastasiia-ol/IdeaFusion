@@ -41,6 +41,15 @@ public sealed record SearchRequest
     /// <summary>Only documents that entered the index after this moment (subscriptions; not exposed in the API).</summary>
     public DateTime? IndexedAfter { get; init; }
 
+    /// <summary>Only the hits, no facets (autocomplete, subscriptions; not exposed in the API). Total is then the page size.</summary>
+    public bool SkipFacets { get; init; }
+
+    /// <summary>
+    /// Full-text and prefix matching only, without the trigram leg (autocomplete; not exposed in the API):
+    /// a word being typed is matched as a prefix, and a few good documents matter more than fuzzy recall.
+    /// </summary>
+    public bool NoFuzzy { get; init; }
+
     /// <summary>Leave out this user's own documents (subscriptions; not exposed in the API).</summary>
     public string? ExcludeOwnerId { get; init; }
 }
