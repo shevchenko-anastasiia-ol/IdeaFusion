@@ -1,4 +1,4 @@
-import { FunctionComponent, useCallback, useEffect, useState } from 'react';
+import { FunctionComponent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import FrameComponent2 from '../components/FrameComponent2';
 import {
@@ -114,20 +114,33 @@ const CopyModerationPage: FunctionComponent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Only the latest request may update the list: after a decision the reload with the old
+  // filter can finish after the one for a newly chosen filter and would overwrite it.
+  const latestRequest = useRef(0);
+
   const load = useCallback(async () => {
+    const request = ++latestRequest.current;
     setLoading(true);
     setError(null);
     try {
-      setChecks(await copyCheckApi.queue({ zones: ZONE_FILTERS[zoneFilter].zones, status }));
+      const data = await copyCheckApi.queue({ zones: ZONE_FILTERS[zoneFilter].zones, status });
+      if (request === latestRequest.current) setChecks(data);
     } catch (e) {
+      if (request !== latestRequest.current) return;
       setError(e instanceof Error ? e.message : 'Помилка завантаження');
       setChecks([]);
     } finally {
-      setLoading(false);
+      if (request === latestRequest.current) setLoading(false);
     }
   }, [zoneFilter, status]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // A card may finish its decision after the filters changed (or after it left the list);
+  // it must reload with the filters current at that moment, not the ones it rendered with.
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  const reloadCurrent = useCallback(() => void loadRef.current(), []);
 
   return (
     <div className={styles.page}>
@@ -160,7 +173,7 @@ const CopyModerationPage: FunctionComponent = () => {
         {!loading && !error && checks.length === 0 && <p className={styles.empty}>Можливих копій немає.</p>}
 
         <div className={styles.list}>
-          {checks.map(c => <CheckCard key={c.id} check={c} onDecided={() => void load()} />)}
+          {checks.map(c => <CheckCard key={c.id} check={c} onDecided={reloadCurrent} />)}
         </div>
       </div>
     </div>
