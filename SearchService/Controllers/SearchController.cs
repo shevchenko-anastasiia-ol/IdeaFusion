@@ -20,11 +20,13 @@ public sealed class SearchController(
     /// <param name="q">The query; empty lists the newest documents.</param>
     /// <param name="kind">post, team, vacancy or user.</param>
     /// <param name="category">A category name, e.g. "Музика".</param>
-    /// <param name="tag">Tag filter, repeatable: documents with any of the tags.</param>
+    /// <param name="tag">Tag filter, repeatable; any spelling or synonym ("3-д", "#3D").</param>
+    /// <param name="tagMode">any (default): documents with at least one of the tags; all: with every tag.</param>
     [HttpGet]
     public async Task<ActionResult<SearchResponse>> Search(
         [FromQuery] string? q, [FromQuery] string? kind, [FromQuery] string? category,
-        [FromQuery(Name = "tag")] string[]? tag, [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery(Name = "tag")] string[]? tag, [FromQuery] TagMatch tagMode = TagMatch.Any,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
         if (kind is not null && !DocumentKinds.All.Contains(kind.Trim().ToLowerInvariant()))
@@ -33,7 +35,7 @@ public sealed class SearchController(
 
         return await search.SearchAsync(new SearchRequest
         {
-            Query = q, Kind = kind, Category = category, Tags = tag ?? [], Page = page, PageSize = pageSize,
+            Query = q, Kind = kind, Category = category, Tags = tag ?? [], TagMode = tagMode, Page = page, PageSize = pageSize,
         }, ct);
     }
 
@@ -43,6 +45,14 @@ public sealed class SearchController(
     {
         if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
         return await search.SuggestAsync(q, limit, ct);
+    }
+
+    /// <summary>Tag autocomplete by any spelling or synonym; an empty q lists the most used tags.</summary>
+    [HttpGet("tags")]
+    public async Task<ActionResult<IReadOnlyList<TagSuggestion>>> Tags([FromQuery] string? q, [FromQuery] int limit = 10, CancellationToken ct = default)
+    {
+        if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
+        return Ok(await search.TagsAsync(q, limit, ct));
     }
 
     /// <summary>Categories (derived from tags) with document counts, for the filter list.</summary>

@@ -6,6 +6,9 @@ public sealed record SearchRequest
     public string? Kind { get; init; }
     public string? Category { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
+
+    /// <summary>All: documents with every tag (tag_keys @> …). Any: with at least one (tag_keys &amp;&amp; …).</summary>
+    public TagMatch TagMode { get; init; } = TagMatch.Any;
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
 }
@@ -54,6 +57,16 @@ public sealed record SuggestResponse
     public IReadOnlyList<string> Completions { get; init; } = [];
 
     public IReadOnlyList<SearchHit> Documents { get; init; } = [];
+
+    /// <summary>Tags matching the last word.</summary>
+    public IReadOnlyList<TagSuggestion> Tags { get; init; } = [];
 }
 
 public sealed record CategoryCount(string Category, int Documents);
+
+public enum TagMatch { Any, All }
+
+/// <param name="Key">Canonical key: pass it (or any spelling) back as a tag filter.</param>
+/// <param name="Label">Display name.</param>
+/// <param name="Documents">Indexed documents with this tag.</param>
+public sealed record TagSuggestion(string Key, string Label, int Documents);

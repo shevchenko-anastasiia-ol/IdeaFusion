@@ -144,6 +144,13 @@ public static class TextNormalizer
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Identity of a tag: written forms of one tag share it. Case, "#", separators and the script are
+    /// ignored, so "#3D", "3d" and "3-д" are all "3d", and "UI/UX" and "ui-ux" are "uiux".
+    /// Empty when the tag has no letters or digits.
+    /// </summary>
+    public static string TagKey(string? tag) => Transliterate(Normalize(tag)).Replace(" ", "");
+
     /// <summary>True when the text contains Cyrillic letters.</summary>
     public static bool HasCyrillic(string text)
     {

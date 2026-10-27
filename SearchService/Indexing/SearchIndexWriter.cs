@@ -7,6 +7,7 @@ namespace SearchService.Indexing;
 /// <summary>A search_documents row: the source fields plus everything derived for matching.</summary>
 public sealed record IndexRow(
     SourceDocument Source,
+    string[] TagKeys,
     string[] Categories,
     string TagText,
     string NormText,
@@ -15,36 +16,24 @@ public sealed record IndexRow(
 /// <summary>Writes snapshots of the sources into searchdb.</summary>
 public sealed class SearchIndexWriter(NpgsqlDataSource index)
 {
-    /// <summary>tag → categories, from tag_categories. Keys are lower case.</summary>
-    public async Task<IReadOnlyDictionary<string, string[]>> LoadTagCategoriesAsync(CancellationToken ct)
-    {
-        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        await using var cmd = index.CreateCommand("SELECT tag, category FROM tag_categories ORDER BY category");
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            var tag = reader.GetString(0);
-            if (!map.TryGetValue(tag, out var list)) map[tag] = list = [];
-            list.Add(reader.GetString(1));
-        }
-        return map.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
-    }
+    public Task<TagCatalog> LoadTagCatalogAsync(CancellationToken ct) => TagCatalog.LoadAsync(index, ct);
 
-    public static IndexRow BuildRow(SourceDocument doc, IReadOnlyDictionary<string, string[]> tagCategories)
+    public static IndexRow BuildRow(SourceDocument doc, TagCatalog catalog)
     {
-        var allCategories = tagCategories.Values.SelectMany(c => c).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var keys = doc.Tags.Select(catalog.Key).Where(k => k.Length > 0).Distinct().ToArray();
+
         var categories = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var tag in doc.Tags.Concat(doc.CategoryHints))
-        {
-            var key = tag.Trim();
-            if (tagCategories.TryGetValue(key, out var mapped)) categories.UnionWith(mapped);
-            // A team's own category may already be a category name ("Музика").
-            else if (allCategories.TryGetValue(key, out var name)) categories.Add(name);
-        }
+            categories.UnionWith(catalog.Categories(tag));
 
-        var tagText = string.Join(", ", doc.Tags.Concat(categories));
+        // The tag weight of the tsvector also carries the synonyms and categories of the tags,
+        // so a post tagged "illustration" is found by "ілюстрація" and by "Арт".
+        var tagText = string.Join(", ", doc.Tags
+            .Concat(keys.SelectMany(catalog.Synonyms))
+            .Concat(categories)
+            .Distinct(StringComparer.OrdinalIgnoreCase));
         var norm = TextNormalizer.Normalize(string.Join(' ', doc.Title, doc.Subtitle, tagText, doc.Body));
-        return new IndexRow(doc, categories.ToArray(), tagText, norm, TextNormalizer.Transliterate(norm));
+        return new IndexRow(doc, keys, categories.ToArray(), tagText, norm, TextNormalizer.Transliterate(norm));
     }
 
     /// <summary>
@@ -60,14 +49,14 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
         await Exec(conn, tx, """
             CREATE TEMP TABLE incoming (
                 id text, kind text, source_id text, title text, subtitle text, body text,
-                tags text[], categories text[], tag_text text, image_url text, owner_id text, team_id text,
+                tags text[], tag_keys text[], categories text[], tag_text text, image_url text, owner_id text, team_id text,
                 created_at timestamptz, likes int, saves int, views int, open_vacancies int,
                 norm_text text, translit_text text
             ) ON COMMIT DROP
             """, ct);
 
         await using (var writer = await conn.BeginBinaryImportAsync("""
-            COPY incoming (id, kind, source_id, title, subtitle, body, tags, categories, tag_text, image_url,
+            COPY incoming (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text, image_url,
                            owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text)
             FROM STDIN (FORMAT BINARY)
             """, ct))
@@ -83,6 +72,7 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 await WriteNullable(writer, d.Subtitle, ct);
                 await WriteNullable(writer, d.Body, ct);
                 await writer.WriteAsync(d.Tags.ToArray(), NpgsqlDbType.Array | NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(row.TagKeys, NpgsqlDbType.Array | NpgsqlDbType.Text, ct);
                 await writer.WriteAsync(row.Categories, NpgsqlDbType.Array | NpgsqlDbType.Text, ct);
                 await writer.WriteAsync(row.TagText, NpgsqlDbType.Text, ct);
                 await WriteNullable(writer, d.ImageUrl, ct);
@@ -101,22 +91,22 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
 
         // Unchanged rows are left alone, so their tsvector is not recomputed every cycle.
         var upserted = await Exec(conn, tx, """
-            INSERT INTO search_documents AS d (id, kind, source_id, title, subtitle, body, tags, categories, tag_text,
+            INSERT INTO search_documents AS d (id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text,
                 image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text)
-            SELECT id, kind, source_id, title, subtitle, body, tags, categories, tag_text,
+            SELECT id, kind, source_id, title, subtitle, body, tags, tag_keys, categories, tag_text,
                 image_url, owner_id, team_id, created_at, likes, saves, views, open_vacancies, norm_text, translit_text
             FROM incoming
             ON CONFLICT (id) DO UPDATE SET
                 title = EXCLUDED.title, subtitle = EXCLUDED.subtitle, body = EXCLUDED.body,
-                tags = EXCLUDED.tags, categories = EXCLUDED.categories, tag_text = EXCLUDED.tag_text,
+                tags = EXCLUDED.tags, tag_keys = EXCLUDED.tag_keys, categories = EXCLUDED.categories, tag_text = EXCLUDED.tag_text,
                 image_url = EXCLUDED.image_url, owner_id = EXCLUDED.owner_id, team_id = EXCLUDED.team_id,
                 created_at = EXCLUDED.created_at, likes = EXCLUDED.likes, saves = EXCLUDED.saves,
                 views = EXCLUDED.views, open_vacancies = EXCLUDED.open_vacancies,
                 norm_text = EXCLUDED.norm_text, translit_text = EXCLUDED.translit_text, indexed_at = now()
-            WHERE (d.title, d.subtitle, d.body, d.tags, d.categories, d.tag_text, d.image_url, d.owner_id, d.team_id,
+            WHERE (d.title, d.subtitle, d.body, d.tags, d.tag_keys, d.categories, d.tag_text, d.image_url, d.owner_id, d.team_id,
                    d.created_at, d.likes, d.saves, d.views, d.open_vacancies)
                   IS DISTINCT FROM
-                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.categories, EXCLUDED.tag_text,
+                  (EXCLUDED.title, EXCLUDED.subtitle, EXCLUDED.body, EXCLUDED.tags, EXCLUDED.tag_keys, EXCLUDED.categories, EXCLUDED.tag_text,
                    EXCLUDED.image_url, EXCLUDED.owner_id, EXCLUDED.team_id, EXCLUDED.created_at, EXCLUDED.likes,
                    EXCLUDED.saves, EXCLUDED.views, EXCLUDED.open_vacancies)
             """, ct);
@@ -174,6 +164,70 @@ public sealed class SearchIndexWriter(NpgsqlDataSource index)
                 await writer.WriteAsync(term, NpgsqlDbType.Text, ct);
                 await writer.WriteAsync(TextNormalizer.Transliterate(term), NpgsqlDbType.Text, ct);
                 await writer.WriteAsync(freq, NpgsqlDbType.Integer, ct);
+            }
+            await writer.CompleteAsync(ct);
+        }
+        await tx.CommitAsync(ct);
+    }
+
+    /// <summary>
+    /// Rebuilds the tags in use (search_tags) and the names that lead to them (search_tag_names):
+    /// one tag per canonical key, labelled by its synonym group or by its most common spelling.
+    /// </summary>
+    public async Task RebuildTagsAsync(TagCatalog catalog, CancellationToken ct)
+    {
+        await using var conn = await index.OpenConnectionAsync(ct);
+
+        var docCount = new Dictionary<string, int>();
+        var spellings = new Dictionary<string, Dictionary<string, int>>();
+        await using (var cmd = new NpgsqlCommand("SELECT tags FROM search_documents WHERE cardinality(tags) > 0", conn))
+        await using (var reader = await cmd.ExecuteReaderAsync(ct))
+        {
+            while (await reader.ReadAsync(ct))
+            {
+                var seen = new HashSet<string>();
+                foreach (var tag in reader.GetFieldValue<string[]>(0))
+                {
+                    var key = catalog.Key(tag);
+                    if (key.Length == 0) continue;
+                    if (!spellings.TryGetValue(key, out var forms)) spellings[key] = forms = [];
+                    forms[tag.Trim()] = forms.GetValueOrDefault(tag.Trim()) + 1;
+                    if (seen.Add(key)) docCount[key] = docCount.GetValueOrDefault(key) + 1;
+                }
+            }
+        }
+
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        await Exec(conn, tx, "DELETE FROM search_tags", ct);
+        await using (var writer = await conn.BeginBinaryImportAsync(
+                         "COPY search_tags (key, label, doc_count) FROM STDIN (FORMAT BINARY)", ct))
+        {
+            foreach (var (key, count) in docCount)
+            {
+                var label = catalog.Label(key)
+                            ?? spellings[key].OrderByDescending(f => f.Value).ThenBy(f => f.Key, StringComparer.Ordinal).First().Key;
+                await writer.StartRowAsync(ct);
+                await writer.WriteAsync(key, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(label, NpgsqlDbType.Text, ct);
+                await writer.WriteAsync(count, NpgsqlDbType.Integer, ct);
+            }
+            await writer.CompleteAsync(ct);
+        }
+        await using (var writer = await conn.BeginBinaryImportAsync(
+                         "COPY search_tag_names (name_key, tag_key) FROM STDIN (FORMAT BINARY)", ct))
+        {
+            foreach (var key in docCount.Keys)
+            {
+                var names = catalog.NameKeys(key)
+                    .Concat(spellings[key].Keys.Select(TextNormalizer.TagKey))
+                    .Where(n => n.Length > 0)
+                    .Distinct();
+                foreach (var name in names)
+                {
+                    await writer.StartRowAsync(ct);
+                    await writer.WriteAsync(name, NpgsqlDbType.Text, ct);
+                    await writer.WriteAsync(key, NpgsqlDbType.Text, ct);
+                }
             }
             await writer.CompleteAsync(ct);
         }

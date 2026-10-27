@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Dapper;
 using Npgsql;
+using SearchService.Indexing;
 using SearchService.Normalization;
 
 namespace SearchService.Search;
@@ -17,7 +18,7 @@ namespace SearchService.Search;
 /// vocabulary does not know.</item>
 /// </list>
 /// </summary>
-public sealed class SearchQueryService(NpgsqlDataSource index)
+public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache catalogs)
 {
     public const int MaxPageSize = 50;
     private const int MaxTokens = 8;
@@ -62,7 +63,7 @@ public sealed class SearchQueryService(NpgsqlDataSource index)
         var plan = await PlanAsync(conn, tx, raw, ct);
         var p = new DynamicParameters();
         var (query, match, score) = BuildMatch(plan, p);
-        var filters = BuildFilters(request, p);
+        var filters = BuildFilters(request, await catalogs.GetAsync(ct), p);
         p.Add("kind", kind);
         p.Add("limit", pageSize);
         p.Add("offset", (page - 1) * pageSize);
@@ -125,12 +126,47 @@ public sealed class SearchQueryService(NpgsqlDataSource index)
             LIMIT @limit
             """, new { prefix = last, latin = TextNormalizer.Transliterate(last), swapped, limit }, cancellationToken: ct));
 
+        var tags = await TagsAsync(raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)[^1], 5, ct);
         var documents = await SearchAsync(new SearchRequest { Query = raw, PageSize = 5 }, ct);
         return new SuggestResponse
         {
             Completions = terms.Select(t => head.Length == 0 ? t : $"{head} {t}").ToList(),
             Documents = documents.Items,
+            Tags = tags,
         };
+    }
+
+    /// <summary>
+    /// Tag autocomplete. Matches the tag's own spellings and its synonyms by prefix, then by trigram
+    /// similarity (so "ilustr", "ілюс" and "ілюстарція" all offer "illustration"), more used tags first.
+    /// An empty query returns the most used tags.
+    /// </summary>
+    public async Task<IReadOnlyList<TagSuggestion>> TagsAsync(string? query, int limit, CancellationToken ct)
+    {
+        limit = Math.Clamp(limit, 1, 50);
+        var keys = new[] { TextNormalizer.TagKey(query), TextNormalizer.TagKey(TextNormalizer.SwapLayout(query)) }
+            .Where(k => k.Length > 0).Distinct().ToArray();
+
+        await using var conn = await index.OpenConnectionAsync(ct);
+        if (keys.Length == 0)
+        {
+            return (await conn.QueryAsync<TagSuggestion>(new CommandDefinition(
+                "SELECT key, label, doc_count AS documents FROM search_tags ORDER BY doc_count DESC, label LIMIT @limit",
+                new { limit }, cancellationToken: ct))).ToList();
+        }
+
+        return (await conn.QueryAsync<TagSuggestion>(new CommandDefinition("""
+            SELECT t.key, t.label, t.doc_count AS documents
+            FROM search_tags t
+            JOIN (SELECT n.tag_key,
+                         bool_or(n.name_key LIKE q.k || '%') AS prefix,
+                         max(similarity(n.name_key, q.k))     AS sim
+                  FROM unnest(@keys) AS q(k)
+                  JOIN search_tag_names n ON n.name_key LIKE q.k || '%' OR n.name_key % q.k
+                  GROUP BY n.tag_key) m ON m.tag_key = t.key
+            ORDER BY m.prefix DESC, m.sim DESC, t.doc_count DESC, t.label
+            LIMIT @limit
+            """, new { keys = PgArray.Of(keys), limit }, cancellationToken: ct))).ToList();
     }
 
     /// <summary>Categories with the number of indexed documents in each, including empty ones.</summary>
@@ -291,7 +327,7 @@ public sealed class SearchQueryService(NpgsqlDataSource index)
         return (tsq.ToString(), match, score);
     }
 
-    private static string BuildFilters(SearchRequest request, DynamicParameters p)
+    private static string BuildFilters(SearchRequest request, TagCatalog catalog, DynamicParameters p)
     {
         var sql = new StringBuilder();
         if (!string.IsNullOrWhiteSpace(request.Category))
@@ -299,11 +335,12 @@ public sealed class SearchQueryService(NpgsqlDataSource index)
             p.Add("category", request.Category.Trim());
             sql.Append(" AND d.categories @> ARRAY[@category]::text[]");
         }
-        var tags = request.Tags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToArray();
+        // Any spelling or synonym of a tag selects the same documents: "#3D", "3-д" and "3d" are one tag.
+        var tags = request.Tags.Select(catalog.Key).Where(k => k.Length > 0).Distinct().ToArray();
         if (tags.Length > 0)
         {
             p.Add("tags", PgArray.Of(tags));
-            sql.Append(" AND d.tags && @tags");
+            sql.Append(request.TagMode == TagMatch.All ? " AND d.tag_keys @> @tags" : " AND d.tag_keys && @tags");
         }
         return sql.ToString();
     }
