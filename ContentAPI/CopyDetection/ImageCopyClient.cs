@@ -14,6 +14,7 @@ public interface IImageCopyClient
 
     Task IndexAsync(CopyIndexRequest request, CancellationToken ct = default);
     Task<int> DeletePostAsync(int postId, CancellationToken ct = default);
+    Task<int> ClearIndexAsync(CancellationToken ct = default);
     Task<int> RecordCheckAsync(CopyCheckRecordRequest request, CancellationToken ct = default);
     Task<IReadOnlyList<CopyCheckRecord>> ListChecksAsync(IEnumerable<string> zones, string? status, int limit, int offset, CancellationToken ct = default);
     Task<CopyCheckRecord?> GetCheckAsync(int id, CancellationToken ct = default);
@@ -62,6 +63,14 @@ public sealed class ImageCopyClient : IImageCopyClient
     public async Task<int> DeletePostAsync(int postId, CancellationToken ct = default)
     {
         using var response = await _http.DeleteAsync($"v1/index/posts/{postId}", ct);
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, int>>(cancellationToken: ct);
+        return body?.GetValueOrDefault("deleted") ?? 0;
+    }
+
+    public async Task<int> ClearIndexAsync(CancellationToken ct = default)
+    {
+        using var response = await _http.DeleteAsync("v1/index", ct);
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, int>>(cancellationToken: ct);
         return body?.GetValueOrDefault("deleted") ?? 0;

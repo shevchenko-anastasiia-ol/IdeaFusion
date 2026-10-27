@@ -15,7 +15,8 @@ COPY service/pyproject.toml service/uv.lock service/
 COPY service/app service/app
 
 WORKDIR /srv/ml/service
-RUN uv sync --frozen --no-dev --no-editable
+# --no-cache: the uv download cache would otherwise stay in the image (~1.3 GB).
+RUN uv sync --frozen --no-dev --no-editable --no-cache
 
 ENV PATH=/srv/ml/service/.venv/bin:$PATH \
     MODEL_DIR=/models/v1 \

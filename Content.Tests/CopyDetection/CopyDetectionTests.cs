@@ -1,6 +1,7 @@
 using ContentAPI.CopyDetection;
 using ContentBLL.DTO.Post;
 using ContentBLL.Services.Interfaces;
+using ContentDAL.Data;
 using ContentDAL.Repository.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
@@ -8,6 +9,7 @@ using FluentAssertions;
 using Grpc.Core;
 using IdeaFusion.Grpc.Teams;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -97,8 +99,11 @@ public class CopyJobProcessorTests
             .ReturnsAsync((CopyCheckResult r, string _, CancellationToken _) => r);
     }
 
+    private readonly ContentDbContext _db = new(new DbContextOptionsBuilder<ContentDbContext>()
+        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+
     private CopyJobProcessor Processor() =>
-        new(_uow.Object, _client.Object, _authorship.Object, NullLogger<CopyJobProcessor>.Instance);
+        new(_uow.Object, _db, _client.Object, _authorship.Object, NullLogger<CopyJobProcessor>.Instance);
 
     private static Post TeamPost() => new()
     {
@@ -162,6 +167,45 @@ public class CopyJobProcessorTests
         await Processor().ProcessAsync(new CopyJob(CopyJobKind.IndexPost, 7), CancellationToken.None);
 
         _client.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ReindexAll_ProcessesPublishedPostsOldestFirstAndSurvivesFailures()
+    {
+        Post Published(int id, int day) => new()
+        {
+            PostId = id,
+            Status = PostStatus.Published,
+            CreatedAt = new DateTime(2026, 1, day),
+            CreatedBy = "u",
+            Media = new List<PostMedia> { new() { Id = id * 10, PostId = id, Bucket = "posts", ObjectName = $"m/{id}.png", ContentType = "image/png" } },
+        };
+        var posts = new[] { Published(3, 20), Published(1, 5), Published(2, 10) };
+        var deleted = Published(4, 1);
+        deleted.IsDeleted = true;
+        foreach (var p in posts.Append(deleted))
+        {
+            _db.Posts.Add(new Post { PostId = p.PostId, Title = $"p{p.PostId}", CreatedAt = p.CreatedAt, IsDeleted = p.IsDeleted });
+            _posts.Setup(r => r.GetByIdAsync(p.PostId, It.IsAny<CancellationToken>())).ReturnsAsync(p);
+        }
+        await _db.SaveChangesAsync();
+
+        var calls = new List<string>();
+        _client.Setup(c => c.ClearIndexAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("clear"))
+            .ReturnsAsync(5);
+        _client.Setup(c => c.CheckObjectAsync("posts", It.IsAny<string>(), It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, string obj, IEnumerable<string> _, IEnumerable<string> _, CancellationToken _) => calls.Add(obj))
+            .ReturnsAsync(new CopyCheckResult());
+        _client.Setup(c => c.IndexAsync(It.Is<CopyIndexRequest>(r => r.PostId == 1), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("ml down for a moment"));
+
+        await Processor().ProcessAsync(new CopyJob(CopyJobKind.ReindexAll, 0), CancellationToken.None);
+
+        // The index is emptied first, so each post is compared only with older ones.
+        calls.Should().Equal("clear", "m/1.png", "m/2.png", "m/3.png");
+        _client.Verify(c => c.IndexAsync(It.Is<CopyIndexRequest>(r => r.PostId == 3), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

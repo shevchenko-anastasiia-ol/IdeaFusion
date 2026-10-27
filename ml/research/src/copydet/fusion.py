@@ -83,7 +83,7 @@ class FusionModel:
             return p
         # Isotonic output is a step function: ties among the top pairs would make ranking
         # arbitrary, so the raw score breaks them without changing the calibrated value much.
-        return self.calibrator.predict(p) + 1e-6 * p
+        return np.minimum(self.calibrator.predict(p) + 1e-6 * p, 1.0)
 
     def set_zones(
         self,

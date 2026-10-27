@@ -23,19 +23,42 @@ public class CopyCheckController : ControllerBase
     private readonly ICurrentUserAccessor _currentUser;
     private readonly ContentDbContext _db;
     private readonly ILogger<CopyCheckController> _logger;
+    private readonly CopyCheckQueue? _queue;
 
     public CopyCheckController(
         IImageCopyClient client,
         IAuthorshipFilter authorship,
         ICurrentUserAccessor currentUser,
         ContentDbContext db,
-        ILogger<CopyCheckController> logger)
+        ILogger<CopyCheckController> logger,
+        CopyCheckQueue? queue = null)
     {
         _client = client;
         _authorship = authorship;
         _currentUser = currentUser;
         _db = db;
         _logger = logger;
+        _queue = queue;
+    }
+
+    /// <summary>
+    /// Checks and indexes every published post, oldest first, in the background. Needed once
+    /// after the copy detection is switched on (older posts are not in the index yet) and after
+    /// a new model version; safe to repeat.
+    /// </summary>
+    [HttpPost("reindex")]
+    [Authorize(Policy = IdeaFusionPolicies.RequireAdministrator)]
+    public IActionResult Reindex()
+    {
+        if (_queue is null)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new ProblemDetails { Title = "Перевірку на копії вимкнено в конфігурації." });
+        if (!_queue.TryEnqueue(new CopyJob(CopyJobKind.ReindexAll, 0)))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new ProblemDetails { Title = "Черга перевірок переповнена, спробуйте пізніше." });
+
+        _logger.LogInformation("Copy index rebuild requested by {User}", _currentUser.UserName);
+        return Accepted(new { status = "queued" });
     }
 
     /// <summary>

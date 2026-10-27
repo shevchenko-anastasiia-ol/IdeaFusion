@@ -12,6 +12,7 @@ FastAPI-сервіс, що розгортає модель з `ml/models/<вер
 | `POST /v1/check` | зображення (`file`) або об'єкт MinIO (`bucket`, `object_name`) + `exclude_user_ids`, `exclude_team_ids` → зона, P(copy), тип збігу, до 5 кандидатів з ознаками та областями збігу |
 | `POST /v1/index` | додати опубліковане зображення до індексу (pgvector, один запис на медіафайл) |
 | `DELETE /v1/index/posts/{post_id}` | прибрати пост з індексу |
+| `DELETE /v1/index` | очистити індекс перед повним переіндексуванням |
 | `POST /v1/checks`, `GET /v1/checks`, `GET /v1/checks/{id}` | черга модератора |
 | `POST /v1/checks/{id}/decision` | рішення модератора: `confirmed_copy`, `dismissed`, `open` |
 | `GET /v1/checks/{id}/explanation.png` | порівняння «завантаження ↔ знайдена робота» з відповідностями |
@@ -31,7 +32,7 @@ FastAPI-сервіс, що розгортає модель з `ml/models/<вер
 ```bash
 cd ml/service
 py -m uv sync
-py -m uv run pytest
+py -m uv run pytest            # з запущеним Docker тести сховища й API йдуть і на Postgres + pgvector
 py -m uv run uvicorn app.main:app --port 8000
 ```
 
