@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Driver;
 using Npgsql;
 using SearchService.Data;
+using SearchService.Feed;
 using SearchService.Indexing;
 using SearchService.Personal;
 using SearchService.Search;
@@ -36,7 +37,9 @@ string Required(string name) =>
 // searchdb is the only database written to; the sources are opened read-only.
 var indexDb = NpgsqlDataSource.Create(Required("searchdb"));
 builder.Services.AddSingleton(indexDb);
-builder.Services.AddSingleton<ISearchSource>(new ContentPostSource(SearchDatabase.ReadOnly(Required("contentdb"))));
+var contentDb = SearchDatabase.ReadOnly(Required("contentdb"));
+builder.Services.AddSingleton<ISearchSource>(new ContentPostSource(contentDb));
+builder.Services.AddSingleton<IInteractionSource>(new ContentInteractionSource(contentDb));
 builder.Services.AddSingleton<ISearchSource>(new IdentityUserSource(SearchDatabase.ReadOnly(Required("identityservicedb"))));
 
 var collaboration = new MongoClient(Required("collaboration-db"))
@@ -51,6 +54,9 @@ builder.Services.AddSingleton<TagCatalogCache>();
 builder.Services.AddSingleton<SearchQueryService>();
 builder.Services.AddSingleton<PersonalSearchStore>();
 builder.Services.AddSingleton<SubscriptionMatcher>();
+builder.Services.AddSingleton<InterestProfileWriter>();
+builder.Services.AddSingleton<FeedService>();
+builder.Services.AddSingleton<FeedEventLog>();
 builder.Services.AddHostedService<IndexSyncService>();
 
 builder.Services.AddHealthChecks()
