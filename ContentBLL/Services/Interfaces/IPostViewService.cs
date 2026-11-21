@@ -2,6 +2,8 @@
 
 public interface IPostViewService
 {
-    Task RecordAsync(int postId, int? userId, CancellationToken ct = default);
+    /// <summary>Records a view of a post by the caller. The viewer is read from the token.</summary>
+    Task RecordAsync(int postId, CancellationToken ct = default);
+
     Task<int> CountByPostAsync(int postId, CancellationToken ct = default);
 }

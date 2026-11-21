@@ -108,10 +108,8 @@ public class CommentIntegrationTests : IClassFixture<ContentWebApplicationFactor
 
         var dto = new CommentCreateDto
         {
-            PostId       = 1,
-            PostAuthorId = 2,
-            Body         = "Hello world",
-            CreatedBy    = "user1",
+            PostId = 1,
+            Body   = "Hello world",
         };
 
         var response = await _client.PostAsJsonAsync("/api/comment", dto);
@@ -132,7 +130,7 @@ public class CommentIntegrationTests : IClassFixture<ContentWebApplicationFactor
             .ReturnsAsync(updated);
 
         var response = await _client.PutAsJsonAsync("/api/comment/7",
-            new CommentUpdateDto { Body = "Updated body", UpdatedBy = "user1" });
+            new CommentUpdateDto { Body = "Updated body" });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }

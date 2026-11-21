@@ -15,6 +15,9 @@ public class CommentMappingProfiles : Profile
  
         CreateMap<CommentCreateDto, Comment>()
             .ForMember(dest => dest.CommentId,  opt => opt.Ignore())
+            // The author and the audit stamp are the server's to fill in.
+            .ForMember(dest => dest.PostAuthorId, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy,  opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt,  opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt,  opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedBy,  opt => opt.Ignore())
@@ -32,6 +35,7 @@ public class CommentMappingProfiles : Profile
             .ForMember(dest => dest.CreatedAt,     opt => opt.Ignore())
             .ForMember(dest => dest.CreatedBy,     opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt,     opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedBy,     opt => opt.Ignore())
             .ForMember(dest => dest.IsDeleted,     opt => opt.Ignore())
             .ForMember(dest => dest.Post,          opt => opt.Ignore())
             .ForMember(dest => dest.Author,        opt => opt.Ignore())

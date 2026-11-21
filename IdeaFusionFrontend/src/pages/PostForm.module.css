@@ -1,0 +1,193 @@
+/* New post / edit post: the work and its fields on the left, the image check and the
+   publish actions in a sticky panel on the right. */
+.compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--sp-8);
+  align-items: start;
+}
+.formCol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.block + .block {
+  padding-top: var(--sp-6);
+  border-top: 1px solid var(--border);
+}
+.sectionLabel {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text);
+}
+.aside {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--sp-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.checkPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+}
+.checkTitle {
+  font-size: var(--fs-lg);
+}
+.checkNote {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.checkEmpty {
+  padding: var(--sp-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  text-align: center;
+}
+.checkList {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* Result badge on a media tile */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: var(--r-full);
+  background: rgba(14, 14, 17, 0.88);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid transparent;
+}
+.badgeOk {
+  color: var(--teal);
+  border-color: rgba(0, 201, 167, 0.45);
+}
+.badgeWarn {
+  color: var(--amber);
+  border-color: rgba(255, 179, 71, 0.5);
+}
+.badgeRed {
+  color: var(--red);
+  border-color: rgba(255, 107, 107, 0.55);
+}
+
+/* Publisher choice */
+.publisher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  text-align: left;
+  color: var(--text);
+  min-width: 0;
+}
+.option:hover:not(:disabled) {
+  border-color: var(--text-3);
+}
+.option:disabled {
+  opacity: 0.55;
+}
+.optionOn,
+.optionOn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.optionText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.optionTitle {
+  font-weight: 600;
+}
+.optionSub {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Edit: files already on the post */
+.existing {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--sp-3);
+}
+.existingItem {
+  aspect-ratio: 1;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+}
+.existingItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.danger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: var(--r-lg);
+}
+.dangerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (max-width: 1099px) {
+  .compose {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .aside {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .publisher {
+    grid-template-columns: 1fr;
+  }
+}

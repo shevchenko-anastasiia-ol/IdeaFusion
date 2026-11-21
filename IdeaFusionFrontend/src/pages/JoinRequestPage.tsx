@@ -1,150 +1,172 @@
-import { FunctionComponent, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
-import Moderation from "../components/Moderation";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { teamsApi, collaborationRequestsApi } from "../api/teams";
 import type { TeamEntity } from "../api/types";
 import { teamStatusLabel } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import styles from "./JoinRequestPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Avatar, Button, ButtonLink, EmptyState, Field, Input, Loading, Notice, PageHeader, Select, Status, Textarea } from "../ui";
+import { IconCheck, IconUsers } from "../ui/icons";
+import { teamStatusTone } from "../lib/status";
+import sh from "./shared.module.css";
+import s from "./TeamForms.module.css";
 
-const JoinRequestPage: FunctionComponent = () => {
-  const navigate    = useNavigate();
-  const [params]    = useSearchParams();
-  const { user }    = useAuth();
-  const preTeamId   = params.get('teamId') ?? '';
+export default function JoinRequestPage() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { user } = useAuth();
+  const preTeamId = params.get("teamId") ?? "";
 
-  const [team,      setTeam]      = useState<TeamEntity | null>(null);
-  const [role,      setRole]      = useState('');
-  const [message,   setMessage]   = useState('Доброго дня, прошу розглянути мою кандидатуру на учасника вашої команди.');
+  const [team, setTeam] = useState<TeamEntity | null>(null);
+  const [loading, setLoading] = useState(!!preTeamId);
+  const [role, setRole] = useState("");
+  const [message, setMessage] = useState("Доброго дня, прошу розглянути мою кандидатуру на учасника вашої команди.");
   const [submitting, setSubmitting] = useState(false);
-  const [done,       setDone]       = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  usePageMeta("Запит на вступ", [
+    { label: "Команди", to: "/collaborations" },
+    ...(team ? [{ label: team.name, to: `/teams/${team.id}` }] : []),
+  ]);
 
   useEffect(() => {
     if (!preTeamId) return;
-    teamsApi.getById(preTeamId)
+    setLoading(true);
+    teamsApi
+      .getById(preTeamId)
       .then(setTeam)
-      .catch(() => {});
+      .catch(() => setTeam(null))
+      .finally(() => setLoading(false));
   }, [preTeamId]);
 
-  async function handleSubmit() {
-    if (!user || !team || !role.trim()) { setError('Оберіть роль'); return; }
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!user || !team || !role.trim()) {
+      setError("Оберіть роль");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      await collaborationRequestsApi.create({
-        teamId: team.id,
-        fromUserId: user.id,
-        fromUsername: user.userName ?? user.fullName ?? user.email?.split('@')[0],
-        fromAvatarUrl: user.avatarUrl,
-        role: role.trim(),
-        message: message.trim() || undefined,
-      });
+      await collaborationRequestsApi.create({ teamId: team.id, role: role.trim(), message: message.trim() || undefined });
       setDone(true);
     } catch (ex: unknown) {
-      setError(ex instanceof Error ? ex.message : 'Помилка надсилання');
+      setError(ex instanceof Error ? ex.message : "Помилка надсилання");
     } finally {
       setSubmitting(false);
     }
   }
 
-  const roles = team?.requiredRoles.map(r => r.role) ?? [
-    'Розробник React', 'Графічний дизайнер', 'Композитор', '3D артист',
-  ];
+  if (loading) {
+    return (
+      <Page width="narrow">
+        <Loading />
+      </Page>
+    );
+  }
 
-  const status = team ? teamStatusLabel(team.status) : '';
+  if (!team) {
+    return (
+      <Page width="narrow">
+        <PageHeader title="Запит на вступ" />
+        <EmptyState
+          icon={<IconUsers />}
+          title={preTeamId ? "Команду не знайдено" : "Команду не обрано"}
+          text="Відкрийте сторінку команди в каталозі та натисніть «Подати заявку»."
+          action={<ButtonLink to="/teams">До каталогу команд</ButtonLink>}
+        />
+      </Page>
+    );
+  }
+
+  const roles = team.requiredRoles.map(r => r.role);
+  const myName = user?.fullName ?? user?.userName ?? user?.email ?? "Ви";
+
+  if (done) {
+    return (
+      <Page width="narrow">
+        <div className={s.done}>
+          <span className={s.doneIcon}>
+            <IconCheck size={22} />
+          </span>
+          <h1 className={s.doneTitle}>Заявку надіслано</h1>
+          <p className={sh.muted}>
+            Лідер команди «{team.name}» розгляне ваш запит на роль «{role}». Статус з'явиться на сторінці команди.
+          </p>
+          <div className={sh.inline}>
+            <ButtonLink to={`/teams/${team.id}`} variant="primary">
+              До команди
+            </ButtonLink>
+            <ButtonLink to="/teams">Інші команди</ButtonLink>
+          </div>
+        </div>
+      </Page>
+    );
+  }
 
   return (
-    <div className={styles.page}>
-      <FrameComponent2 />
-
-      <div className={styles.content}>
-        <header className={styles.header}>
-          <h2 className={styles.headerTitle}>Запит на вступ до команди</h2>
-          <button className={styles.cancelBtn} onClick={() => navigate(-1)}>Скасувати</button>
-        </header>
-
-        <main className={styles.main}>
-          {done ? (
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle} style={{ color: "#3fcca0" }}>✓ Заявку надіслано!</h3>
-              <button className={styles.submitBtn} onClick={() => navigate(-1)}>Назад</button>
-            </div>
-          ) : (
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Надішли запит на вступ до команди</h3>
-
-              <div className={styles.section}>
-                <div className={styles.label}>Від кого</div>
-                <div className={styles.recipient}>
-                  {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className={styles.recipientAvatar} style={{ objectFit: "cover" }} />
-                  ) : (
-                    <div className={styles.recipientAvatar} style={{ backgroundColor: "#7c5cfc" }}>
-                      {(user?.userName ?? user?.email ?? '?').slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <div className={styles.recipientName}>
-                      {user?.fullName ?? user?.userName ?? user?.email ?? 'Ви'}
-                    </div>
-                    {user?.specialization && (
-                      <div className={styles.recipientRole}>{user.specialization}</div>
-                    )}
-                  </div>
+    <Page width="narrow">
+      <PageHeader title="Запит на вступ" description="Розкажіть команді, чим можете бути корисні." />
+      <form className={sh.form} onSubmit={e => void handleSubmit(e)}>
+        <section className={sh.formSection}>
+          <div className={s.route}>
+            <div className={s.party}>
+              <span className={sh.mono}>від</span>
+              <div className={s.partyBody}>
+                <Avatar name={myName} src={user?.avatarUrl} seed={user?.id} size={36} />
+                <div className={s.partyText}>
+                  <span className={s.partyName}>{myName}</span>
+                  {user?.specialization && <span className={sh.mono}>{user.specialization}</span>}
                 </div>
               </div>
-
-              {team && (
-                <div className={styles.section}>
-                  <div className={styles.label}>В команду</div>
-                  <div className={styles.teamRow}>
-                    <div className={styles.teamAccent} style={{ backgroundColor: "#7c5cfc" }} />
-                    <div className={styles.teamInfo}>
-                      <div className={styles.teamTop}>
-                        <span className={styles.teamName}>{team.name}</span>
-                        <span className={styles.teamBadge} style={{ background: "rgba(124,92,252,0.2)", border: "1px solid #7c5cfc", color: "#a48fff" }}>
-                          {status}
-                        </span>
-                      </div>
-                      <div className={styles.teamSub}>{team.tags.join(' · ')}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.section}>
-                <div className={styles.label}>На роль</div>
-                <select className={styles.select} value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="">Оберіть з наявних...</option>
-                  {roles.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-
-              <div className={styles.section}>
-                <div className={styles.label}>Текст повідомлення</div>
-                <textarea
-                  className={styles.textarea}
-                  rows={6}
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                />
-              </div>
-
-              {error && <p style={{ color: "#ff6b6b", marginBottom: 8 }}>{error}</p>}
-
-              <button className={styles.submitBtn} disabled={submitting} onClick={handleSubmit}>
-                {submitting ? '...' : 'Надіслати'}
-              </button>
             </div>
-          )}
-        </main>
+            <span className={s.arrow} aria-hidden="true">→</span>
+            <div className={s.party}>
+              <span className={sh.mono}>до команди</span>
+              <Link to={`/teams/${team.id}`} className={s.partyBody}>
+                <Avatar name={team.name} src={team.avatarUrl} seed={team.id} size={36} square />
+                <div className={s.partyText}>
+                  <span className={s.partyName}>{team.name}</span>
+                  <Status tone={teamStatusTone(team.status)}>{teamStatusLabel(team.status).toLowerCase()}</Status>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
 
-        <Moderation moderationPosition="relative" moderationMarginTop="auto" moderationTop="unset" moderationLeft="124px" />
-      </div>
-    </div>
+        <section className={sh.formSection}>
+          <Field label="Роль" required htmlFor="jr-role" hint={roles.length === 0 ? "Команда не вказала відкритих ролей — опишіть свою" : undefined}>
+            {roles.length > 0 ? (
+              <Select id="jr-role" value={role} onChange={e => setRole(e.target.value)}>
+                <option value="">Оберіть з відкритих ролей…</option>
+                {roles.map(r => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input id="jr-role" placeholder="Напр.: 3D художник" value={role} onChange={e => setRole(e.target.value)} />
+            )}
+          </Field>
+          <Field label="Повідомлення" htmlFor="jr-msg">
+            <Textarea id="jr-msg" rows={6} value={message} onChange={e => setMessage(e.target.value)} />
+          </Field>
+        </section>
+
+        {error && <Notice tone="error">{error}</Notice>}
+
+        <div className={sh.formActions}>
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            Скасувати
+          </Button>
+          <Button type="submit" variant="primary" loading={submitting}>
+            Надіслати запит
+          </Button>
+        </div>
+      </form>
+    </Page>
   );
-};
-
-export default JoinRequestPage;
+}

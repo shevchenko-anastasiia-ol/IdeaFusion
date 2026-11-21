@@ -222,7 +222,7 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
     }
 
     /// <summary>Completions of the last word from the vocabulary, matching tags and the most popular few matching documents.</summary>
-    public async Task<SuggestResponse> SuggestAsync(string? query, int limit, CancellationToken ct)
+    public async Task<SuggestResponse> SuggestAsync(string? query, int limit, CancellationToken ct, string? viewerId = null)
     {
         var raw = Clip(query);
         var words = TextNormalizer.Tokenize(raw);
@@ -236,7 +236,7 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         // The three parts are independent, so they run at the same time on their own connections.
         var termsTask = CompletionsAsync(last, swapped, limit, ct);
         var tagsTask = TagsAsync(raw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)[^1], 5, ct);
-        var documentsTask = SuggestDocumentsAsync(raw, words.Length > 1 ? last : null, ct);
+        var documentsTask = SuggestDocumentsAsync(raw, words.Length > 1 ? last : null, viewerId, ct);
         await Task.WhenAll(termsTask, tagsTask, documentsTask);
 
         return new SuggestResponse
@@ -260,9 +260,9 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
     }
 
     /// <summary>The most popular few documents with all the words, or, failing that, with the word being typed.</summary>
-    private async Task<IReadOnlyList<SearchHit>> SuggestDocumentsAsync(string raw, string? lastWord, CancellationToken ct)
+    private async Task<IReadOnlyList<SearchHit>> SuggestDocumentsAsync(string raw, string? lastWord, string? viewerId, CancellationToken ct)
     {
-        SearchRequest Request(string q) => new() { Query = q, PageSize = 5, SkipFacets = true, NoFuzzy = true, Sort = SearchSort.Popular };
+        SearchRequest Request(string q) => new() { Query = q, PageSize = 5, SkipFacets = true, NoFuzzy = true, Sort = SearchSort.Popular, ViewerId = viewerId };
         var documents = await SearchAsync(Request(raw), ct);
         if (documents.Items.Count == 0 && lastWord is not null)
             documents = await SearchAsync(Request(lastWord), ct);
@@ -593,6 +593,11 @@ public sealed class SearchQueryService(NpgsqlDataSource index, TagCatalogCache c
         {
             p.Add("excludeOwner", request.ExcludeOwnerId);
             filters["excludeOwner"] = "d.owner_id IS DISTINCT FROM @excludeOwner";
+        }
+        if (!string.IsNullOrWhiteSpace(request.ViewerId))
+        {
+            p.Add("viewerDoc", $"{DocumentKinds.User}:{request.ViewerId.Trim()}");
+            filters["notSelf"] = "d.id <> @viewerDoc";
         }
         return filters;
     }

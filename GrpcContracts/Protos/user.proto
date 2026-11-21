@@ -6,8 +6,8 @@ package users;
 service UserGrpcService {
   rpc GetUserById      (GetUserByIdRequest)   returns (UserResponse);
   rpc GetUsersByIds    (GetUsersByIdsRequest)  returns (UsersResponse);
-  rpc ValidateToken    (ValidateTokenRequest)  returns (ValidateTokenResponse);
   rpc CheckUserExists  (CheckUserExistsRequest) returns (CheckUserExistsResponse);
+  rpc RecordAudit      (RecordAuditRequest)    returns (RecordAuditResponse);
 }
 
 // ── Requests ─────────────────────────────────────────────
@@ -20,12 +20,21 @@ message GetUsersByIdsRequest {
   repeated string user_ids = 1;
 }
 
-message ValidateTokenRequest {
-  string access_token = 1;
-}
-
 message CheckUserExistsRequest {
   string user_id = 1;
+}
+
+// Lets other services report privileged actions they perform, so the audit trail
+// has one home instead of a separate log per service.
+message RecordAuditRequest {
+  string actor_id    = 1;  // Keycloak subject ("sub") of the acting user
+  string actor_name  = 2;
+  string action      = 3;  // e.g. "post.delete"
+  string target_type = 4;  // e.g. "post"
+  string target_id   = 5;
+  string target_name = 6;
+  string details     = 7;  // free-form, usually compact JSON
+  string category    = 8;  // AuditCategory name; empty means "user"
 }
 
 // ── Responses ─────────────────────────────────────────────
@@ -38,15 +47,13 @@ message UsersResponse {
   repeated UserDto users = 1;
 }
 
-message ValidateTokenResponse {
-  bool   is_valid  = 1;
-  string user_id   = 2;
-  string user_name = 3;
-  string email     = 4;
-}
-
 message CheckUserExistsResponse {
   bool exists = 1;
+}
+
+message RecordAuditResponse {
+  string entry_id = 1;
+  bool   recorded = 2;
 }
 
 // ── DTOs ──────────────────────────────────────────────────

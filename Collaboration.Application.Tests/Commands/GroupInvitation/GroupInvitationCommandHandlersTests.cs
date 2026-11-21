@@ -1,4 +1,5 @@
 using Collaboration.Application.Commands.GroupInvitation;
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Domain.Exceptions;
 using Collaboration.Domain.Interfaces;
 using Collaboration.Domain.ValueOfObjects;
@@ -13,7 +14,17 @@ public class GroupInvitationCommandHandlersTests
 {
     private readonly Mock<IGroupInvitationRepository> _invitationRepoMock = new();
     private readonly Mock<ITeamRepository> _teamRepoMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    private void SetCaller(string userId, string? username = null, string? avatarUrl = null)
+    {
+        _callerMock.Setup(c => c.UserId).Returns(userId);
+        _callerMock.Setup(c => c.Username).Returns(username ?? userId);
+        _callerMock.Setup(c => c.AvatarUrl).Returns(avatarUrl);
+        _callerMock.Setup(c => c.ToSnapshot())
+                   .Returns(() => new UserSnapshot(userId, username ?? userId, avatarUrl));
+    }
 
     private static Domain.Entities.Team CreateTeam(string id = "team-1")
     {
@@ -65,13 +76,13 @@ public class GroupInvitationCommandHandlersTests
             .Setup(r => r.CreateAsync(It.IsAny<Domain.Entities.GroupInvitation>(), _ct))
             .Returns<Domain.Entities.GroupInvitation, CancellationToken>((inv, _) => Task.FromResult(inv));
 
+        SetCaller("owner-id");
         var handler = new CreateGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1",
             InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id",
             Role = "Developer",
             Message = "Join us!",
             ExpirationDays = 7
@@ -92,11 +103,12 @@ public class GroupInvitationCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct))
                      .ReturnsAsync((Domain.Entities.Team?)null);
 
+        SetCaller("owner-id");
         var handler = new CreateGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "user-1", InvitedByUserId = "owner-id",
+            TeamId = "team-1", InvitedUserId = "user-1",
             Role = "Developer", ExpirationDays = 7
         };
 
@@ -112,11 +124,12 @@ public class GroupInvitationCommandHandlersTests
         team.MarkAsDeleted();
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
 
+        SetCaller("owner-id");
         var handler = new CreateGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "user-1", InvitedByUserId = "owner-id",
+            TeamId = "team-1", InvitedUserId = "user-1",
             Role = "Developer", ExpirationDays = 7
         };
 
@@ -132,11 +145,12 @@ public class GroupInvitationCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
 
+        SetCaller("owner-id");
         var handler = new CreateGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "user-1", InvitedByUserId = "owner-id",
+            TeamId = "team-1", InvitedUserId = "user-1",
             Role = "Developer", ExpirationDays = 7
         };
 
@@ -153,11 +167,12 @@ public class GroupInvitationCommandHandlersTests
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(false);
         _invitationRepoMock.Setup(r => r.HasPendingInvitationAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
 
+        SetCaller("owner-id");
         var handler = new CreateGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "user-1", InvitedByUserId = "owner-id",
+            TeamId = "team-1", InvitedUserId = "user-1",
             Role = "Developer", ExpirationDays = 7
         };
 
@@ -178,20 +193,18 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.UpdateAsync(inv, _ct)).ReturnsAsync(inv);
         _teamRepoMock.Setup(r => r.UpdateAsync(team, _ct)).ReturnsAsync(team);
 
+        SetCaller("user-1", "alice", "https://img/avatar.png");
         var handler = new AcceptGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1",
-            UserId = "user-1",
-            Username = "alice",
-            AvatarUrl = "https://img/avatar.png"
+            InvitationId = "inv-1"
         };
 
         var result = await handler.Handle(command, _ct);
 
         result.Status.Should().Be(Domain.Entities.InvitationStatus.Accepted);
-        team.Members.Should().Contain(m => m.UserId == "user-1" && m.Role == "Developer");
+        team.Members.Should().Contain(m => m.UserId == "user-1" && m.Role == Domain.Entities.TeamRole.Member && m.Position == "Developer");
         _invitationRepoMock.Verify(r => r.UpdateAsync(inv, _ct), Times.Once);
         _teamRepoMock.Verify(r => r.UpdateAsync(team, _ct), Times.Once);
     }
@@ -202,11 +215,12 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct))
                            .ReturnsAsync((Domain.Entities.GroupInvitation?)null);
 
+        SetCaller("user-1", "alice", "https://img/avatar.png");
         var handler = new AcceptGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1", Username = "alice"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -220,11 +234,12 @@ public class GroupInvitationCommandHandlersTests
         var inv = CreatePendingInvitation(invitedUserId: "user-1");
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
 
+        SetCaller("other-user");
         var handler = new AcceptGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "other-user", Username = "bob"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -240,11 +255,12 @@ public class GroupInvitationCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct))
                      .ReturnsAsync((Domain.Entities.Team?)null);
 
+        SetCaller("user-1", "alice", "https://img/avatar.png");
         var handler = new AcceptGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1", Username = "alice"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -260,11 +276,12 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
 
+        SetCaller("user-1", "alice", "https://img/avatar.png");
         var handler = new AcceptGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1", Username = "alice"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -280,11 +297,12 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
 
+        SetCaller("user-1", "alice", "https://img/avatar.png");
         var handler = new AcceptGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1", Username = "alice"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -301,10 +319,11 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
         _invitationRepoMock.Setup(r => r.UpdateAsync(inv, _ct)).ReturnsAsync(inv);
 
-        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object, _callerMock.Object);
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1"
+            InvitationId = "inv-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -319,10 +338,11 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct))
                            .ReturnsAsync((Domain.Entities.GroupInvitation?)null);
 
-        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object, _callerMock.Object);
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -336,10 +356,11 @@ public class GroupInvitationCommandHandlersTests
         var inv = CreatePendingInvitation(invitedUserId: "user-1");
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
 
-        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object);
+        SetCaller("other-user");
+        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object, _callerMock.Object);
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "other-user"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -354,10 +375,11 @@ public class GroupInvitationCommandHandlersTests
         inv.Decline("user-1");
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
 
-        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object, _callerMock.Object);
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -371,10 +393,11 @@ public class GroupInvitationCommandHandlersTests
         var inv = CreateExpiredInvitation(invitedUserId: "user-1");
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
 
-        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new DeclineGroupInvitationCommandHandler(_invitationRepoMock.Object, _callerMock.Object);
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -392,11 +415,12 @@ public class GroupInvitationCommandHandlersTests
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "owner-id", _ct)).ReturnsAsync(true);
         _invitationRepoMock.Setup(r => r.UpdateAsync(inv, _ct)).ReturnsAsync(inv);
 
+        SetCaller("owner-id");
         var handler = new RevokeGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RevokeGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "owner-id"
+            InvitationId = "inv-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -412,11 +436,12 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct))
                            .ReturnsAsync((Domain.Entities.GroupInvitation?)null);
 
+        SetCaller("owner-id");
         var handler = new RevokeGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RevokeGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "owner-id"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -431,11 +456,12 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "outsider", _ct)).ReturnsAsync(false);
 
+        SetCaller("outsider");
         var handler = new RevokeGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RevokeGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "outsider"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -451,11 +477,12 @@ public class GroupInvitationCommandHandlersTests
         _invitationRepoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(inv);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "owner-id", _ct)).ReturnsAsync(true);
 
+        SetCaller("owner-id");
         var handler = new RevokeGroupInvitationCommandHandler(
-            _invitationRepoMock.Object, _teamRepoMock.Object);
+            _invitationRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RevokeGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "owner-id"
+            InvitationId = "inv-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))

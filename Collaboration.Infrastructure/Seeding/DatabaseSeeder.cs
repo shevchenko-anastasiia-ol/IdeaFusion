@@ -19,7 +19,9 @@ public class DatabaseSeeder : IDataSeeder
     // Системний snapshot для seed-даних
     private static readonly UserSnapshot SystemUser = new("system", "System", null);
  
-    // Тестові юзери з UserService (денормалізовані snapshots)
+    // Демонстраційні персони для контенту, який не належить жодному реальному користувачу.
+    // Вони навмисно не мають облікового запису в Keycloak: у токенi ніколи не буде відповідного sub,
+    // тому керувати такими командами неможливо. Не замінювати їх на UUID з IdentitySeeder.
     private static readonly UserSnapshot Artist01    = new("user_artist_01",       "pixel_master",    "https://cdn.example.com/avatars/artist01.jpg");
     private static readonly UserSnapshot Sound01     = new("user_sound_01",        "soundwave_pro",   null);
     private static readonly UserSnapshot Drummer01   = new("user_drummer_01",      "beat_keeper",     "https://cdn.example.com/avatars/drummer01.jpg");
@@ -46,6 +48,7 @@ public class DatabaseSeeder : IDataSeeder
             await SeedTeamPostsAsync(cancellationToken);
             await SeedRealUserTeamsAsync(cancellationToken);
             await SeedVacanciesAsync(cancellationToken);
+            await BackfillRequiredRoleVacanciesAsync(cancellationToken);
             await SeedRealUserInvitationsAsync(cancellationToken);
             await SeedRealUserCollaborationRequestsAsync(cancellationToken);
 
@@ -106,14 +109,14 @@ public class DatabaseSeeder : IDataSeeder
         teams[1].AddRequiredRole("Keyboardist", "Знання музичної теорії, досвід запису у студії", "system");
  
         teams[2].AddRequiredRole("Videographer", "Досвід з камерами Sony/Canon, знання DaVinci Resolve", "system");
-        teams[2].AddMember(Videographer01, "Videographer");
+        teams[2].Join(Videographer01, "Videographer");
         teams[2].SetStatus(TeamStatus.Active, "system");
  
         teams[3].AddRequiredRole("Editor", "Досвід редагування художніх текстів", "system");
         teams[3].AddRequiredRole("Illustrator", "Ілюстрації для обкладинки та розділів", "system");
  
         teams[4].AddRequiredRole("Motion Designer", "After Effects, Cinema 4D", "system");
-        teams[4].AddMember(Motion01, "Motion Designer");
+        teams[4].Join(Motion01, "Motion Designer");
         teams[4].SetStatus(TeamStatus.Active, "system");
  
         foreach (var team in teams)
@@ -491,6 +494,62 @@ public class DatabaseSeeder : IDataSeeder
     }
 
     // ── Demo vacancies ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Teams created before required roles opened vacancies list roles nobody can see in
+    /// the catalogue. Each such role gets an open vacancy once: a role that already has a
+    /// vacancy (open or closed) or a member holding that position is left alone, so a
+    /// restart never re-opens a hire.
+    /// </summary>
+    private async Task BackfillRequiredRoleVacanciesAsync(CancellationToken cancellationToken)
+    {
+        var teams = await _context.Teams
+            .Find(t => !t.IsDeleted && t.RequiredRoles.Any())
+            .ToListAsync(cancellationToken);
+
+        var created = 0;
+        foreach (var team in teams)
+        {
+            var existing = await _context.TeamVacancies
+                .Find(v => v.TeamId == team.Id && !v.IsDeleted)
+                .Project(v => v.Role)
+                .ToListAsync(cancellationToken);
+            var taken = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+            foreach (var member in team.Members)
+                if (!string.IsNullOrWhiteSpace(member.Position))
+                    taken.Add(member.Position);
+
+            var added = 0;
+            foreach (var required in team.RequiredRoles)
+            {
+                var role = required.Role?.Trim();
+                if (string.IsNullOrEmpty(role) || role.Length > 100 || !taken.Add(role))
+                    continue;
+
+                var vacancy = new TeamVacancy(
+                    teamId: team.Id,
+                    teamName: team.Name,
+                    category: team.Category,
+                    tags: team.Tags,
+                    role: role,
+                    creatorUserId: "system",
+                    description: required.Description,
+                    teamAvatarUrl: team.AvatarUrl);
+                await _context.TeamVacancies.InsertOneAsync(vacancy, cancellationToken: cancellationToken);
+                team.IncrementOpenVacancyCount("system");
+                added++;
+            }
+
+            if (added > 0)
+            {
+                await _context.Teams.ReplaceOneAsync(t => t.Id == team.Id, team, cancellationToken: cancellationToken);
+                created += added;
+            }
+        }
+
+        if (created > 0)
+            _logger.LogInformation("Opened {Count} vacancies for required roles that had none", created);
+    }
 
     private async Task SeedVacanciesAsync(CancellationToken cancellationToken)
     {

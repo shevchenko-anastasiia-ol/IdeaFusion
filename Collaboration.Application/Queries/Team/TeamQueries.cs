@@ -15,6 +15,15 @@ public class GetTeamsPagedQuery : IQuery<PagedList<Domain.Entities.Team>>
     public TeamParameters Parameters { get; init; } = default!;
 }
  
+/// <summary>The teams the caller belongs to. No user id: it is the token's.</summary>
+public class GetMyTeamsQuery : IQuery<IEnumerable<Domain.Entities.Team>>
+{
+}
+
+/// <summary>
+/// The teams somebody belongs to, as anyone can already see on the team pages. Used to put a
+/// team's published work into each member's public portfolio.
+/// </summary>
 public class GetTeamsByMemberQuery : IQuery<IEnumerable<Domain.Entities.Team>>
 {
     public string UserId { get; init; } = default!;

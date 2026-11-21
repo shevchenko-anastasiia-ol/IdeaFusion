@@ -1,16 +1,25 @@
-﻿using Collaboration.Application.Commands.TeamPost;
+﻿using Collaboration.API.Services;
+using Collaboration.Application.Commands.TeamPost;
 using Collaboration.Application.Queries.TeamPost;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Collaboration.API.Controllers;
 
 [Route("api/team-posts")]
+[Authorize]
 public class TeamPostController : BaseApiController
 {
-    public TeamPostController(IMediator mediator) : base(mediator) { }
+    private readonly ICollaborationAuditWriter _audit;
+
+    public TeamPostController(IMediator mediator, ICollaborationAuditWriter audit) : base(mediator)
+    {
+        _audit = audit;
+    }
  
     // GET: api/team-posts/{postId}
+    [AllowAnonymous]
     [HttpGet("{postId}")]
     public async Task<IActionResult> GetByPostId(string postId, CancellationToken cancellationToken)
     {
@@ -26,6 +35,7 @@ public class TeamPostController : BaseApiController
     }
  
     // GET: api/team-posts/team/{teamId}
+    [AllowAnonymous]
     [HttpGet("team/{teamId}")]
     public async Task<IActionResult> GetByTeam(string teamId, CancellationToken cancellationToken)
     {
@@ -38,6 +48,7 @@ public class TeamPostController : BaseApiController
     }
  
     // GET: api/team-posts/team/{teamId}/paged
+    [AllowAnonymous]
     [HttpGet("team/{teamId}/paged")]
     public async Task<IActionResult> GetByTeamPaged(string teamId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
@@ -55,6 +66,9 @@ public class TeamPostController : BaseApiController
     }
  
     // GET: api/team-posts/author/{userId}
+    // A public byline, like a profile page: the userId here is the subject of the
+    // listing, not the caller, so it is not one of the removed identity parameters.
+    [AllowAnonymous]
     [HttpGet("author/{userId}")]
     public async Task<IActionResult> GetByAuthor(string userId, CancellationToken cancellationToken)
     {
@@ -104,6 +118,15 @@ public class TeamPostController : BaseApiController
                 return BadRequest(new { message = "ID mismatch." });
  
             await _mediator.Send(command, cancellationToken);
+
+            await _audit.RecordAsync(
+                action: "DeleteTeamPost",
+                targetType: "TeamPost",
+                targetId: postId,
+                details: $"Post {postId} unlinked from team {command.TeamId}.",
+                category: CollaborationAuditCategories.Content,
+                cancellationToken: cancellationToken);
+
             return NoContent();
         }
         catch (Exception ex) { return HandleException(ex); }

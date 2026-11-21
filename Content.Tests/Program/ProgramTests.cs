@@ -5,6 +5,7 @@ using ContentDAL.Repository.Interfaces;
 using ContentDAL.UOW;
 using FluentAssertions;
 using GrpcClients.Interfaces;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -16,6 +17,7 @@ using Minio;
 using Minio.DataModel.Args;
 using Moq;
 using System.Net;
+using Content.Tests.Integration;
 using Xunit;
 
 namespace Content.Tests.Program;
@@ -85,6 +87,18 @@ public class ContentApiFactory : WebApplicationFactory<global::Program>
 
     internal static void SetupServices(IServiceCollection services, SqliteConnection conn)
     {
+        // Test auth: the fail-closed fallback policy rejects anonymous callers, so
+        // pipeline tests opt in through TestAuthHandler headers. PostConfigure runs
+        // after the app's own AddAuthentication(...).
+        services.AddAuthentication(Content.Tests.Integration.TestAuthHandler.Scheme)
+            .AddScheme<AuthenticationSchemeOptions, Content.Tests.Integration.TestAuthHandler>(
+                Content.Tests.Integration.TestAuthHandler.Scheme, _ => { });
+        services.PostConfigure<AuthenticationOptions>(o =>
+        {
+            o.DefaultAuthenticateScheme = Content.Tests.Integration.TestAuthHandler.Scheme;
+            o.DefaultChallengeScheme = Content.Tests.Integration.TestAuthHandler.Scheme;
+        });
+
         // Replace ContentDbContext with SQLite in-memory so ExecuteSqlRawAsync succeeds.
         // ReplaceService<IModelCustomizer> is used instead of a subclass to avoid the
         // DbContextOptions<T> generic mismatch that AddDbContext<TService,TImpl> creates.
@@ -267,9 +281,22 @@ public class ProgramTests : IClassFixture<ContentApiFactory>
     }
 
     [Fact]
-    public async Task Http_UnknownRoute_Returns404()
+    public async Task Http_UnknownRoute_IsRejectedBeforeRouting()
     {
+        // The fail-closed fallback policy also covers unmatched routes, so an
+        // unauthenticated caller gets 401 rather than a 404 that would confirm
+        // which paths exist.
         var response = await _client.GetAsync("/api/nonexistent-route-xyz");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Http_UnknownRoute_Returns404ForAuthenticatedCaller()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/nonexistent-route-xyz");
+        request.Headers.Add(TestAuthHandler.SubjectHeader, TestAuthHandler.DefaultSubject);
+
+        var response = await _client.SendAsync(request);
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 

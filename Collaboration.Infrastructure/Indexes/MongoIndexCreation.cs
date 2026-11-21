@@ -20,8 +20,43 @@ public class MongoIndexCreation : IIndexCreation
         await CreateGroupInvitationIndexesAsync(cancellationToken);
         await CreateTeamPostIndexesAsync(cancellationToken);
         await CreateChatMessageIndexesAsync(cancellationToken);
+        await CreateDirectConversationIndexesAsync(cancellationToken);
         await CreateTeamVacancyIndexesAsync(cancellationToken);
         await CreateVacancyApplicationIndexesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Removes an index that is being replaced. Mongo treats a name as an identity, so
+    /// an old index declared under the same name but a different key would make the
+    /// creation below fail outright rather than migrate.
+    /// </summary>
+    private static async Task DropIndexIfExistsAsync<T>(
+        IMongoCollection<T> collection, string name, CancellationToken cancellationToken)
+    {
+        var exists = false;
+        try
+        {
+            using var cursor = await collection.Indexes.ListAsync(cancellationToken);
+            var indexes = await cursor.ToListAsync(cancellationToken);
+            exists = indexes.Any(i => string.Equals(i["name"].AsString, name, StringComparison.Ordinal));
+        }
+        catch (MongoCommandException)
+        {
+            // Listing failed (permissions, or the collection does not exist yet). Creating
+            // the replacement below will surface anything that actually matters.
+            return;
+        }
+
+        if (!exists) return;
+
+        try
+        {
+            await collection.Indexes.DropOneAsync(name, cancellationToken);
+        }
+        catch (MongoCommandException)
+        {
+            // Someone else dropped it first, which is the outcome we wanted anyway.
+        }
     }
  
     private async Task CreateTeamIndexesAsync(CancellationToken cancellationToken)
@@ -64,11 +99,19 @@ public class MongoIndexCreation : IIndexCreation
             cancellationToken: cancellationToken
         );
  
-        // Індекс за учасниками (userId у вкладеному масиві)
+        // Індекс за учасниками.
+        //
+        // The member's subject is stored at members.user.userId: TeamMember is persisted
+        // under "user" and UserSnapshot's identifier under "userId". The previous index
+        // was declared on "members.userId", which matches no document at all, so every
+        // membership lookup was a collection scan. It also has to be dropped by name:
+        // Mongo refuses to redefine an index under a name that already exists.
+        await DropIndexIfExistsAsync(collection, "idx_members_user_id", cancellationToken);
+
         await collection.Indexes.CreateOneAsync(
             new CreateIndexModel<Team>(
-                Builders<Team>.IndexKeys.Ascending("members.userId"),
-                new CreateIndexOptions { Name = "idx_members_user_id" }
+                Builders<Team>.IndexKeys.Ascending("members.user.userId"),
+                new CreateIndexOptions { Name = "idx_members_user_user_id" }
             ),
             cancellationToken: cancellationToken
         );
@@ -321,6 +364,38 @@ public class MongoIndexCreation : IIndexCreation
         );
     }
 
+    private async Task CreateDirectConversationIndexesAsync(CancellationToken cancellationToken)
+    {
+        var collection = _context.DirectConversations;
+
+        // One conversation per pair of people: a declined request cannot be sent again as a new one.
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<DirectConversation>(
+                Builders<DirectConversation>.IndexKeys.Ascending(c => c.PairKey),
+                new CreateIndexOptions { Name = "idx_direct_pair", Unique = true }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // The caller's conversations
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<DirectConversation>(
+                Builders<DirectConversation>.IndexKeys.Ascending("participantIds"),
+                new CreateIndexOptions { Name = "idx_direct_participants" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // One settings document per person
+        await _context.NotificationSettings.Indexes.CreateOneAsync(
+            new CreateIndexModel<NotificationSettings>(
+                Builders<NotificationSettings>.IndexKeys.Ascending(s => s.UserId),
+                new CreateIndexOptions { Name = "idx_notification_settings_user", Unique = true }
+            ),
+            cancellationToken: cancellationToken
+        );
+    }
+
     private async Task CreateTeamVacancyIndexesAsync(CancellationToken cancellationToken)
     {
         var collection = _context.TeamVacancies;
@@ -354,6 +429,18 @@ public class MongoIndexCreation : IIndexCreation
             new CreateIndexModel<TeamVacancy>(
                 Builders<TeamVacancy>.IndexKeys.Ascending(v => v.Role),
                 new CreateIndexOptions { Name = "idx_vacancy_role" }
+            ),
+            cancellationToken: cancellationToken
+        );
+
+        // Текстовий індекс для ролі, опису та вимог
+        await collection.Indexes.CreateOneAsync(
+            new CreateIndexModel<TeamVacancy>(
+                Builders<TeamVacancy>.IndexKeys
+                    .Text(v => v.Role)
+                    .Text(v => v.Description)
+                    .Text(v => v.Requirements),
+                new CreateIndexOptions { Name = "idx_vacancy_text" }
             ),
             cancellationToken: cancellationToken
         );

@@ -51,6 +51,16 @@ public sealed class SearchFilterTests(SearchDatabaseFixture db) : IClassFixture<
     }
 
     [SkippableFact]
+    public async Task Searchers_own_profile_is_left_out_but_their_posts_stay()
+    {
+        var all = await Search(new() { AuthorId = Docs.Olena.SourceId });
+        var asOlena = await Search(new() { AuthorId = Docs.Olena.SourceId, ViewerId = Docs.Olena.SourceId });
+
+        Ids(asOlena).Should().Equal(Docs.BookIllustration.Id);
+        asOlena.Facets.Kinds.GetValueOrDefault("user").Should().Be(all.Facets.Kinds.GetValueOrDefault("user") - 1);
+    }
+
+    [SkippableFact]
     public async Task Filters_combine_with_the_query()
     {
         var r = await Search(new() { Query = "ілюстрація", Kind = "post", From = Docs.BookIllustration.CreatedAt });

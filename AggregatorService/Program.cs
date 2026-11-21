@@ -1,4 +1,5 @@
 using AggregatorService.Clients;
+using AggregatorService.Handlers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AggregatorService.HealthChecks;
@@ -24,26 +25,17 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpContextAccessor();
-
-builder.Services.AddHttpClient("ContentClient", client =>
-{
-    client.BaseAddress = new Uri("http://contentservice");
-}).AddServiceDiscovery();
-
-builder.Services.AddHttpClient("CollaborationClient", client =>
-{
-    client.BaseAddress = new Uri("http://collaborationservice");
-}).AddServiceDiscovery();
+builder.Services.AddTransient<TokenPropagationHandler>();
 
 builder.Services.AddHttpClient<ContentClient>(client =>
 {
     client.BaseAddress = new Uri("http://contentservice");
-}).AddServiceDiscovery();
+}).AddServiceDiscovery().AddHttpMessageHandler<TokenPropagationHandler>();
 
 builder.Services.AddHttpClient<CollaborationClient>(client =>
 {
     client.BaseAddress = new Uri("http://collaborationservice");
-}).AddServiceDiscovery();
+}).AddServiceDiscovery().AddHttpMessageHandler<TokenPropagationHandler>();
 
 builder.Services.AddHealthChecks()
     .AddCheck<ContentServiceHealthCheck>(

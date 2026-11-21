@@ -119,50 +119,82 @@ public class UserGrpcClientTests
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 
-    // ── ValidateTokenAsync ────────────────────────────────────────────────────
+    // ── RecordAuditAsync ──────────────────────────────────────────────────────
 
-    [Fact]
-    public async Task ValidateTokenAsync_WhenValid_ReturnsValidatedTokenResult()
+    private static AuditRecordMessage Audit(
+        string action = "post.delete",
+        string category = "Content") => new()
     {
-        var resp = new ValidateTokenResponse
-        {
-            IsValid  = true,
-            UserId   = "u-1",
-            UserName = "alice",
-            Email    = "alice@example.com"
-        };
+        ActorId    = "22222222-2222-2222-2222-222222222222",
+        ActorName  = "admin",
+        Action     = action,
+        TargetType = "post",
+        TargetId   = "p-1",
+        Details    = "{}",
+        Category   = category
+    };
 
-        _grpcMock.Setup(c => c.ValidateTokenAsync(
-                It.IsAny<ValidateTokenRequest>(),
+    private void SetupRecordAudit(RecordAuditResponse response) =>
+        _grpcMock.Setup(c => c.RecordAuditAsync(
+                It.IsAny<RecordAuditRequest>(),
                 It.IsAny<Metadata>(),
                 It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(MakeCall(resp));
+            .Returns(MakeCall(response));
 
-        var result = await CreateClient().ValidateTokenAsync("my-token");
+    [Fact]
+    public async Task RecordAuditAsync_WhenRecorded_ReturnsTrue()
+    {
+        SetupRecordAudit(new RecordAuditResponse { EntryId = "e-1", Recorded = true });
 
-        result.Should().NotBeNull();
-        result!.IsValid.Should().BeTrue();
-        result.UserId.Should().Be("u-1");
-        result.UserName.Should().Be("alice");
-        result.Email.Should().Be("alice@example.com");
+        (await CreateClient().RecordAuditAsync(Audit())).Should().BeTrue();
     }
 
     [Fact]
-    public async Task ValidateTokenAsync_WhenRpcException_ReturnsNullAndLogsError()
+    public async Task RecordAuditAsync_SendsEveryFieldOfTheRecord()
+    {
+        var captured = new RecordAuditRequest();
+        _grpcMock.Setup(c => c.RecordAuditAsync(
+                It.IsAny<RecordAuditRequest>(), It.IsAny<Metadata>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .Callback<RecordAuditRequest, Metadata, DateTime?, CancellationToken>(
+                (r, _, _, _) => captured = r)
+            .Returns(MakeCall(new RecordAuditResponse { Recorded = true }));
+
+        await CreateClient().RecordAuditAsync(Audit(action: "report.resolve", category: "Moderation"));
+
+        captured.ActorId.Should().Be("22222222-2222-2222-2222-222222222222");
+        captured.ActorName.Should().Be("admin");
+        captured.Action.Should().Be("report.resolve");
+        captured.TargetType.Should().Be("post");
+        captured.TargetId.Should().Be("p-1");
+        captured.Details.Should().Be("{}");
+        captured.Category.Should().Be("Moderation");
+    }
+
+    [Fact]
+    public async Task RecordAuditAsync_WhenServerRejects_ReturnsFalse()
+    {
+        SetupRecordAudit(new RecordAuditResponse { Recorded = false });
+
+        (await CreateClient().RecordAuditAsync(Audit())).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RecordAuditAsync_WhenRpcFails_ReturnsFalseAndLogsTheError()
     {
         var rpc = new RpcException(new Status(StatusCode.Internal, "error"));
 
-        _grpcMock.Setup(c => c.ValidateTokenAsync(
-                It.IsAny<ValidateTokenRequest>(),
+        _grpcMock.Setup(c => c.RecordAuditAsync(
+                It.IsAny<RecordAuditRequest>(),
                 It.IsAny<Metadata>(),
                 It.IsAny<DateTime?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(MakeFailingCall<ValidateTokenResponse>(rpc));
+            .Returns(MakeFailingCall<RecordAuditResponse>(rpc));
 
-        var result = await CreateClient().ValidateTokenAsync("bad-token");
+        // A caller reporting an audit entry must not take its own request down
+        // because the trail was unavailable, so the failure is contained.
+        (await CreateClient().RecordAuditAsync(Audit())).Should().BeFalse();
 
-        result.Should().BeNull();
         _loggerMock.Verify(l => l.Log(
             LogLevel.Error,
             It.IsAny<EventId>(),

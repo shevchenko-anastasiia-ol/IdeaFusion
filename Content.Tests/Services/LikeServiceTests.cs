@@ -1,6 +1,7 @@
 using AutoMapper;
 using ContentBLL.DTO.Like;
 using ContentBLL.Services;
+using ContentBLL.Services.Interfaces;
 using ContentDAL.Repository.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
@@ -17,15 +18,28 @@ public class LikeServiceTests
     private readonly Mock<IMapper> _mapper = new();
     private readonly Mock<IPostRepository> _postRepo = new();
     private readonly Mock<ILikeRepository> _likeRepo = new();
+    private readonly Mock<IPostAuthorResolver> _authorResolver = new();
     private readonly CancellationToken _ct = CancellationToken.None;
 
     public LikeServiceTests()
     {
         _uow.Setup(u => u.PostRepository).Returns(_postRepo.Object);
         _uow.Setup(u => u.LikeRepository).Returns(_likeRepo.Object);
+
+        // The liker is the token's subject; Likes key on its content-side UserId.
+        var caller = new ResolvedPostAuthor(1, 10, Guid.Empty, "user", null, false);
+        _authorResolver
+            .Setup(r => r.ResolveForWriteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(caller);
+        _authorResolver
+            .Setup(r => r.ResolveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(caller);
+        _authorResolver
+            .Setup(r => r.FindAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(caller);
     }
 
-    private LikeService Svc() => new(_uow.Object, _mapper.Object);
+    private LikeService Svc() => new(_uow.Object, _mapper.Object, _authorResolver.Object);
 
     // ── AddAsync ──────────────────────────────────────────────────────────────
 
@@ -33,7 +47,7 @@ public class LikeServiceTests
     public async Task AddAsync_WhenPostNotFound_ThrowsNotFoundException()
     {
         _postRepo.Setup(r => r.GetByIdAsync(1, _ct)).ReturnsAsync((Post?)null);
-        var dto = new LikeCreateDto { PostId = 1, UserId = 10 };
+        var dto = new LikeCreateDto { PostId = 1 };
 
         await Svc().Invoking(s => s.AddAsync(dto, _ct))
                    .Should().ThrowAsync<NotFoundException>()
@@ -45,7 +59,7 @@ public class LikeServiceTests
     {
         _postRepo.Setup(r => r.GetByIdAsync(1, _ct)).ReturnsAsync(new Post { PostId = 1 });
         _likeRepo.Setup(r => r.ExistsAsync(1, 10, _ct)).ReturnsAsync(true);
-        var dto = new LikeCreateDto { PostId = 1, UserId = 10 };
+        var dto = new LikeCreateDto { PostId = 1 };
 
         await Svc().Invoking(s => s.AddAsync(dto, _ct))
                    .Should().ThrowAsync<BusinessConflictException>();
@@ -64,7 +78,7 @@ public class LikeServiceTests
         _likeRepo.Setup(r => r.AddAsync(like, _ct)).Returns(Task.CompletedTask);
         _mapper.Setup(m => m.Map<LikeDto>(like)).Returns(likeDto);
 
-        var dto = new LikeCreateDto { PostId = 1, UserId = 10 };
+        var dto = new LikeCreateDto { PostId = 1 };
         var result = await Svc().AddAsync(dto, _ct);
 
         result.LikeId.Should().Be(5);
@@ -78,7 +92,7 @@ public class LikeServiceTests
     {
         _likeRepo.Setup(r => r.ExistsAsync(1, 10, _ct)).ReturnsAsync(false);
 
-        await Svc().Invoking(s => s.RemoveAsync(1, 10, _ct))
+        await Svc().Invoking(s => s.RemoveAsync(1, _ct))
                    .Should().ThrowAsync<NotFoundException>();
     }
 
@@ -88,7 +102,7 @@ public class LikeServiceTests
         _likeRepo.Setup(r => r.ExistsAsync(1, 10, _ct)).ReturnsAsync(true);
         _likeRepo.Setup(r => r.DeleteAsync(1, 10, _ct)).Returns(Task.CompletedTask);
 
-        await Svc().RemoveAsync(1, 10, _ct);
+        await Svc().RemoveAsync(1, _ct);
 
         _likeRepo.Verify(r => r.DeleteAsync(1, 10, _ct), Times.Once);
     }
@@ -100,7 +114,7 @@ public class LikeServiceTests
     {
         _likeRepo.Setup(r => r.ExistsAsync(2, 5, _ct)).ReturnsAsync(true);
 
-        var result = await Svc().ExistsAsync(2, 5, _ct);
+        var result = await Svc().ExistsAsync(2, _ct);
 
         result.Should().BeTrue();
     }

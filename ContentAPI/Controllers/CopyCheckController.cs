@@ -1,4 +1,6 @@
 using ContentAPI.CopyDetection;
+using ContentAPI.Notifications;
+using ContentAPI.Services;
 using ContentDAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
@@ -134,13 +136,34 @@ public class CopyCheckController : ControllerBase
     /// <summary>"confirmed_copy" (the moderator then acts on the post as usual), "dismissed" or "open".</summary>
     [HttpPost("moderation/{id:int}/decision")]
     [Authorize(Policy = IdeaFusionPolicies.RequireModerator)]
-    public async Task<ActionResult<CopyCheckRecord>> Decide(int id, [FromBody] DecisionBody body, CancellationToken ct)
+    public async Task<ActionResult<CopyCheckRecord>> Decide(
+        int id, [FromBody] DecisionBody body,
+        [FromServices] IModerationMailer mailer, [FromServices] IContentAuditWriter audit,
+        CancellationToken ct)
     {
         if (body.Decision is not ("confirmed_copy" or "dismissed" or "open"))
             return BadRequest(new ProblemDetails { Title = "Рішення: confirmed_copy, dismissed або open." });
 
+        var before = await _client.GetCheckAsync(id, ct);
         var moderator = _currentUser.UserName ?? _currentUser.UserId?.ToString() ?? "moderator";
         var check = await _client.DecideAsync(id, new CopyCheckDecision { Decision = body.Decision, Moderator = moderator }, ct);
-        return check is null ? NotFound() : Ok(check);
+        if (check is null) return NotFound();
+
+        if (before?.Status != check.Status && check.PostId is { } postId)
+        {
+            // The decision belongs in the moderation log like any other moderator action.
+            await audit.RecordAsync(
+                action: $"copycheck.{check.Status}",
+                targetType: "post",
+                targetId: postId.ToString(),
+                details: $"check={id}; zone={check.Zone}; score={check.Score:0.00}; matchedPost={check.MatchedPostId?.ToString() ?? "none"}",
+                ct: ct);
+
+            // The author learns that their post is a confirmed copy and will be removed. Sent once,
+            // when the status turns to confirmed, not on every click.
+            if (check.Status == "confirmed_copy")
+                await mailer.NotifyCopyConfirmedAsync(postId, ct);
+        }
+        return Ok(check);
     }
 }

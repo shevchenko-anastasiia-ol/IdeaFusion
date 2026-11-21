@@ -1,12 +1,14 @@
 using AutoMapper;
 using ContentBLL.DTO.Post;
 using ContentBLL.Services;
+using ContentBLL.Services.Interfaces;
 using ContentDAL.Repository.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
 using ContentDomain.Exception;
 using FluentAssertions;
 using Moq;
+using ServiceDefaults.Interfaces;
 using Xunit;
 
 namespace Content.Tests.Services;
@@ -17,15 +19,32 @@ public class PostServiceTests
     private readonly Mock<IMapper> _mapper = new();
     private readonly Mock<IPostRepository> _postRepo = new();
     private readonly Mock<ITagRepository> _tagRepo = new();
+    private readonly Mock<IPostAuthorResolver> _authorResolver = new();
+    private readonly Mock<ICurrentUserAccessor> _currentUser = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    /// <summary>The content-side author id every owned post in these tests carries.</summary>
+    private const int CallerPostAuthorId = 7;
 
     public PostServiceTests()
     {
         _uow.Setup(u => u.PostRepository).Returns(_postRepo.Object);
         _uow.Setup(u => u.TagRepository).Returns(_tagRepo.Object);
+
+        // The author is the token's subject, so the rows these tests edit belong
+        // to caller.PostAuthorId and the ownership guard lets them through.
+        _authorResolver
+            .Setup(r => r.ResolveForWriteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolvedPostAuthor(
+                CallerPostAuthorId, 42, Guid.Empty, "alice", null, false));
+        _authorResolver
+            .Setup(r => r.ResolveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolvedPostAuthor(
+                CallerPostAuthorId, 42, Guid.Empty, "alice", null, false));
     }
 
-    private PostService Svc() => new(_uow.Object, _mapper.Object);
+    private PostService Svc() =>
+        new(_uow.Object, _mapper.Object, _authorResolver.Object, _currentUser.Object);
 
     // ── GetByIdAsync ──────────────────────────────────────────────────────────
 
@@ -173,19 +192,6 @@ public class PostServiceTests
         _postRepo.Verify(r => r.ArchiveAsync(3, _ct), Times.Once);
     }
 
-    // ── EnsurePostAuthorAsync ─────────────────────────────────────────────────
-
-    [Fact]
-    public async Task EnsurePostAuthorAsync_DelegatesToRepository()
-    {
-        _postRepo.Setup(r => r.EnsurePostAuthorAsync("alice", null, _ct)).ReturnsAsync((PostAuthorId: 3, UserId: 42));
-
-        var result = await Svc().EnsurePostAuthorAsync("alice", null, _ct);
-
-        result.PostAuthorId.Should().Be(3);
-        result.UserId.Should().Be(42);
-    }
-
     // ── GetByCollaborationAsync ───────────────────────────────────────────────
 
     [Fact]
@@ -219,7 +225,7 @@ public class PostServiceTests
     public async Task CreateAsync_CallsBeginTransaction()
     {
         var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", TagIds = new(), MediaFiles = new() };
+        var createDto = new PostCreateDto { Title = "T", TagIds = new(), MediaFiles = new() };
         var returnDto = new PostDto { PostId = 0 };
         SetupCreateAsync(post, createDto, returnDto);
 
@@ -232,7 +238,7 @@ public class PostServiceTests
     public async Task CreateAsync_OnSuccess_CallsCommit()
     {
         var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", TagIds = new(), MediaFiles = new() };
+        var createDto = new PostCreateDto { Title = "T", TagIds = new(), MediaFiles = new() };
         var returnDto = new PostDto { PostId = 0 };
         SetupCreateAsync(post, createDto, returnDto);
 
@@ -242,41 +248,24 @@ public class PostServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithNoPostAuthorId_DoesNotCallEnsurePostAuthorByUserId()
+    public async Task CreateAsync_TakesThePostAuthorFromTheToken()
     {
         var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", PostAuthorId = null, TagIds = new(), MediaFiles = new() };
+        var createDto = new PostCreateDto { Title = "T", TagIds = new(), MediaFiles = new() };
         var returnDto = new PostDto { PostId = 0 };
         SetupCreateAsync(post, createDto, returnDto);
 
         await Svc().CreateAsync(createDto, _ct);
 
-        _postRepo.Verify(
-            r => r.EnsurePostAuthorByUserIdAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithPostAuthorId_CallsEnsurePostAuthorByUserId()
-    {
-        var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", PostAuthorId = 7, AuthorUsername = "alice", TagIds = new(), MediaFiles = new() };
-        var returnDto = new PostDto { PostId = 0 };
-        _postRepo.Setup(r => r.EnsurePostAuthorByUserIdAsync(7, "alice", null, _ct)).ReturnsAsync(99);
-        SetupCreateAsync(post, createDto, returnDto);
-
-        await Svc().CreateAsync(createDto, _ct);
-
-        _postRepo.Verify(
-            r => r.EnsurePostAuthorByUserIdAsync(7, "alice", null, _ct),
-            Times.Once);
+        post.PostAuthorId.Should().Be(CallerPostAuthorId);
+        post.CreatedBy.Should().Be("alice");
     }
 
     [Fact]
     public async Task CreateAsync_WithTagIds_AddsPostTagsForEachId()
     {
         var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", TagIds = new List<int> { 1, 2 }, MediaFiles = new() };
+        var createDto = new PostCreateDto { Title = "T", TagIds = new List<int> { 1, 2 }, MediaFiles = new() };
         var returnDto = new PostDto { PostId = 0 };
         _tagRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>(), _ct)).ReturnsAsync(new Tag { TagId = 1 });
         _tagRepo.Setup(r => r.AddPostTagAsync(It.IsAny<int>(), It.IsAny<int>(), _ct)).Returns(Task.CompletedTask);
@@ -292,7 +281,7 @@ public class PostServiceTests
     public async Task CreateAsync_OnException_CallsRollback()
     {
         var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", TagIds = new(), MediaFiles = new() };
+        var createDto = new PostCreateDto { Title = "T", TagIds = new(), MediaFiles = new() };
         _mapper.Setup(m => m.Map<Post>(createDto)).Returns(post);
         _uow.Setup(u => u.BeginTransactionAsync(_ct)).Returns(Task.CompletedTask);
         _uow.Setup(u => u.RollbackAsync(_ct)).Returns(Task.CompletedTask);
@@ -307,7 +296,7 @@ public class PostServiceTests
     public async Task CreateAsync_ReturnsMappedDto()
     {
         var post      = new Post { PostId = 0, Media = new List<PostMedia>() };
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", TagIds = new(), MediaFiles = new() };
+        var createDto = new PostCreateDto { Title = "T", TagIds = new(), MediaFiles = new() };
         var returnDto = new PostDto { PostId = 0, Title = "T" };
         SetupCreateAsync(post, createDto, returnDto);
 
@@ -338,7 +327,7 @@ public class PostServiceTests
     public async Task UpdateAsync_WhenPostNotFound_ThrowsNotFoundException()
     {
         _postRepo.Setup(r => r.GetByIdAsync(99, _ct)).ReturnsAsync((Post?)null);
-        var updateDto = new PostUpdateDto { Title = "T", UpdatedBy = "u", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "T", TagIds = new() };
 
         await Svc().Invoking(s => s.UpdateAsync(99, updateDto, _ct))
                    .Should().ThrowAsync<ContentDomain.Exception.NotFoundException>()
@@ -349,7 +338,7 @@ public class PostServiceTests
     public async Task UpdateAsync_CallsBeginTransaction()
     {
         var existing  = new Post { PostId = 1, Media = new List<PostMedia>() };
-        var updateDto = new PostUpdateDto { Title = "T", UpdatedBy = "u", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "T", TagIds = new() };
         var returnDto = new PostDto { PostId = 1 };
         SetupUpdateAsync(1, existing, updateDto, returnDto);
 
@@ -362,7 +351,7 @@ public class PostServiceTests
     public async Task UpdateAsync_CallsUpdateRepository()
     {
         var existing  = new Post { PostId = 2, Media = new List<PostMedia>() };
-        var updateDto = new PostUpdateDto { Title = "New", UpdatedBy = "u", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "New", TagIds = new() };
         var returnDto = new PostDto { PostId = 2 };
         SetupUpdateAsync(2, existing, updateDto, returnDto);
 
@@ -375,7 +364,7 @@ public class PostServiceTests
     public async Task UpdateAsync_DeletesAndReinsertsTags()
     {
         var existing  = new Post { PostId = 3, Media = new List<PostMedia>() };
-        var updateDto = new PostUpdateDto { Title = "T", UpdatedBy = "u", TagIds = new List<int> { 10 } };
+        var updateDto = new PostUpdateDto { Title = "T", TagIds = new List<int> { 10 } };
         var returnDto = new PostDto { PostId = 3 };
         SetupUpdateAsync(3, existing, updateDto, returnDto);
 
@@ -389,7 +378,7 @@ public class PostServiceTests
     public async Task UpdateAsync_OnSuccess_CallsCommit()
     {
         var existing  = new Post { PostId = 4, Media = new List<PostMedia>() };
-        var updateDto = new PostUpdateDto { Title = "T", UpdatedBy = "u", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "T", TagIds = new() };
         var returnDto = new PostDto { PostId = 4 };
         SetupUpdateAsync(4, existing, updateDto, returnDto);
 
@@ -402,7 +391,7 @@ public class PostServiceTests
     public async Task UpdateAsync_OnException_CallsRollback()
     {
         var existing  = new Post { PostId = 5, Media = new List<PostMedia>() };
-        var updateDto = new PostUpdateDto { Title = "T", UpdatedBy = "u", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "T", TagIds = new() };
         _postRepo.Setup(r => r.GetByIdAsync(5, _ct)).ReturnsAsync(existing);
         _mapper.Setup(m => m.Map<PostUpdateDto, Post>(updateDto, existing)).Returns(existing);
         _uow.Setup(u => u.BeginTransactionAsync(_ct)).Returns(Task.CompletedTask);
@@ -442,7 +431,7 @@ public class PostServiceTests
         var post     = new Post { PostId = 0, Media = new List<PostMedia>() };
         var createDto = new PostCreateDto
         {
-            Title = "T", CreatedBy = "u", TagIds = new(),
+            Title = "T", TagIds = new(),
             MediaFiles = new List<Microsoft.AspNetCore.Http.IFormFile> { fakeFile }
         };
         var returnDto = new PostDto { PostId = 0 };
@@ -473,7 +462,7 @@ public class PostServiceTests
         var existing = new Post { PostId = 6, Media = new List<PostMedia>() };
         var updateDto = new PostUpdateDto
         {
-            Title = "T", UpdatedBy = "u", TagIds = new(),
+            Title = "T", TagIds = new(),
             NewMediaFiles = new List<Microsoft.AspNetCore.Http.IFormFile> { fakeFile }
         };
         var returnDto = new PostDto { PostId = 6 };

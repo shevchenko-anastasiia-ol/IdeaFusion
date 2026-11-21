@@ -20,7 +20,7 @@ builder.Services.AddServiceDiscovery();
 
 builder.Services
     .AddKeycloakAuthentication(builder.Configuration)
-    .AddPermissionAuthorization();
+    .AddIdeaFusionAuthorization();
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
@@ -35,6 +35,9 @@ builder.Services.AddReverseProxy()
                 transformContext.ProxyRequest.Headers.TryAddWithoutValidation(
                     "X-Correlation-Id", correlationId);
             }
+
+            // YARP already forwards the Authorization header; adding it again sent a doubled
+            // value downstream and every service rejected the token (401 invalid_token).
 
             await ValueTask.CompletedTask;
         });
@@ -65,5 +68,5 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapReverseProxy();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 await app.RunAsync();   

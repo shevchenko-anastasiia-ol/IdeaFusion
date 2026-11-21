@@ -98,31 +98,35 @@ public class JwtExtensionsTests
     }
 
     [Fact]
-    public async Task AddKeycloakJwtAuthentication_RegistersAuthorizationPolicies()
+    public void AddKeycloakJwtAuthentication_UsesIdeaFusionRealmAndAudienceByDefault()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddKeycloakJwtAuthentication(new ConfigurationBuilder().Build());
-        var sp       = services.BuildServiceProvider();
-        var provider = sp.GetRequiredService<IAuthorizationPolicyProvider>();
+        var sp = services.BuildServiceProvider();
 
-        var policy = await provider.GetPolicyAsync("RequireAuthenticatedUser");
+        var options = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+                        .Get(JwtBearerDefaults.AuthenticationScheme);
 
-        policy.Should().NotBeNull();
+        options.Authority.Should().Be("http://localhost:8080/realms/IdeaFusion");
+        options.Audience.Should().Be("ideafusion_api");
     }
 
     [Fact]
-    public async Task AddKeycloakJwtAuthentication_RegistersRequireAdminRolePolicy()
+    public void AddKeycloakJwtAuthentication_ReadsRolesFromFlatRoleClaim()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddKeycloakJwtAuthentication(new ConfigurationBuilder().Build());
-        var sp       = services.BuildServiceProvider();
-        var provider = sp.GetRequiredService<IAuthorizationPolicyProvider>();
+        var sp = services.BuildServiceProvider();
 
-        var policy = await provider.GetPolicyAsync("RequireAdminRole");
+        var options = sp.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+                        .Get(JwtBearerDefaults.AuthenticationScheme);
 
-        policy.Should().NotBeNull();
+        // The realm's ideafusion-roles scope emits "role", not "realm_access.roles".
+        options.TokenValidationParameters.RoleClaimType.Should().Be("role");
+        options.MapInboundClaims.Should().BeFalse();
+        options.TokenValidationParameters.ValidAudiences.Should().Equal("ideafusion_api");
     }
 
     // ── event callbacks ───────────────────────────────────────────────────────
@@ -174,7 +178,7 @@ public class JwtExtensionsTests
     }
 
     [Fact]
-    public async Task OnTokenValidated_WithAuthorizationClaim_DoesNotThrow()
+    public async Task OnTokenValidated_WithRoleClaim_DoesNotThrow()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -185,7 +189,7 @@ public class JwtExtensionsTests
                         .Get(JwtBearerDefaults.AuthenticationScheme);
         var scheme  = new AuthenticationScheme(JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler));
 
-        var identity    = new ClaimsIdentity(new[] { new Claim("authorization", "orders:read catalog:write") }, "Bearer");
+        var identity    = new ClaimsIdentity(new[] { new Claim("role", "moderator") }, "Bearer");
         var httpContext = new DefaultHttpContext { RequestServices = sp };
         var ctx = new TokenValidatedContext(httpContext, scheme, options)
         {
@@ -320,7 +324,7 @@ public class JwtExtensionsTests
             {
                 new Claim(ClaimTypes.Name, "testuser"),
                 new Claim("preferred_username", "testuser"),
-                new Claim("authorization", "catalog:read")
+                new Claim("role", "author")
             }, "Bearer");
         var httpContext = new DefaultHttpContext { RequestServices = sp };
         var ctx = new TokenValidatedContext(httpContext, scheme, options)

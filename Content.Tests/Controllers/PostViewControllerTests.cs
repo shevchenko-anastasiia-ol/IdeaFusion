@@ -18,22 +18,10 @@ public class PostViewControllerTests
     public async Task Record_ValidArgs_ReturnsNoContent()
     {
         _serviceMock
-            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var result = await Ctrl().Record(1, 2, CancellationToken.None);
-
-        result.Should().BeOfType<NoContentResult>();
-    }
-
-    [Fact]
-    public async Task Record_NullUserId_ReturnsNoContent()
-    {
-        _serviceMock
-            .Setup(s => s.RecordAsync(It.IsAny<int>(), null, It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        var result = await Ctrl().Record(5, null, CancellationToken.None);
+        var result = await Ctrl().Record(1, CancellationToken.None);
 
         result.Should().BeOfType<NoContentResult>();
     }
@@ -42,27 +30,13 @@ public class PostViewControllerTests
     public async Task Record_PassesPostIdToService()
     {
         _serviceMock
-            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await Ctrl().Record(10, null, CancellationToken.None);
+        await Ctrl().Record(10, CancellationToken.None);
 
         _serviceMock.Verify(
-            s => s.RecordAsync(10, It.IsAny<int?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task Record_PassesUserIdToService()
-    {
-        _serviceMock
-            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        await Ctrl().Record(3, 99, CancellationToken.None);
-
-        _serviceMock.Verify(
-            s => s.RecordAsync(3, 99, It.IsAny<CancellationToken>()),
+            s => s.RecordAsync(10, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -70,13 +44,13 @@ public class PostViewControllerTests
     public async Task Record_CallsServiceExactlyOnce()
     {
         _serviceMock
-            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.RecordAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await Ctrl().Record(1, 1, CancellationToken.None);
+        await Ctrl().Record(1, CancellationToken.None);
 
         _serviceMock.Verify(
-            s => s.RecordAsync(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            s => s.RecordAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

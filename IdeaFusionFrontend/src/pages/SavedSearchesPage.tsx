@@ -1,47 +1,53 @@
-import { FunctionComponent, ReactNode, useCallback, useEffect, useState } from "react";
-import { Box, Button, Switch } from "@mui/material";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
 import { KIND_LABEL, searchApi, toQueryString } from "../api/search";
 import type { HistoryEntry, SavedSearch, SearchFilters, SearchNotification } from "../api/search";
-import styles from "./SearchPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Badge, Button, ButtonLink, EmptyState, ErrorState, IconButton, Loading, Menu, PageHeader, Switch, Tabs, useDialogs, useToast, cx } from "../ui";
+import { IconArrowLeft, IconBell, IconBookmark, IconClose, IconEdit, IconHistory, IconTrash } from "../ui/icons";
+import sh from "./shared.module.css";
 
 function describe(query: string, f: SearchFilters): string {
-  const parts = [query && `«${query}»`, f.kind && KIND_LABEL[f.kind], f.category, f.tags?.map(t => `#${t}`).join(" "),
-    f.role && `роль: ${f.role}`, f.hasOpenVacancies && "з вакансіями", f.minLikes && `від ${f.minLikes} ♥`].filter(Boolean);
+  const parts = [
+    query && `«${query}»`,
+    f.kind && KIND_LABEL[f.kind],
+    f.category,
+    f.tags?.map(t => `#${t}`).join(" "),
+    f.role && `роль: ${f.role}`,
+    f.hasOpenVacancies && "з вакансіями",
+    f.minLikes && `від ${f.minLikes} вподобань`,
+  ].filter(Boolean);
   return parts.length ? parts.join(" · ") : "Усі матеріали";
 }
 
-const Section: FunctionComponent<{ title: string; action?: ReactNode; children: ReactNode }> = ({ title, action, children }) => (
-  <Box component="section" sx={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Box component="h2" sx={{ m: 0, fontSize: 22, color: "#fff", fontWeight: 600 }}>{title}</Box>
-      {action}
-    </Box>
-    {children}
-  </Box>
-);
-
-const rowSx = {
-  display: "flex", alignItems: "center", gap: "14px", p: "14px 18px", background: "#181818",
-  border: "1px solid #222", borderRadius: "18px",
-} as const;
-
-const linkButton = { color: "#a48fff", textTransform: "none", minWidth: 0 } as const;
+type Tab = "saved" | "notifications" | "history";
 
 /** Saved searches with their subscription switch, new matches, and the search history. */
-const SavedSearchesPage: FunctionComponent = () => {
+export default function SavedSearchesPage() {
+  usePageMeta("Збережені пошуки", [{ label: "Пошук", to: "/search" }]);
   const navigate = useNavigate();
+  const { confirm, prompt } = useDialogs();
+  const toast = useToast();
+  const [tab, setTab] = useState<Tab>("saved");
   const [saved, setSaved] = useState<SavedSearch[]>([]);
   const [notifications, setNotifications] = useState<SearchNotification[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     Promise.all([searchApi.saved(), searchApi.notifications(false, 30), searchApi.history("", 50)])
-      .then(([s, n, h]) => { setSaved(s); setNotifications(n); setHistory(h); setError(null); })
-      .catch(e => setError(e instanceof Error ? e.message : "Не вдалося завантажити"));
+      .then(([sv, n, h]) => {
+        setSaved(sv);
+        setNotifications(n);
+        setHistory(h);
+        setError(null);
+      })
+      .catch(e => setError(e instanceof Error ? e.message : "Не вдалося завантажити"))
+      .finally(() => setLoading(false));
   }, []);
+
   useEffect(load, [load]);
 
   const open = (query: string, filters: SearchFilters) => {
@@ -49,32 +55,45 @@ const SavedSearchesPage: FunctionComponent = () => {
     navigate(`/search${qs ? `?${qs}` : ""}`);
   };
 
-  const toggleNotify = async (s: SavedSearch) => {
-    const updated = await searchApi.updateSaved(s.id, { name: s.name, query: s.query, filters: s.filters, notify: !s.notify });
-    setSaved(list => list.map(x => (x.id === s.id ? updated : x)));
-  };
-
-  const rename = async (s: SavedSearch) => {
-    const name = prompt("Нова назва", s.name)?.trim();
-    if (!name || name === s.name) return;
+  const toggleNotify = async (sv: SavedSearch) => {
     try {
-      const updated = await searchApi.updateSaved(s.id, { name, query: s.query, filters: s.filters, notify: s.notify });
-      setSaved(list => list.map(x => (x.id === s.id ? updated : x)));
-    } catch {
-      alert("Пошук з такою назвою вже є");
+      const updated = await searchApi.updateSaved(sv.id, { name: sv.name, query: sv.query, filters: sv.filters, notify: !sv.notify });
+      setSaved(list => list.map(x => (x.id === sv.id ? updated : x)));
+    } catch (err) {
+      toast.fromError(err, "Не вдалося змінити сповіщення");
     }
   };
 
-  const remove = async (s: SavedSearch) => {
-    if (!confirm(`Видалити «${s.name}»?`)) return;
-    await searchApi.deleteSaved(s.id);
-    setSaved(list => list.filter(x => x.id !== s.id));
-    setNotifications(list => list.filter(n => n.savedSearchId !== s.id));
+  const rename = async (sv: SavedSearch) => {
+    const name = (await prompt({ title: "Перейменувати пошук", label: "Нова назва", defaultValue: sv.name }))?.trim();
+    if (!name || name === sv.name) return;
+    try {
+      const updated = await searchApi.updateSaved(sv.id, { name, query: sv.query, filters: sv.filters, notify: sv.notify });
+      setSaved(list => list.map(x => (x.id === sv.id ? updated : x)));
+    } catch {
+      toast.error("Пошук з такою назвою вже є");
+    }
+  };
+
+  const remove = async (sv: SavedSearch) => {
+    const ok = await confirm({ title: `Видалити «${sv.name}»?`, message: "Сповіщення за цим пошуком теж зникнуть.", confirmLabel: "Видалити", danger: true });
+    if (!ok) return;
+    try {
+      await searchApi.deleteSaved(sv.id);
+      setSaved(list => list.filter(x => x.id !== sv.id));
+      setNotifications(list => list.filter(n => n.savedSearchId !== sv.id));
+    } catch (err) {
+      toast.fromError(err, "Не вдалося видалити");
+    }
   };
 
   const markAllRead = async () => {
-    await searchApi.markRead();
-    load();
+    try {
+      await searchApi.markRead();
+      load();
+    } catch (err) {
+      toast.fromError(err, "Не вдалося позначити прочитаним");
+    }
   };
 
   const openNotification = async (n: SearchNotification) => {
@@ -83,86 +102,151 @@ const SavedSearchesPage: FunctionComponent = () => {
     navigate({ post: `/posts/${sourceId}`, team: `/teams/${sourceId}`, vacancy: `/vacancies/${sourceId}`, user: `/users/${sourceId}` }[n.kind]);
   };
 
+  const clearHistory = async () => {
+    try {
+      await searchApi.clearHistory();
+      setHistory([]);
+    } catch (err) {
+      toast.fromError(err, "Не вдалося очистити історію");
+    }
+  };
+
+  const removeHistory = async (h: HistoryEntry) => {
+    try {
+      await searchApi.deleteHistory(h.id);
+      setHistory(list => list.filter(x => x.id !== h.id));
+    } catch (err) {
+      toast.fromError(err, "Не вдалося видалити");
+    }
+  };
+
   const unread = notifications.filter(n => !n.read).length;
 
   return (
-    <Box className={styles.page}>
-      <FrameComponent2 />
-      <main className={styles.main}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-          <h1 className={styles.title}>Збережені пошуки</h1>
-          <Button onClick={() => navigate("/search")} sx={linkButton}>← До пошуку</Button>
-        </Box>
-        {error && <Box sx={{ color: "#ff6b6b" }}>{error}</Box>}
+    <Page width="narrow">
+      <PageHeader
+        title="Збережені пошуки"
+        description="Підписки на пошуки, нові результати за ними та ваша історія."
+        actions={
+          <ButtonLink to="/search" variant="ghost" icon={<IconArrowLeft size={16} />}>
+            До пошуку
+          </ButtonLink>
+        }
+      />
 
-        <Section title="Мої пошуки">
-          {saved.length === 0 && (
-            <Box sx={{ color: "#888" }}>Ще нічого не збережено. Налаштуйте фільтри на сторінці пошуку й натисніть «Зберегти пошук».</Box>
-          )}
-          {saved.map(s => (
-            <Box key={s.id} sx={rowSx}>
-              <Box sx={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => open(s.query, s.filters)}>
-                <Box sx={{ color: "#fff", fontWeight: 600 }}>
-                  {s.name}
-                  {s.unread > 0 && (
-                    <Box component="span" sx={{ ml: "8px", px: "8px", borderRadius: "20px", background: "#7c5cfc", color: "#fff", fontSize: 12 }}>
-                      +{s.unread}
-                    </Box>
-                  )}
-                </Box>
-                <Box sx={{ color: "#888", fontSize: 13 }}>{describe(s.query, s.filters)}</Box>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", color: "#888", fontSize: 13 }} title="Повідомляти про нові результати">
-                <Switch size="small" checked={s.notify} onChange={() => toggleNotify(s)} />
-                Сповіщення
-              </Box>
-              <Button onClick={() => rename(s)} sx={linkButton}>Перейменувати</Button>
-              <Button onClick={() => remove(s)} sx={{ ...linkButton, color: "#ff6b6b" }}>Видалити</Button>
-            </Box>
-          ))}
-        </Section>
+      <Tabs
+        label="Розділи"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { value: "saved", label: "Мої пошуки", count: saved.length },
+          { value: "notifications", label: "Нове за підписками", count: unread || undefined },
+          { value: "history", label: "Історія", count: history.length },
+        ]}
+      />
+      <div style={{ height: "var(--sp-5)" }} />
 
-        <Section title={`Нове за підписками${unread ? ` (${unread})` : ""}`}
-          action={unread > 0 && <Button onClick={markAllRead} sx={linkButton}>Позначити все прочитаним</Button>}>
-          {notifications.length === 0 && (
-            <Box sx={{ color: "#888" }}>Тут з'являться нові пости, команди й вакансії, що відповідають пошукам зі сповіщеннями.</Box>
-          )}
-          {notifications.map(n => (
-            <Box key={n.id} sx={{ ...rowSx, cursor: "pointer", opacity: n.read ? 0.6 : 1 }} onClick={() => openNotification(n)}>
-              {!n.read && <Box sx={{ width: 8, height: 8, borderRadius: "50%", background: "#7c5cfc", flexShrink: 0 }} />}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ color: "#fff" }}>{KIND_LABEL[n.kind]}: {n.title}</Box>
-                <Box sx={{ color: "#888", fontSize: 13 }}>
-                  за пошуком «{n.savedSearchName}» · {new Date(n.createdAt).toLocaleString("uk-UA")}
-                </Box>
-              </Box>
-            </Box>
-          ))}
-        </Section>
+      {loading && <Loading />}
+      {!loading && error && <ErrorState message={error} onRetry={load} />}
 
-        <Section title="Історія пошуку"
-          action={history.length > 0 && (
-            <Button onClick={async () => { await searchApi.clearHistory(); setHistory([]); }} sx={linkButton}>Очистити історію</Button>
-          )}>
-          {history.length === 0 && <Box sx={{ color: "#888" }}>Історія порожня. Її бачите лише ви.</Box>}
-          {history.map(h => (
-            <Box key={h.id} sx={rowSx}>
-              <Box sx={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => open(h.query, h.filters)}>
-                <Box sx={{ color: "#ddd" }}>{describe(h.query, h.filters)}</Box>
-                <Box sx={{ color: "#777", fontSize: 12 }}>
-                  {new Date(h.searchedAt).toLocaleString("uk-UA")} · результатів: {h.resultsCount}
-                </Box>
-              </Box>
-              <Button aria-label="Видалити з історії" sx={{ ...linkButton, color: "#888" }}
-                onClick={async () => { await searchApi.deleteHistory(h.id); setHistory(list => list.filter(x => x.id !== h.id)); }}>
-                ×
+      {!loading && !error && tab === "saved" && (
+        saved.length === 0 ? (
+          <EmptyState
+            icon={<IconBookmark />}
+            title="Ще нічого не збережено"
+            text="Налаштуйте фільтри на сторінці пошуку й натисніть «Зберегти пошук»."
+            action={<ButtonLink to="/search">Відкрити пошук</ButtonLink>}
+          />
+        ) : (
+          <ul className={sh.list}>
+            {saved.map(sv => (
+              <li key={sv.id} className={sh.row}>
+                <div className={cx(sh.rowMain, sh.rowLink)} role="link" tabIndex={0} onClick={() => open(sv.query, sv.filters)} onKeyDown={e => e.key === "Enter" && open(sv.query, sv.filters)}>
+                  <span className={sh.inline}>
+                    <span className={sh.rowTitle}>{sv.name}</span>
+                    {sv.unread > 0 && <Badge tone="accent">+{sv.unread}</Badge>}
+                  </span>
+                  <span className={sh.mono}>{describe(sv.query, sv.filters)}</span>
+                </div>
+                <div className={sh.rowActions}>
+                  <Switch checked={sv.notify} onChange={() => void toggleNotify(sv)} label={<span className={sh.small}>Сповіщення</span>} />
+                  <Menu
+                    items={[
+                      { label: "Перейменувати", icon: <IconEdit size={16} />, onSelect: () => void rename(sv) },
+                      { label: "Видалити", icon: <IconTrash size={16} />, danger: true, onSelect: () => void remove(sv) },
+                    ]}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+
+      {!loading && !error && tab === "notifications" && (
+        <>
+          {unread > 0 && (
+            <div className={sh.toolbar}>
+              <span className={sh.mono}>непрочитаних: {unread}</span>
+              <Button size="sm" variant="ghost" onClick={() => void markAllRead()}>
+                Позначити все прочитаним
               </Button>
-            </Box>
-          ))}
-        </Section>
-      </main>
-    </Box>
-  );
-};
+            </div>
+          )}
+          {notifications.length === 0 ? (
+            <EmptyState icon={<IconBell />} title="Поки нічого нового" text="Тут з'являться нові пости, команди й вакансії, що відповідають пошукам зі сповіщеннями." />
+          ) : (
+            <ul className={sh.list}>
+              {notifications.map(n => (
+                <li key={n.id} className={cx(sh.row, sh.rowLink)} style={{ opacity: n.read ? 0.6 : 1 }} onClick={() => void openNotification(n)}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: n.read ? "transparent" : "var(--accent)" }} aria-hidden="true" />
+                  <div className={sh.rowMain}>
+                    <span className={sh.rowTitle}>
+                      <span className={sh.mono} style={{ marginRight: 8 }}>{KIND_LABEL[n.kind]}</span>
+                      {n.title}
+                    </span>
+                    <span className={sh.mono}>
+                      за пошуком «{n.savedSearchName}» · {new Date(n.createdAt).toLocaleString("uk-UA")}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
 
-export default SavedSearchesPage;
+      {!loading && !error && tab === "history" && (
+        <>
+          {history.length > 0 && (
+            <div className={sh.toolbar}>
+              <span className={sh.mono}>історію бачите лише ви</span>
+              <Button size="sm" variant="ghost" onClick={() => void clearHistory()}>
+                Очистити історію
+              </Button>
+            </div>
+          )}
+          {history.length === 0 ? (
+            <EmptyState icon={<IconHistory />} title="Історія порожня" text="Її бачите лише ви." />
+          ) : (
+            <ul className={sh.list}>
+              {history.map(h => (
+                <li key={h.id} className={sh.row}>
+                  <div className={cx(sh.rowMain, sh.rowLink)} role="link" tabIndex={0} onClick={() => open(h.query, h.filters)} onKeyDown={e => e.key === "Enter" && open(h.query, h.filters)}>
+                    <span className={sh.rowTitle}>{describe(h.query, h.filters)}</span>
+                    <span className={sh.mono}>
+                      {new Date(h.searchedAt).toLocaleString("uk-UA")} · результатів: {h.resultsCount}
+                    </span>
+                  </div>
+                  <IconButton label="Видалити з історії" size="sm" onClick={() => void removeHistory(h)}>
+                    <IconClose size={15} />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </Page>
+  );
+}

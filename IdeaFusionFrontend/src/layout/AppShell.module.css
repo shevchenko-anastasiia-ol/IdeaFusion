@@ -1,0 +1,598 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+}
+.collapsed {
+  grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 2000;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+}
+.skip:focus {
+  left: 8px;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────── */
+.sidebar,
+.drawer {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebarTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  height: 76px;
+  padding: 0 var(--sp-3) 0 var(--sp-6);
+  flex-shrink: 0;
+}
+/* Collapsed: the same 76px row (so the menu below does not move) holding only the
+   "expand" button; the logo is hidden. */
+.collapsed .sidebarTop {
+  justify-content: center;
+  padding: 0;
+}
+.collapsed .sidebarTop .logo {
+  display: none;
+}
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+.logo:hover {
+  text-decoration: none;
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+.wordmark span {
+  color: var(--text);
+}
+/* Three overlapping circles — the brand mark (same as /logo.svg). */
+.mark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.nav {
+  flex: 1;
+  padding: var(--sp-2) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.navGroup ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.navGroupLabel {
+  display: block;
+  padding: 0 var(--sp-3) 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.collapsed .navGroupLabel {
+  visibility: hidden;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 46px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  position: relative;
+  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.navItem:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+}
+.navItem svg {
+  flex-shrink: 0;
+}
+.navIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition: color var(--dur) var(--ease);
+}
+.navIcon svg {
+  width: 20px;
+  height: 20px;
+}
+.navItem:hover .navIcon {
+  color: var(--text-2);
+}
+.navItemActive {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
+.navItemActive svg,
+.navItemActive .navIcon {
+  color: var(--accent-text);
+}
+.collapsed .navItem {
+  justify-content: center;
+  padding: 0;
+  width: 44px;
+  margin: 0 auto;
+}
+.collapsed .nav {
+  padding: var(--sp-2) 0;
+}
+.newPost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 48px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  transition: background-color var(--dur) var(--ease);
+}
+.newPost:hover {
+  background: var(--accent-hover);
+  text-decoration: none;
+}
+.newPostCompact {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+}
+/* The divider between groups is the same open and collapsed, so nothing shifts vertically. */
+.navGroup + .navGroup {
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+.sidebarBottom {
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.userBlock {
+  min-height: 40px;
+  display: flex;
+}
+.userBlock > * {
+  width: 100%;
+}
+.userButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: none;
+  text-align: left;
+  color: var(--text-2);
+}
+.userButton:hover {
+  background: var(--surface-2);
+}
+.userButtonCollapsed {
+  justify-content: center;
+  padding: 6px 0;
+  border-color: transparent;
+}
+.userText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.userName {
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.userRole {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.contacts {
+  padding: 0 var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.contacts p {
+  display: flex;
+  flex-direction: column;
+}
+.contacts p > span:first-child {
+  color: var(--text-2);
+}
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Main column ────────────────────────────────────────────────────── */
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-8);
+  background: var(--bg);
+}
+.topbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+.menuBtn,
+.mobileLogo,
+.searchIconBtn {
+  display: none !important;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.crumbRoot {
+  color: var(--text-3);
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.crumb > span:last-child,
+.crumb > a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crumb:last-child > span:last-child {
+  color: var(--text);
+}
+.crumb a {
+  color: var(--text-2);
+}
+.crumbSep {
+  margin: 0 8px;
+  color: var(--border-strong);
+}
+/* A compact button, not an input look-alike: it opens the search page, nothing is typed here. */
+.searchTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 36px;
+  padding: 0 6px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.searchTrigger:hover {
+  border-color: var(--accent-border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.searchTrigger kbd {
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+.chatBtnWrap {
+  position: relative;
+  display: inline-flex;
+}
+.unread {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--r-full);
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.content {
+  flex: 1;
+  padding: var(--sp-4) var(--sp-8) var(--sp-16);
+  outline: none;
+}
+.page {
+  margin: 0 auto;
+  width: 100%;
+}
+.page-narrow {
+  max-width: 760px;
+}
+.page-default {
+  max-width: var(--content-max);
+}
+.page-feed {
+  /* Full width of the content area: the feed's right rail stays at the right edge whether
+     the sidebar is open or collapsed, and the column takes whatever room is left. */
+  max-width: none;
+}
+.page-wide {
+  max-width: 1320px;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: var(--sp-5) var(--sp-6);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4) var(--sp-8);
+  align-items: flex-start;
+  justify-content: space-between;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.footerBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+.footerName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.footerTag {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.footerCols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3) var(--sp-8);
+}
+.footerCols p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.footerCols p > span:first-child {
+  color: var(--text-2);
+}
+.footerCols a {
+  color: var(--text-2);
+}
+
+/* ── Bottom tabs (mobile) ───────────────────────────────────────────── */
+.bottomTabs {
+  display: none;
+}
+
+/* ── Drawer (tablet / mobile) ───────────────────────────────────────── */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(5, 5, 8, 0.6);
+  animation: fade var(--dur) var(--ease);
+}
+.drawer {
+  width: min(300px, 86vw);
+  height: 100%;
+  overflow-y: auto;
+  animation: slide 180ms var(--ease);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+/* Laptop: icon rail by default is user choice; keep both modes. */
+@media (max-width: 1199px) {
+  .searchTrigger {
+    min-width: 0;
+  }
+  .searchTrigger kbd {
+    display: none;
+  }
+}
+
+/* Tablet: sidebar becomes a drawer. */
+@media (max-width: 899px) {
+  .shell,
+  .collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar {
+    display: none;
+  }
+  .menuBtn,
+  .mobileLogo {
+    display: inline-flex !important;
+  }
+  .topbar {
+    padding: 0 var(--sp-3);
+  }
+  .content {
+    padding: var(--sp-4) var(--sp-4) calc(var(--bottomtabs-h) + var(--sp-8));
+  }
+  .topbar {
+    border-bottom: 1px solid var(--border);
+  }
+  .footer {
+    padding: var(--sp-5) var(--sp-4) calc(var(--bottomtabs-h) + var(--sp-5));
+  }
+  .bottomTabs {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    height: var(--bottomtabs-h);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: var(--text-3);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .tab:hover {
+    text-decoration: none;
+    color: var(--text-2);
+  }
+  .tabActive {
+    color: var(--text);
+  }
+  .tabActive .tabIcon {
+    color: var(--accent-text);
+  }
+  .tabIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+  }
+  .tabPrimary .tabIcon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #fff !important;
+  }
+  .tabPrimary .tabLabel {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .searchTrigger,
+  .newPostBtn {
+    display: none !important;
+  }
+  .searchIconBtn {
+    display: inline-flex !important;
+  }
+  .crumbRoot,
+  .crumb:not(:last-child) {
+    display: none;
+  }
+  .crumb:last-child .crumbSep {
+    display: none;
+  }
+  .crumbs {
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    font-weight: 600;
+  }
+  .footerCols {
+    flex-direction: column;
+  }
+}

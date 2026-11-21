@@ -1,4 +1,6 @@
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Application.Queries.GroupInvitation;
+using Collaboration.Domain.ValueOfObjects;
 using Collaboration.Domain.Common.Helpers;
 using Collaboration.Domain.Entities;
 using Collaboration.Domain.Entities.Parameters;
@@ -13,7 +15,22 @@ namespace Collaboration.Application.Tests.Queries.GroupInvitation;
 public class GroupInvitationQueryHandlersTests
 {
     private readonly Mock<IGroupInvitationRepository> _repoMock = new();
+    private readonly Mock<ITeamRepository> _teamRepoMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    private void SetCaller(string userId)
+    {
+        _callerMock.Setup(c => c.UserId).Returns(userId);
+    }
+
+    private void SetupReviewableTeam(string teamId = "team-1", string callerId = "owner-id")
+    {
+        var team = new Domain.Entities.Team(
+            "Test Team", "desc", "Design", ["design"], new UserSnapshot(callerId, "owner"));
+        _teamRepoMock.Setup(r => r.GetByIdAsync(teamId, _ct)).ReturnsAsync(team);
+        SetCaller(callerId);
+    }
 
     private static Domain.Entities.GroupInvitation CreateInvitation(
         string teamId = "team-1",
@@ -31,8 +48,9 @@ public class GroupInvitationQueryHandlersTests
     {
         var invitation = CreateInvitation();
         _repoMock.Setup(r => r.GetByIdAsync("inv-1", _ct)).ReturnsAsync(invitation);
+        SetCaller("user-1");
 
-        var handler = new GetGroupInvitationByIdQueryHandler(_repoMock.Object);
+        var handler = new GetGroupInvitationByIdQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetGroupInvitationByIdQuery { InvitationId = "inv-1" }, _ct);
 
@@ -46,8 +64,9 @@ public class GroupInvitationQueryHandlersTests
     {
         _repoMock.Setup(r => r.GetByIdAsync("missing", _ct))
                  .ReturnsAsync((Domain.Entities.GroupInvitation?)null);
+        SetCaller("user-1");
 
-        var handler = new GetGroupInvitationByIdQueryHandler(_repoMock.Object);
+        var handler = new GetGroupInvitationByIdQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
 
         await handler.Invoking(h => h.Handle(
                          new GetGroupInvitationByIdQuery { InvitationId = "missing" }, _ct))
@@ -67,8 +86,9 @@ public class GroupInvitationQueryHandlersTests
         };
         _repoMock.Setup(r => r.GetByTeamIdAsync("team-1", _ct))
                  .ReturnsAsync(invitations);
+        SetupReviewableTeam();
 
-        var handler = new GetGroupInvitationsByTeamQueryHandler(_repoMock.Object);
+        var handler = new GetGroupInvitationsByTeamQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetGroupInvitationsByTeamQuery { TeamId = "team-1" }, _ct);
 
@@ -81,18 +101,19 @@ public class GroupInvitationQueryHandlersTests
     {
         _repoMock.Setup(r => r.GetByTeamIdAsync("team-1", _ct))
                  .ReturnsAsync([]);
+        SetupReviewableTeam();
 
-        var handler = new GetGroupInvitationsByTeamQueryHandler(_repoMock.Object);
+        var handler = new GetGroupInvitationsByTeamQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetGroupInvitationsByTeamQuery { TeamId = "team-1" }, _ct);
 
         result.Should().BeEmpty();
     }
 
-    // ── GetGroupInvitationsByUserQueryHandler ─────────────────────────────────
+    // ── GetMyGroupInvitationsQueryHandler ─────────────────────────────────────
 
     [Fact]
-    public async Task GetByUser_ReturnsInvitationsFromRepository()
+    public async Task GetMyGroupInvitations_ReturnsInvitationsForCaller()
     {
         var invitations = new[]
         {
@@ -101,24 +122,24 @@ public class GroupInvitationQueryHandlersTests
         };
         _repoMock.Setup(r => r.GetByInvitedUserIdAsync("user-1", _ct))
                  .ReturnsAsync(invitations);
+        SetCaller("user-1");
 
-        var handler = new GetGroupInvitationsByUserQueryHandler(_repoMock.Object);
-        var result = await handler.Handle(
-            new GetGroupInvitationsByUserQuery { UserId = "user-1" }, _ct);
+        var handler = new GetMyGroupInvitationsQueryHandler(_repoMock.Object, _callerMock.Object);
+        var result = await handler.Handle(new GetMyGroupInvitationsQuery(), _ct);
 
         result.Should().HaveCount(2);
         result.Should().OnlyContain(i => i.InvitedUserId == "user-1");
     }
 
     [Fact]
-    public async Task GetByUser_WhenNoInvitations_ReturnsEmptyCollection()
+    public async Task GetMyGroupInvitations_WhenNoInvitations_ReturnsEmptyCollection()
     {
         _repoMock.Setup(r => r.GetByInvitedUserIdAsync("user-1", _ct))
                  .ReturnsAsync([]);
+        SetCaller("user-1");
 
-        var handler = new GetGroupInvitationsByUserQueryHandler(_repoMock.Object);
-        var result = await handler.Handle(
-            new GetGroupInvitationsByUserQuery { UserId = "user-1" }, _ct);
+        var handler = new GetMyGroupInvitationsQueryHandler(_repoMock.Object, _callerMock.Object);
+        var result = await handler.Handle(new GetMyGroupInvitationsQuery(), _ct);
 
         result.Should().BeEmpty();
     }
@@ -168,8 +189,9 @@ public class GroupInvitationQueryHandlersTests
                      "team-1", null, null, null, null, null,
                      1, 10, false, _ct))
                  .ReturnsAsync(paged);
+        SetupReviewableTeam();
 
-        var handler = new GetGroupInvitationsPagedQueryHandler(_repoMock.Object);
+        var handler = new GetGroupInvitationsPagedQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetGroupInvitationsPagedQuery { Parameters = parameters }, _ct);
 

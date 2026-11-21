@@ -1,0 +1,49 @@
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  color: var(--text);
+  transition: background-color var(--dur) var(--ease);
+}
+.row:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.titleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--sp-3);
+}
+.role {
+  font-weight: 600;
+  font-size: var(--fs-base);
+}
+.team {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.desc {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}

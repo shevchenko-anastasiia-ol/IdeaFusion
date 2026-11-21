@@ -1,4 +1,5 @@
 ﻿using Collaboration.Application.Commands.GroupInvitation;
+using Collaboration.Domain.Entities;
 using FluentValidation;
 
 namespace Collaboration.Application.Validators;
@@ -10,19 +11,18 @@ public class CreateGroupInvitationCommandValidator : AbstractValidator<CreateGro
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
  
+        // The invitee is the subject of the invitation; the inviter is the token, so
+        // there is nothing left here to compare the two against.
         RuleFor(x => x.InvitedUserId)
             .NotEmpty().WithMessage("InvitedUserId is required.");
  
-        RuleFor(x => x.InvitedByUserId)
-            .NotEmpty().WithMessage("InvitedByUserId is required.");
- 
-        RuleFor(x => x.InvitedUserId)
-            .NotEqual(x => x.InvitedByUserId)
-            .WithMessage("Cannot invite yourself.");
- 
+        // The role here is the position the person is invited for ("Веб-розробник"),
+        // not an access rank: everyone who accepts joins as a plain Member.
         RuleFor(x => x.Role)
             .NotEmpty().WithMessage("Role is required.")
-            .MaximumLength(100).WithMessage("Role cannot exceed 100 characters.");
+            .MaximumLength(100).WithMessage("Role cannot exceed 100 characters.")
+            .Must(role => role != TeamRole.Owner)
+            .WithMessage("An invitation cannot grant ownership.");
  
         RuleFor(x => x.Message)
             .MaximumLength(1000).WithMessage("Message cannot exceed 1000 characters.")
@@ -40,9 +40,6 @@ public class AcceptGroupInvitationCommandValidator : AbstractValidator<AcceptGro
     {
         RuleFor(x => x.InvitationId)
             .NotEmpty().WithMessage("InvitationId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -52,9 +49,6 @@ public class DeclineGroupInvitationCommandValidator : AbstractValidator<DeclineG
     {
         RuleFor(x => x.InvitationId)
             .NotEmpty().WithMessage("InvitationId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -64,8 +58,5 @@ public class RevokeGroupInvitationCommandValidator : AbstractValidator<RevokeGro
     {
         RuleFor(x => x.InvitationId)
             .NotEmpty().WithMessage("InvitationId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }

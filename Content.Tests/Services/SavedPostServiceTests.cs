@@ -1,6 +1,7 @@
 using AutoMapper;
 using ContentBLL.DTO.SavedPost;
 using ContentBLL.Services;
+using ContentBLL.Services.Interfaces;
 using ContentDAL.Repository.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
@@ -17,6 +18,7 @@ public class SavedPostServiceTests
     private readonly Mock<IMapper> _mapper = new();
     private readonly Mock<IPostRepository> _postRepo = new();
     private readonly Mock<ISavedPostRepository> _savedPostRepo = new();
+    private readonly Mock<IPostAuthorResolver> _authorResolver = new();
     private readonly CancellationToken _ct = CancellationToken.None;
 
     public SavedPostServiceTests()
@@ -25,7 +27,29 @@ public class SavedPostServiceTests
         _uow.Setup(u => u.SavedPostRepository).Returns(_savedPostRepo.Object);
     }
 
-    private SavedPostService Svc() => new(_uow.Object, _mapper.Object);
+    /// <summary>
+    /// The saver is the token's subject, so tests pin the content-side user id
+    /// the repository is expected to be queried/deleted by. A null id means the
+    /// caller has never written anything and therefore has no row.
+    /// </summary>
+    private void SetCaller(int? userId)
+    {
+        var resolved = userId is null
+            ? null
+            : new ResolvedPostAuthor(1, userId.Value, Guid.Empty, "alice", null, false);
+
+        _authorResolver
+            .Setup(r => r.ResolveForWriteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resolved!);
+        _authorResolver
+            .Setup(r => r.ResolveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resolved!);
+        _authorResolver
+            .Setup(r => r.FindAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(resolved);
+    }
+
+    private SavedPostService Svc() => new(_uow.Object, _mapper.Object, _authorResolver.Object);
 
     // ── SaveAsync ─────────────────────────────────────────────────────────────
 
@@ -33,7 +57,7 @@ public class SavedPostServiceTests
     public async Task SaveAsync_WhenPostNotFound_ThrowsNotFoundException()
     {
         _postRepo.Setup(r => r.GetByIdAsync(1, _ct)).ReturnsAsync((Post?)null);
-        var dto = new SavedPostCreateDto { PostId = 1, UserId = 5 };
+        var dto = new SavedPostCreateDto { PostId = 1 };
 
         await Svc().Invoking(s => s.SaveAsync(dto, _ct))
                    .Should().ThrowAsync<NotFoundException>()
@@ -45,7 +69,8 @@ public class SavedPostServiceTests
     {
         _postRepo.Setup(r => r.GetByIdAsync(1, _ct)).ReturnsAsync(new Post { PostId = 1 });
         _savedPostRepo.Setup(r => r.ExistsAsync(1, 5, _ct)).ReturnsAsync(true);
-        var dto = new SavedPostCreateDto { PostId = 1, UserId = 5 };
+        SetCaller(5);
+        var dto = new SavedPostCreateDto { PostId = 1 };
 
         await Svc().Invoking(s => s.SaveAsync(dto, _ct))
                    .Should().ThrowAsync<BusinessConflictException>();
@@ -64,7 +89,9 @@ public class SavedPostServiceTests
         _savedPostRepo.Setup(r => r.AddAsync(savedPost, _ct)).Returns(Task.CompletedTask);
         _mapper.Setup(m => m.Map<SavedPostDto>(savedPost)).Returns(savedPostDto);
 
-        var dto = new SavedPostCreateDto { PostId = 1, UserId = 5 };
+        SetCaller(5);
+
+        var dto = new SavedPostCreateDto { PostId = 1 };
         var result = await Svc().SaveAsync(dto, _ct);
 
         result.SavedPostId.Should().Be(10);
@@ -78,8 +105,9 @@ public class SavedPostServiceTests
     public async Task UnsaveAsync_WhenSavedPostNotExists_ThrowsNotFoundException()
     {
         _savedPostRepo.Setup(r => r.ExistsAsync(1, 5, _ct)).ReturnsAsync(false);
+        SetCaller(5);
 
-        await Svc().Invoking(s => s.UnsaveAsync(1, 5, _ct))
+        await Svc().Invoking(s => s.UnsaveAsync(1, _ct))
                    .Should().ThrowAsync<NotFoundException>();
     }
 
@@ -88,8 +116,9 @@ public class SavedPostServiceTests
     {
         _savedPostRepo.Setup(r => r.ExistsAsync(1, 5, _ct)).ReturnsAsync(true);
         _savedPostRepo.Setup(r => r.DeleteAsync(1, 5, _ct)).Returns(Task.CompletedTask);
+        SetCaller(5);
 
-        await Svc().UnsaveAsync(1, 5, _ct);
+        await Svc().UnsaveAsync(1, _ct);
 
         _savedPostRepo.Verify(r => r.DeleteAsync(1, 5, _ct), Times.Once);
     }
@@ -100,8 +129,9 @@ public class SavedPostServiceTests
     public async Task ExistsAsync_ReturnsRepositoryResult()
     {
         _savedPostRepo.Setup(r => r.ExistsAsync(2, 3, _ct)).ReturnsAsync(true);
+        SetCaller(3);
 
-        var result = await Svc().ExistsAsync(2, 3, _ct);
+        var result = await Svc().ExistsAsync(2, _ct);
 
         result.Should().BeTrue();
     }
@@ -118,28 +148,45 @@ public class SavedPostServiceTests
         result.Should().Be(3);
     }
 
-    // ── GetByUserIdAsync ──────────────────────────────────────────────────────
+    // ── GetMineAsync ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetByUserIdAsync_WhenNoSavedPosts_ReturnsEmpty()
+    public async Task GetMineAsync_WhenNoSavedPosts_ReturnsEmpty()
     {
         _savedPostRepo.Setup(r => r.GetByUserIdAsync(7, _ct)).ReturnsAsync(new List<SavedPost>());
+        SetCaller(7);
 
-        var result = await Svc().GetByUserIdAsync(7, _ct);
+        var result = await Svc().GetMineAsync(_ct);
 
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_BuildsDtoWithTitleAndMedia()
+    public async Task GetMineAsync_WithoutAnAuthorRow_ReturnsEmpty()
+    {
+        SetCaller(null);
+        _savedPostRepo
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<SavedPost>());
+
+        var result = await Svc().GetMineAsync(_ct);
+
+        result.Should().BeEmpty();
+        _savedPostRepo.Verify(
+            r => r.GetByUserIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetMineAsync_BuildsDtoWithTitleAndMedia()
     {
         var post = new Post { PostId = 1, Title = "Post Title" };
         var saved = new SavedPost { SavedPostId = 1, PostId = 1, UserId = 7, Post = post };
 
         _savedPostRepo.Setup(r => r.GetByUserIdAsync(7, _ct)).ReturnsAsync(new List<SavedPost> { saved });
         _postRepo.Setup(r => r.GetMediaByPostIdAsync(1, _ct)).ReturnsAsync(new List<PostMedia>());
+        SetCaller(7);
 
-        var result = (await Svc().GetByUserIdAsync(7, _ct)).ToList();
+        var result = (await Svc().GetMineAsync(_ct)).ToList();
 
         result.Should().ContainSingle();
         result[0].PostTitle.Should().Be("Post Title");
@@ -147,21 +194,22 @@ public class SavedPostServiceTests
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_WhenPostIsNull_UsesEmptyStringForTitle()
+    public async Task GetMineAsync_WhenPostIsNull_UsesEmptyStringForTitle()
     {
         var saved = new SavedPost { SavedPostId = 2, PostId = 5, UserId = 9, Post = null };
 
         _savedPostRepo.Setup(r => r.GetByUserIdAsync(9, _ct)).ReturnsAsync(new List<SavedPost> { saved });
         _postRepo.Setup(r => r.GetMediaByPostIdAsync(5, _ct)).ReturnsAsync(new List<PostMedia>());
+        SetCaller(9);
 
-        var result = (await Svc().GetByUserIdAsync(9, _ct)).ToList();
+        var result = (await Svc().GetMineAsync(_ct)).ToList();
 
         result.Should().ContainSingle();
         result[0].PostTitle.Should().Be(string.Empty);
     }
 
     [Fact]
-    public async Task GetByUserIdAsync_WithMediaItems_AddsUrlsToDto()
+    public async Task GetMineAsync_WithMediaItems_AddsUrlsToDto()
     {
         var post = new Post { PostId = 3, Title = "Media Post" };
         var media = new PostMedia { Id = 10, PostId = 3 };
@@ -170,8 +218,9 @@ public class SavedPostServiceTests
         _savedPostRepo.Setup(r => r.GetByUserIdAsync(11, _ct)).ReturnsAsync(new List<SavedPost> { saved });
         _postRepo.Setup(r => r.GetMediaByPostIdAsync(3, _ct)).ReturnsAsync(new List<PostMedia> { media });
         _postRepo.Setup(r => r.GetMediaUrlAsync(media, _ct)).ReturnsAsync("https://cdn.example.com/img.jpg");
+        SetCaller(11);
 
-        var result = (await Svc().GetByUserIdAsync(11, _ct)).ToList();
+        var result = (await Svc().GetMineAsync(_ct)).ToList();
 
         result.Should().ContainSingle();
         result[0].PostMediaUrls.Should().ContainSingle("https://cdn.example.com/img.jpg");

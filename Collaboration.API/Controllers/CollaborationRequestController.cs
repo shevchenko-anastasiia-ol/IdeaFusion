@@ -2,16 +2,19 @@
 using Collaboration.Application.Queries.CollaborationRequest;
 using Collaboration.Domain.Entities.Parameters;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Collaboration.API.Controllers;
 
 [Route("api/collaboration-requests")]
+[Authorize]
 public class CollaborationRequestController : BaseApiController
 {
     public CollaborationRequestController(IMediator mediator) : base(mediator) { }
  
     // GET: api/collaboration-requests/{id}
+    // Authenticated: a request carries the applicant's profile and message.
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id, CancellationToken cancellationToken)
     {
@@ -25,6 +28,7 @@ public class CollaborationRequestController : BaseApiController
     }
  
     // GET: api/collaboration-requests
+    // Authenticated: listing is scoped to one team and permission-checked.
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] CollaborationRequestParameters parameters, CancellationToken cancellationToken)
     {
@@ -48,13 +52,15 @@ public class CollaborationRequestController : BaseApiController
         catch (Exception ex) { return HandleException(ex); }
     }
  
-    // GET: api/collaboration-requests/user/{userId}
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetByUser(string userId, CancellationToken cancellationToken)
+    // GET: api/collaboration-requests/mine
+    // The requests the caller has sent. The old /user/{userId} route is gone: with it
+    // gone, nobody can read another person's outgoing requests by naming them.
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
     {
         try
         {
-            var requests = await _mediator.Send(new GetCollaborationRequestsByUserQuery { UserId = userId }, cancellationToken);
+            var requests = await _mediator.Send(new GetMyCollaborationRequestsQuery(), cancellationToken);
             return Ok(requests);
         }
         catch (Exception ex) { return HandleException(ex); }

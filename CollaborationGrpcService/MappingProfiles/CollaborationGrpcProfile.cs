@@ -42,7 +42,8 @@ public class CollaborationGrpcProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Username))
             .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User.AvatarUrl ?? string.Empty))
             .ForMember(dest => dest.Role,     opt => opt.MapFrom(src => src.Role))
-            .ForMember(dest => dest.JoinedAt, opt => opt.MapFrom(src => src.JoinedAt.ToString("O")));
+            .ForMember(dest => dest.JoinedAt, opt => opt.MapFrom(src => src.JoinedAt.ToString("O")))
+            .ForMember(dest => dest.Position, opt => opt.MapFrom(src => src.Position ?? string.Empty));
  
         // RequiredRole → RequiredRoleDto
         CreateMap<RequiredRole, GrpcTeams.RequiredRoleDto>()

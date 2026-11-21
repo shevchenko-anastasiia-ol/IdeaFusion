@@ -1,53 +1,71 @@
-import { FunctionComponent, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
-import Moderation from "../components/Moderation";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { teamsApi } from "../api/teams";
 import { useAuth } from "../context/AuthContext";
 import { aggregatorApi } from "../api/aggregator";
 import { postauthorApi } from "../api/posts";
 import type { TeamEntity, UserDto, PostWithEngagementDto } from "../api/types";
-import { teamStatusLabel } from "../api/types";
 import { api } from "../api/client";
-import styles from "./UserPublicPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Avatar, Badge, Button, ButtonLink, EmptyState, Loading, Tabs, useToast } from "../ui";
+import { IconChat, IconEdit, IconLock, IconUser, IconUsers } from "../ui/icons";
+import { useChatPanel } from "../components/ChatWidget";
+import { directApi } from "../api/direct";
+import { useDirectChat } from "../context/DirectChatContext";
+import type { DirectConversationDto } from "../api/types";
+import Portfolio from "../components/Portfolio";
+import UserTeams from "../components/UserTeams";
+import { plural } from "../lib/plural";
+import sh from "./shared.module.css";
 
-const PALETTE = ["#7c5cfc","#ff6b6b","#3fcca0","#ffb347","#29b6f6","#e040fb","#ef5350","#66bb6a","#26c6da","#ec407a"];
-const BG_PALETTE = ["#3fcca0","#f87c6b","#7c5cfc","#4a4a6a","#ffb347","#5bc8f5","#c756ff"];
+const ROLE_LABEL: Record<string, string> = { author: "автор", moderator: "модератор", administrator: "адміністратор" };
 
-function accentFor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return PALETTE[h % PALETTE.length];
-}
-function bgFor(id: number) { return BG_PALETTE[id % BG_PALETTE.length]; }
-
-function getMediaType(url: string): 'image' | 'video' | 'audio' | 'pdf' {
-  const ext = url.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
-  if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) return 'video';
-  if (['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'].includes(ext)) return 'audio';
-  if (ext === 'pdf') return 'pdf';
-  return 'image';
-}
-
-const FILTERS = ["Всі", "Дизайн", "Музика", "Арт", "Анімація"];
-const TAG_MAP: Record<string, string[]> = {
-  "Дизайн":   ["design", "branding", "ui-ux"],
-  "Музика":   ["music"],
-  "Арт":      ["art", "illustration", "street-art"],
-  "Анімація": ["animation"],
-};
-
-const UserPublicPage: FunctionComponent = () => {
+export default function UserPublicPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { user: me } = useAuth();
-
-  const [profile,  setProfile]  = useState<UserDto | null>(null);
-  const [teams,    setTeams]    = useState<TeamEntity[]>([]);
-  const [posts,    setPosts]    = useState<PostWithEngagementDto[]>([]);
-  const [loading,  setLoading]  = useState(true);
+  const { user: me, isAuthenticated } = useAuth();
+  const [profile, setProfile] = useState<UserDto | null>(null);
+  const [teams, setTeams] = useState<TeamEntity[]>([]);
+  const [posts, setPosts] = useState<PostWithEngagementDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("Всі");
+  const [tab, setTab] = useState<"portfolio" | "teams">("portfolio");
+  const isMe = me?.id === id;
+  const panel = useChatPanel();
+  const direct = useDirectChat();
+  const toast = useToast();
+  const [dm, setDm] = useState<DirectConversationDto | null>(null);
+  const [dmBusy, setDmBusy] = useState(false);
+
+  // Where the two of us stand: no chat yet, a request, an open chat or a block.
+  useEffect(() => {
+    setDm(null);
+    if (!id || isMe || !isAuthenticated) return;
+    directApi.withUser(id).then(setDm).catch(() => setDm(null));
+  }, [id, isMe, isAuthenticated]);
+  // Keep it in step with live updates from the chat panel.
+  useEffect(() => {
+    const live = direct.conversations.find(c => c.otherUserId === id);
+    if (live) setDm(live);
+  }, [direct.conversations, id]);
+
+  async function toggleBlock() {
+    if (!id) return;
+    setDmBusy(true);
+    try {
+      const updated = dm?.canUnblock ? await directApi.act(dm.id, "unblock") : await directApi.blockUser(id);
+      setDm(updated);
+      void direct.refresh();
+      toast.success(updated.status === "blocked" ? "Користувача заблоковано" : "Користувача розблоковано");
+    } catch (err: unknown) {
+      toast.fromError(err, "Не вдалося змінити блокування");
+    } finally {
+      setDmBusy(false);
+    }
+  }
+
+  const displayName = profile ? profile.fullName ?? profile.userName ?? profile.email.split("@")[0] : "Профіль";
+  usePageMeta(displayName, [{ label: "Люди" }]);
 
   useEffect(() => {
     if (!id) return;
@@ -56,287 +74,173 @@ const UserPublicPage: FunctionComponent = () => {
     setProfile(null);
     setTeams([]);
     setPosts([]);
-
     Promise.all([
       api.get<UserDto>(`/api/users/${id}`).catch(() => null),
-      teamsApi.getByMember(id).catch(() => []),
-    ]).then(async ([u, t]) => {
-      if (!u) {
-        setNotFound(true);
+      // Anyone's teams are public (team pages list their members), so every profile shows them.
+      (isMe ? teamsApi.getMine() : teamsApi.getByMember(id)).catch(() => [] as TeamEntity[]),
+    ])
+      .then(async ([u, t]) => {
         setTeams(t as TeamEntity[]);
-        return;
-      }
-      setProfile(u);
-      setTeams(t as TeamEntity[]);
-
-      // Fetch portfolio: personal posts + team posts, using the portfolio endpoint
-      const userName = u.userName ?? u.email.split('@')[0];
-      try {
-        const ids = await postauthorApi.getByUserName(userName, u.avatarUrl ?? undefined);
-        const userPosts = await aggregatorApi.getPortfolio(ids.userId, u.id);
-        setPosts(userPosts);
-      } catch {
-        // No posts available — not an error
-      }
-    }).finally(() => setLoading(false));
-  }, [id]);
+        if (!u) {
+          setNotFound(true);
+          return;
+        }
+        setProfile(u);
+        const userName = u.userName ?? u.email.split("@")[0];
+        // No personal author record just means no personal posts (404): the portfolio still
+        // holds the work of this person's teams, so it is loaded either way.
+        let contentUserId = 0;
+        try {
+          contentUserId = (await postauthorApi.getByUserName(userName)).userId;
+        } catch {
+          /* never published personally */
+        }
+        try {
+          setPosts(await aggregatorApi.getPortfolio(contentUserId, u.id));
+        } catch {
+          setPosts([]);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [id, isMe]);
 
   if (loading) {
     return (
-      <div className={styles.page}>
-        <FrameComponent2 />
-        <div className={styles.content}>
-          <p className={styles.msg}>Завантаження...</p>
-        </div>
-      </div>
+      <Page>
+        <Loading />
+      </Page>
     );
   }
 
   if (notFound || !profile) {
     return (
-      <div className={styles.page}>
-        <FrameComponent2 />
-        <div className={styles.content}>
-          <p className={styles.msg}>Користувача не знайдено</p>
-        </div>
-      </div>
+      <Page width="narrow">
+        <EmptyState
+          icon={<IconUser />}
+          title="Користувача не знайдено"
+          text={isAuthenticated ? "Можливо, акаунт видалено або посилання неточне." : "Увійдіть, щоб переглядати профілі користувачів."}
+          action={isAuthenticated ? <ButtonLink to="/home">До стрічки</ButtonLink> : <ButtonLink to="/login" variant="primary">Увійти</ButtonLink>}
+        />
+      </Page>
     );
   }
 
-  const isMe = me?.id === id;
-  const displayName = profile.fullName ?? profile.userName ?? profile.email.split("@")[0];
-  const initials    = displayName.slice(0, 2).toUpperCase();
-  const color       = accentFor(profile.id);
-
-  const filtered = activeFilter === "Всі"
-    ? posts
-    : posts.filter(p => {
-        const mapped = TAG_MAP[activeFilter] ?? [activeFilter.toLowerCase()];
-        return p.post.tags.some(t => mapped.includes(t.toLowerCase()));
-      });
+  const totalLikes = posts.reduce((acc, p) => acc + p.likesCount, 0);
+  const totalComments = posts.reduce((acc, p) => acc + p.commentsCount, 0);
 
   return (
-    <div className={styles.page}>
-      <FrameComponent2 />
-
-      <div className={styles.content}>
-        {/* Header */}
-        <header className={styles.header}>
-          <button className={styles.backBtn} onClick={() => navigate(-1)}>← Назад</button>
-          <h2 className={styles.headerTitle}>Профіль користувача</h2>
-        </header>
-
-        {/* Profile card */}
-        <div className={styles.profileCard}>
-          {profile.avatarUrl ? (
-            <img src={profile.avatarUrl} alt="" className={styles.profileAvatar} style={{ objectFit: "cover" }} />
-          ) : (
-            <div className={styles.profileAvatar} style={{ backgroundColor: color }}>{initials}</div>
-          )}
-          <div className={styles.profileInfo}>
-            <h1 className={styles.profileName}>{displayName}</h1>
-            {profile.specialization && (
-              <p className={styles.profileSub}>{profile.specialization}</p>
-            )}
-            <p className={styles.profileSub}>{profile.email}</p>
-          </div>
-          {isMe ? (
-            <button className={styles.actionBtn} onClick={() => navigate("/personal")}>
-              Редагувати профіль
-            </button>
-          ) : (
-            <button
-              className={styles.actionBtn}
-              onClick={() => navigate(`/team/invite-to-team?userId=${profile.id}`)}
-            >
-              Запросити до команди
-            </button>
-          )}
+    <Page>
+      <header className={sh.profile}>
+        <div className={sh.profileAvatar}>
+          <Avatar name={displayName} src={profile.avatarUrl} seed={profile.id} size={128} />
         </div>
-
-        <div className={styles.body}>
-          {/* Info section */}
-          <div className={styles.infoSection}>
-            <div className={styles.infoCard}>
-              <h3 className={styles.cardTitle}>Інформація</h3>
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Логін</span>
-                <span className={styles.infoValue}>{profile.userName ?? "—"}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Email</span>
-                <span className={styles.infoValue}>{profile.email}</span>
-              </div>
-              {profile.specialization && (
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Спеціалізація</span>
-                  <span className={styles.infoValue}>{profile.specialization}</span>
-                </div>
-              )}
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Ролі</span>
-                <span className={styles.infoValue}>{profile.roles.join(", ") || "Користувач"}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>З нами з</span>
-                <span className={styles.infoValue}>
-                  {new Date(profile.createdAt).toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: "numeric" })}
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.statsCard}>
-              <h3 className={styles.cardTitle}>Статистика</h3>
-              <div className={styles.statsGrid}>
-                <div className={styles.statItem}>
-                  <span className={styles.statNumber}>{posts.length}</span>
-                  <span className={styles.statLabel}>Постів</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span className={styles.statNumber}>{teams.length}</span>
-                  <span className={styles.statLabel}>Команд</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span className={styles.statNumber}>{posts.reduce((s, p) => s + p.likesCount, 0)}</span>
-                  <span className={styles.statLabel}>Лайків</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span className={styles.statNumber}>{posts.reduce((s, p) => s + p.commentsCount, 0)}</span>
-                  <span className={styles.statLabel}>Коментарів</span>
-                </div>
-              </div>
-            </div>
+        <div className={sh.profileBody}>
+          <div className={sh.profileName}>
+            <h1>{displayName}</h1>
+            {profile.roles.map(r => (
+              <Badge key={r} tone={r === "administrator" ? "red" : r === "moderator" ? "amber" : "accent"}>
+                {ROLE_LABEL[r] ?? r}
+              </Badge>
+            ))}
           </div>
-
-          {/* Teams section */}
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Команди ({teams.length})</h2>
-            {teams.length === 0 ? (
-              <p className={styles.emptyMsg}>Поки не в жодній команді</p>
+          <div className={sh.profileActions}>
+            {isMe ? (
+              <ButtonLink to="/personal?tab=profile" icon={<IconEdit size={15} />}>
+                Редагувати профіль
+              </ButtonLink>
             ) : (
-              <div className={styles.teamsList}>
-                {teams.map(t => {
-                  const status = teamStatusLabel(t.status);
-                  const accent = accentFor(t.id);
-                  const statusStyle =
-                    status === "Активна"
-                      ? { bg: "rgba(63,204,160,0.15)", border: "1px solid #3fcca0", color: "#3fcca0" }
-                      : status === "У пошуку"
-                      ? { bg: "rgba(124,92,252,0.15)", border: "1px solid #7c5cfc", color: "#a48fff" }
-                      : { bg: "rgba(210,50,50,0.15)", border: "1px solid #e05555", color: "#ff6b6b" };
-                  const role = t.members.find(m => m.user.userId === profile.id)?.role;
-                  return (
-                    <div key={t.id} className={styles.teamCard} onClick={() => navigate(`/teams/${t.id}`)}>
-                      {t.avatarUrl ? (
-                        <img src={t.avatarUrl} alt="" className={styles.teamAvatar} style={{ objectFit: "cover" }} />
-                      ) : (
-                        <div className={styles.teamAvatar} style={{ backgroundColor: accent }}>
-                          {t.name.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <div className={styles.teamInfo}>
-                        <div className={styles.teamNameRow}>
-                          <span className={styles.teamName}>{t.name}</span>
-                          <span className={styles.statusBadge} style={{ background: statusStyle.bg, border: statusStyle.border, color: statusStyle.color }}>
-                            {status}
-                          </span>
-                        </div>
-                        <div className={styles.teamMeta}>
-                          <span>{t.category}</span>
-                          {role && <span style={{ color: "#a48fff" }}>· {role}</span>}
-                          <span>· {t.members.length} учасників</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              isAuthenticated && (
+                <>
+                  {dm?.status === "blocked" && !dm.blockedByMe ? (
+                    <Button disabled icon={<IconLock size={15} />} title={`${displayName} заблокував(-ла) листування з вами`}>
+                      Листування заблоковано
+                    </Button>
+                  ) : (
+                    <Button
+                      icon={<IconChat size={15} />}
+                      onClick={() => panel.openDirect({ userId: profile.id, username: displayName, avatarUrl: profile.avatarUrl })}
+                    >
+                      {dm?.canAccept ? "Відповісти на запит" : "Написати"}
+                    </Button>
+                  )}
+                  <ButtonLink to={`/team/invite-to-team?userId=${profile.id}`} variant="primary" icon={<IconUsers size={15} />}>
+                    Запросити до команди
+                  </ButtonLink>
+                  {(!dm || dm.status !== "blocked" || dm.canUnblock) && (
+                    <Button variant="ghost" loading={dmBusy} onClick={() => void toggleBlock()}>
+                      {dm?.canUnblock ? "Розблокувати" : "Заблокувати"}
+                    </Button>
+                  )}
+                </>
+              )
             )}
           </div>
-
-          {/* Portfolio section */}
-          <div className={styles.portfolioSection}>
-            <div className={styles.portfolioHeader}>
-              <h2 className={styles.sectionTitle} style={{ margin: 0 }}>Портфоліо ({posts.length})</h2>
-              <div className={styles.filters}>
-                {FILTERS.map(f => (
-                  <button
-                    key={f}
-                    className={`${styles.filterBtn} ${activeFilter === f ? styles.filterActive : ""}`}
-                    onClick={() => setActiveFilter(f)}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.portfolioGrid}>
-              {filtered.length === 0 && (
-                <p style={{ color: "#777", fontFamily: "var(--font-inter)", fontSize: 14, margin: 0 }}>
-                  Постів немає
-                </p>
-              )}
-              {filtered.map(item => {
-                const urls = item.post.mediaUrls ?? [];
-                const videoUrl = urls.find(u => getMediaType(u) === 'video');
-                const imageUrl = urls.find(u => getMediaType(u) === 'image');
-                const fallbackBg = bgFor(item.post.postId);
-                return (
-                <div
-                  key={item.post.postId}
-                  className={styles.portfolioCard}
-                  onClick={() => navigate(`/posts/${item.post.postId}`)}
-                >
-                  <div
-                    className={styles.cardPlate}
-                    style={{
-                      position: 'relative', overflow: 'hidden',
-                      ...(imageUrl && !videoUrl ? { backgroundImage: `url("${imageUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
-                      ...(!videoUrl && !imageUrl ? { backgroundColor: fallbackBg, display: 'flex', alignItems: 'center', justifyContent: 'center' } : {}),
-                    }}
-                  >
-                    {videoUrl && (
-                      <video src={videoUrl} muted preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} />
-                    )}
-                    {!videoUrl && !imageUrl && urls[0] && (
-                      <span style={{ fontSize: 32, opacity: 0.7 }}>
-                        {getMediaType(urls[0]) === 'audio' ? '🎵' : '📄'}
-                      </span>
-                    )}
-                  </div>
-                  <div className={styles.cardBody}>
-                    <div className={styles.cardRow}>
-                      <span className={styles.cardTitle2}>{item.post.title}</span>
-                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                        {item.post.collaboration != null && (
-                          <span className={styles.cardTag} style={{ color: "#3fcca0", border: "1px solid #3fcca0", background: "rgba(63,204,160,0.15)" }}>
-                            Команда
-                          </span>
-                        )}
-                        {item.post.tags[0] && (
-                          <span className={styles.cardTag} style={{ color: "#a48fff", border: "1px solid #7c5cfc", background: "rgba(124,92,252,0.15)" }}>
-                            {item.post.tags[0]}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className={styles.cardStats}>
-                      <span>♥ {item.likesCount}</span>
-                      <span>💬 {item.commentsCount}</span>
-                      <span>👁 {item.viewsCount}</span>
-                    </div>
-                  </div>
-                </div>
-                );
-              })}
-            </div>
+          <div className={sh.profileNums}>
+            <span>
+              <b>{posts.length}</b>
+              {plural(posts.length, ["робота", "роботи", "робіт"])}
+            </span>
+            <span>
+              <b>{totalLikes}</b>
+              {plural(totalLikes, ["вподобання", "вподобання", "вподобань"])}
+            </span>
+            <span>
+              <b>{totalComments}</b>
+              {plural(totalComments, ["коментар", "коментарі", "коментарів"])}
+            </span>
+            <span>
+              <b>{teams.length}</b>
+              {plural(teams.length, ["команда", "команди", "команд"])}
+            </span>
           </div>
+          <p className={sh.profileBio}>
+            {profile.specialization && (
+              <>
+                {profile.specialization}
+                <br />
+              </>
+            )}
+            <span className={sh.mono}>
+              {profile.userName ? `@${profile.userName}` : profile.email}
+              {profile.createdAt ? ` · на платформі з ${new Date(profile.createdAt).toLocaleDateString("uk-UA")}` : ""}
+            </span>
+          </p>
         </div>
-        <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="unset" />
-      </div>
-    </div>
-  );
-};
+      </header>
 
-export default UserPublicPage;
+      <div className={sh.centerTabs}>
+        <Tabs
+          label="Розділи профілю"
+          value={tab}
+          onChange={setTab}
+          items={[
+            { value: "portfolio", label: "Портфоліо", count: posts.length },
+            { value: "teams", label: "Команди", count: teams.length },
+          ]}
+        />
+      </div>
+      <div style={{ paddingTop: "var(--sp-5)" }}>
+        {tab === "portfolio" && (
+          <Portfolio
+            posts={posts}
+            empty={{
+              title: isMe ? "Ваше портфоліо поки порожнє" : "Портфоліо поки порожнє",
+              text: isMe ? "Опублікуйте першу роботу — вона з'явиться тут." : "Ця людина ще не публікувала робіт.",
+              action: isMe ? <ButtonLink to="/posts/new">Створити пост</ButtonLink> : undefined,
+            }}
+          />
+        )}
+        {tab === "teams" && (
+          <UserTeams
+            teams={teams}
+            userId={profile.id}
+            empty={{
+              title: isMe ? "Ви ще не в жодній команді" : "Ця людина поки не в командах",
+              action: isMe ? <ButtonLink to="/teams">Знайти команду</ButtonLink> : undefined,
+            }}
+          />
+        )}
+      </div>
+    </Page>
+  );
+}

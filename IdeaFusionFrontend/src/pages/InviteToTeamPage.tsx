@@ -1,26 +1,25 @@
-import { FunctionComponent, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
-import Moderation from "../components/Moderation";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { teamsApi, groupInvitationsApi } from "../api/teams";
 import { useAuth } from "../context/AuthContext";
 import type { TeamEntity, UserDto } from "../api/types";
 import { teamStatusLabel, hasPermission } from "../api/types";
 import { api } from "../api/client";
-import styles from "./InviteToTeamPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Avatar, Button, ButtonLink, EmptyState, Field, Input, Loading, Notice, PageHeader, Select, Status, Textarea } from "../ui";
+import { IconCheck, IconUser, IconUsers } from "../ui/icons";
+import RadioCard from "../components/RadioCard";
+import { teamStatusTone } from "../lib/status";
+import { plural } from "../lib/plural";
+import sh from "./shared.module.css";
+import s from "./TeamForms.module.css";
 
-const PALETTE = ["#7c5cfc","#ff6b6b","#3fcca0","#ffb347","#29b6f6","#e040fb"];
-function accentFor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return PALETTE[h % PALETTE.length];
-}
-
-const InviteToTeamPage: FunctionComponent = () => {
+export default function InviteToTeamPage() {
+  usePageMeta("Запросити до команди", [{ label: "Команди", to: "/collaborations" }]);
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { user } = useAuth();
-
   const inviteeId = params.get("userId") ?? "";
   const preTeamId = params.get("teamId") ?? "";
 
@@ -35,37 +34,49 @@ const InviteToTeamPage: FunctionComponent = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !inviteeId) { setLoading(false); return; }
-    Promise.all([
-      api.get<UserDto>(`/api/users/${inviteeId}`).catch(() => null),
-      teamsApi.getByMember(user.id),
-    ]).then(([inv, teams]) => {
-      setInvitee(inv);
-      const allowed = (teams as TeamEntity[]).filter(t =>
-        hasPermission(t, user.id, "canInviteMembers")
-      );
-      setMyTeams(allowed);
-      if (!selectedTeamId && allowed.length > 0) setSelectedTeamId(allowed[0].id);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [user, inviteeId, selectedTeamId]);
+    if (!user || !inviteeId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    Promise.all([api.get<UserDto>(`/api/users/${inviteeId}`).catch(() => null), teamsApi.getMine()])
+      .then(([inv, teams]) => {
+        setInvitee(inv);
+        const allowed = (teams as TeamEntity[]).filter(t => hasPermission(t, user.id, "canInviteMembers"));
+        setMyTeams(allowed);
+        setSelectedTeamId(current => current || allowed[0]?.id || "");
+      })
+      .catch(() => setMyTeams([]))
+      .finally(() => setLoading(false));
+  }, [user, inviteeId]);
 
   const selectedTeam = myTeams.find(t => t.id === selectedTeamId) ?? null;
-
   const availableRoles = selectedTeam?.requiredRoles.map(r => r.role) ?? [];
 
-  async function handleSubmit() {
-    if (!user) { navigate("/login"); return; }
-    if (!selectedTeamId) { setError("Оберіть команду"); return; }
-    if (!role.trim())    { setError("Введіть роль");    return; }
-    if (!inviteeId)      { setError("Немає отримувача"); return; }
-
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (!selectedTeamId) {
+      setError("Оберіть команду");
+      return;
+    }
+    if (!role.trim()) {
+      setError("Вкажіть роль");
+      return;
+    }
+    if (!inviteeId) {
+      setError("Немає отримувача");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       await groupInvitationsApi.create({
         teamId: selectedTeamId,
         invitedUserId: inviteeId,
-        invitedByUserId: user.id,
         role: role.trim(),
         message: message.trim() || undefined,
         expirationDays: 14,
@@ -79,146 +90,134 @@ const InviteToTeamPage: FunctionComponent = () => {
   }
 
   const inviteeName = invitee?.fullName || invitee?.userName || invitee?.email?.split("@")[0] || inviteeId.slice(0, 8);
-  const inviteeInitials = inviteeName.slice(0, 2).toUpperCase();
-  const inviteeColor = accentFor(inviteeId);
+
+  if (!inviteeId) {
+    return (
+      <Page width="narrow">
+        <PageHeader title="Запросити до команди" />
+        <EmptyState
+          icon={<IconUser />}
+          title="Кого запрошуємо?"
+          text="Знайдіть людину через пошук і відкрийте її профіль — там є кнопка «Запросити до команди»."
+          action={<ButtonLink to="/search?kind=user">Шукати людей</ButtonLink>}
+        />
+      </Page>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Page width="narrow">
+        <Loading />
+      </Page>
+    );
+  }
+
+  if (done) {
+    return (
+      <Page width="narrow">
+        <div className={s.done}>
+          <span className={s.doneIcon}>
+            <IconCheck size={22} />
+          </span>
+          <h1 className={s.doneTitle}>Запрошення надіслано</h1>
+          <p className={sh.muted}>
+            {inviteeName} отримає запрошення до команди «{selectedTeam?.name}» на роль «{role}». Запрошення діє 14 днів.
+          </p>
+          <div className={sh.inline}>
+            <Button variant="primary" onClick={() => navigate(-1)}>
+              Назад
+            </Button>
+            {selectedTeam && <ButtonLink to={`/teams/${selectedTeam.id}`}>До команди</ButtonLink>}
+          </div>
+        </div>
+      </Page>
+    );
+  }
 
   return (
-    <div className={styles.page}>
-      <FrameComponent2 />
-
-      <header className={styles.header}>
-        <h2 className={styles.headerTitle}>Запросити до команди</h2>
-        <button className={styles.cancelBtn} onClick={() => navigate(-1)}>Скасувати</button>
-      </header>
-
-      <main className={styles.main}>
-        {done ? (
-          <div className={styles.card}>
-            <h3 className={styles.cardTitle} style={{ color: "#3fcca0" }}>✓ Запрошення надіслано!</h3>
-            <p style={{ color: "#888", fontSize: 14 }}>
-              {inviteeName} отримає запрошення до команди «{selectedTeam?.name}».
-            </p>
-            <button className={styles.submitBtn} onClick={() => navigate(-1)}>Назад</button>
-          </div>
-        ) : loading ? (
-          <div className={styles.card}>
-            <p style={{ color: "#aaa" }}>Завантаження...</p>
-          </div>
-        ) : (
-          <div className={styles.card}>
-            <h3 className={styles.cardTitle}>Надішли запрошення користувачу</h3>
-
-            {/* Кому */}
-            <div className={styles.section}>
-              <div className={styles.label}>Кому</div>
-              <div className={styles.recipient}>
-                {invitee?.avatarUrl ? (
-                  <img src={invitee.avatarUrl} alt="" className={styles.recipientAvatar} style={{ objectFit: "cover" }} />
-                ) : (
-                  <div className={styles.recipientAvatar} style={{ backgroundColor: inviteeColor }}>
-                    {inviteeInitials}
-                  </div>
-                )}
-                <div>
-                  <div className={styles.recipientName}>{inviteeName}</div>
-                  {invitee?.specialization && (
-                    <div className={styles.recipientRole}>{invitee.specialization}</div>
-                  )}
-                </div>
-              </div>
+    <Page width="narrow">
+      <PageHeader title="Запросити до команди" description="Запрошення надійде користувачу в розділ «Команди»." />
+      <form className={sh.form} onSubmit={e => void handleSubmit(e)}>
+        <section className={sh.formSection}>
+          <span className={sh.mono}>кому</span>
+          <Link to={`/users/${inviteeId}`} className={s.partyBody}>
+            <Avatar name={inviteeName} src={invitee?.avatarUrl} seed={inviteeId} size={40} />
+            <div className={s.partyText}>
+              <span className={s.partyName}>{inviteeName}</span>
+              {invitee?.specialization && <span className={sh.mono}>{invitee.specialization}</span>}
             </div>
+          </Link>
+        </section>
 
-            {/* Оберіть команду */}
-            <div className={styles.section}>
-              <div className={styles.label}>Оберіть команду</div>
-              {myTeams.length === 0 ? (
-                <p style={{ color: "#666", fontSize: 13 }}>
-                  У вас немає команд, де ви власник.{" "}
-                  <span style={{ color: "#7c5cfc", cursor: "pointer" }} onClick={() => navigate("/team/new")}>
-                    Створити команду
+        <section className={sh.formSection}>
+          <span className={sh.mono}>до команди</span>
+          {myTeams.length === 0 ? (
+            <EmptyState
+              icon={<IconUsers />}
+              title="Немає команд, куди ви можете запрошувати"
+              text="Запрошувати можуть власники команд та учасники з відповідним правом."
+              action={<ButtonLink to="/team/new">Створити команду</ButtonLink>}
+            />
+          ) : (
+            <div className={s.teamOptions} role="radiogroup" aria-label="Команда">
+              {myTeams.map(t => (
+                <RadioCard
+                  key={t.id}
+                  name="invite-team"
+                  checked={selectedTeamId === t.id}
+                  onSelect={() => {
+                    setSelectedTeamId(t.id);
+                    setRole("");
+                  }}
+                >
+                  <Avatar name={t.name} src={t.avatarUrl} seed={t.id} size={32} square />
+                  <span className={s.optText}>
+                    <span className={s.optName}>{t.name}</span>
+                    <span className={sh.mono}>
+                      {t.members.length} {plural(t.members.length, ["учасник", "учасники", "учасників"])} · {t.tags.join(" · ") || t.category}
+                    </span>
                   </span>
-                </p>
-              ) : (
-                <div className={styles.teamList}>
-                  {myTeams.map(t => {
-                    const status = teamStatusLabel(t.status);
-                    const active = selectedTeamId === t.id;
-                    const statusStyle =
-                      status === "Активна"
-                        ? { bg: "rgba(63,204,160,0.2)", border: "1px solid #3fcca0", color: "#3fcca0" }
-                        : status === "У пошуку"
-                        ? { bg: "rgba(124,92,252,0.2)", border: "1px solid #7c5cfc", color: "#a48fff" }
-                        : { bg: "rgba(210,50,50,0.2)", border: "1px solid #e05555", color: "#ff6b6b" };
-                    return (
-                      <label
-                        key={t.id}
-                        className={`${styles.teamRow} ${active ? styles.teamRowActive : ""}`}
-                        onClick={() => { setSelectedTeamId(t.id); setRole(""); }}
-                      >
-                        <div className={styles.teamAccent} style={{ backgroundColor: accentFor(t.id) }} />
-                        <div className={styles.teamInfo}>
-                          <div className={styles.teamTop}>
-                            <span className={styles.teamName}>{t.name}</span>
-                            <span className={styles.teamBadge} style={{ background: statusStyle.bg, border: statusStyle.border, color: statusStyle.color }}>
-                              {status}
-                            </span>
-                            <span className={styles.teamCount}>{t.members.length} учасників</span>
-                          </div>
-                          <div className={styles.teamSub}>{t.tags.join(" · ") || t.category}</div>
-                        </div>
-                        <input type="radio" name="team" className={styles.radio} readOnly checked={active} />
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+                  <Status tone={teamStatusTone(t.status)}>{teamStatusLabel(t.status).toLowerCase()}</Status>
+                </RadioCard>
+              ))}
             </div>
+          )}
+        </section>
 
-            {/* Роль */}
-            <div className={styles.section}>
-              <div className={styles.label}>На роль</div>
+        {myTeams.length > 0 && (
+          <section className={sh.formSection}>
+            <Field label="Роль" required htmlFor="inv-role">
               {availableRoles.length > 0 ? (
-                <select className={styles.select} value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="">Оберіть з наявних...</option>
-                  {availableRoles.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
+                <Select id="inv-role" value={role} onChange={e => setRole(e.target.value)}>
+                  <option value="">Оберіть з відкритих ролей…</option>
+                  {availableRoles.map(r => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </Select>
               ) : (
-                <input
-                  className={styles.input}
-                  placeholder="Введіть роль (напр. UI Designer)"
-                  value={role}
-                  onChange={e => setRole(e.target.value)}
-                />
+                <Input id="inv-role" placeholder="Напр.: UI Designer" value={role} onChange={e => setRole(e.target.value)} />
               )}
-            </div>
-
-            {/* Повідомлення */}
-            <div className={styles.section}>
-              <div className={styles.label}>Текст повідомлення</div>
-              <textarea
-                className={styles.textarea}
-                rows={5}
-                placeholder="Привіт! Ми хотіли б запросити вас до нашої команди..."
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-              />
-            </div>
-
-            {error && <p style={{ color: "#ff6b6b", fontSize: 13 }}>{error}</p>}
-
-            <button
-              className={styles.submitBtn}
-              onClick={handleSubmit}
-              disabled={submitting || myTeams.length === 0}
-            >
-              {submitting ? "Надсилання..." : "Надіслати"}
-            </button>
-          </div>
+            </Field>
+            <Field label="Повідомлення" htmlFor="inv-msg">
+              <Textarea id="inv-msg" rows={5} placeholder="Привіт! Ми хотіли б запросити вас до нашої команди…" value={message} onChange={e => setMessage(e.target.value)} />
+            </Field>
+          </section>
         )}
-      </main>
-      <Moderation moderationPosition="relative" moderationTop="unset" moderationLeft="124px" />
-    </div>
-  );
-};
 
-export default InviteToTeamPage;
+        {error && <Notice tone="error">{error}</Notice>}
+
+        <div className={sh.formActions}>
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            Скасувати
+          </Button>
+          <Button type="submit" variant="primary" loading={submitting} disabled={myTeams.length === 0}>
+            Надіслати запрошення
+          </Button>
+        </div>
+      </form>
+    </Page>
+  );
+}

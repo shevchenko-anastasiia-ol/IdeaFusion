@@ -1,4 +1,5 @@
 using Collaboration.Application.Commands.TeamPost;
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Domain.Exceptions;
 using Collaboration.Domain.Interfaces;
 using Collaboration.Domain.ValueOfObjects;
@@ -13,7 +14,16 @@ public class TeamPostCommandHandlersTests
 {
     private readonly Mock<ITeamPostRepository> _postRepoMock = new();
     private readonly Mock<ITeamRepository> _teamRepoMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    private void SetCaller(string userId, string? username = null)
+    {
+        _callerMock.Setup(c => c.UserId).Returns(userId);
+        _callerMock.Setup(c => c.Username).Returns(username ?? userId);
+        _callerMock.Setup(c => c.ToSnapshot())
+                   .Returns(() => new UserSnapshot(userId, username ?? userId));
+    }
 
     private static Domain.Entities.Team CreateTeam(string id = "team-1")
     {
@@ -49,13 +59,12 @@ public class TeamPostCommandHandlersTests
             .Setup(r => r.CreateAsync(It.IsAny<Domain.Entities.TeamPost>(), _ct))
             .Returns<Domain.Entities.TeamPost, CancellationToken>((p, _) => Task.FromResult(p));
 
-        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateTeamPostCommand
         {
             PostId = "post-1",
             TeamId = "team-1",
-            AuthorUserId = "user-1",
-            AuthorUsername = "alice",
             Title = "My Title"
         };
 
@@ -74,11 +83,11 @@ public class TeamPostCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct))
                      .ReturnsAsync((Domain.Entities.Team?)null);
 
-        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", AuthorUserId = "user-1",
-            AuthorUsername = "alice", Title = "Title"
+            PostId = "post-1", TeamId = "team-1", Title = "Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -93,11 +102,11 @@ public class TeamPostCommandHandlersTests
         team.MarkAsDeleted();
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
 
-        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", AuthorUserId = "user-1",
-            AuthorUsername = "alice", Title = "Title"
+            PostId = "post-1", TeamId = "team-1", Title = "Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -112,11 +121,11 @@ public class TeamPostCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "outsider", _ct)).ReturnsAsync(false);
 
-        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("outsider");
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", AuthorUserId = "outsider",
-            AuthorUsername = "bob", Title = "Title"
+            PostId = "post-1", TeamId = "team-1", Title = "Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -133,11 +142,11 @@ public class TeamPostCommandHandlersTests
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
         _postRepoMock.Setup(r => r.ExistsByPostIdAsync("post-1", "team-1", _ct)).ReturnsAsync(true);
 
-        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", AuthorUserId = "user-1",
-            AuthorUsername = "alice", Title = "Title"
+            PostId = "post-1", TeamId = "team-1", Title = "Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -154,11 +163,11 @@ public class TeamPostCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
 
-        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new CreateTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", AuthorUserId = "user-1",
-            AuthorUsername = "alice", Title = "Title"
+            PostId = "post-1", TeamId = "team-1", Title = "Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -176,10 +185,11 @@ public class TeamPostCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
         _postRepoMock.Setup(r => r.UpdateAsync(post, _ct)).ReturnsAsync(post);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -194,10 +204,11 @@ public class TeamPostCommandHandlersTests
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct))
                      .ReturnsAsync((Domain.Entities.TeamPost?)null);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -211,10 +222,11 @@ public class TeamPostCommandHandlersTests
         var post = CreateTeamPost(teamId: "other-team");
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -229,10 +241,11 @@ public class TeamPostCommandHandlersTests
         post.MarkAsDeleted();
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
 
-        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new UpdateTeamPostTitleCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -250,10 +263,11 @@ public class TeamPostCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
         _postRepoMock.Setup(r => r.UpdateAsync(post, _ct)).ReturnsAsync(post);
 
-        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -268,16 +282,17 @@ public class TeamPostCommandHandlersTests
     {
         var post = CreateTeamPost(authorId: "author-id");
         var team = CreateTeam();
-        team.AddMember(new UserSnapshot("member-id", "deleter"), "Moderator");
+        team.Join(new UserSnapshot("member-id", "deleter"), "Moderator");
         team.Members.Single(m => m.UserId == "member-id").Permissions = [Domain.Entities.TeamPermission.EditPosts];
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _postRepoMock.Setup(r => r.UpdateAsync(post, _ct)).ReturnsAsync(post);
 
-        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("member-id", "deleter");
+        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", UserId = "member-id"
+            PostId = "post-1", TeamId = "team-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -292,10 +307,11 @@ public class TeamPostCommandHandlersTests
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct))
                      .ReturnsAsync((Domain.Entities.TeamPost?)null);
 
-        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -309,10 +325,11 @@ public class TeamPostCommandHandlersTests
         var post = CreateTeamPost(teamId: "other-team");
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
 
-        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("user-1", "alice");
+        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -327,10 +344,11 @@ public class TeamPostCommandHandlersTests
         _postRepoMock.Setup(r => r.GetByPostIdAsync("post-1", _ct)).ReturnsAsync(post);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
 
-        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("outsider");
+        var handler = new DeleteTeamPostCommandHandler(_postRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", UserId = "outsider"
+            PostId = "post-1", TeamId = "team-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))

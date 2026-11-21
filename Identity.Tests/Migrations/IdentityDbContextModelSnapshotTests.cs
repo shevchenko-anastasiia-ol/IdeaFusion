@@ -111,7 +111,7 @@ public class IdentityDbContextModelSnapshotTests
     }
 
     [Fact]
-    public void BuildModel_RegistersRefreshTokenEntity()
+    public void BuildModel_RegistersAuditLogEntryEntity()
     {
         _snapshotType.Should().NotBeNull();
 
@@ -120,8 +120,22 @@ public class IdentityDbContextModelSnapshotTests
         var modelBuilder = new ModelBuilder();
         method!.Invoke(instance, new object[] { modelBuilder });
 
-        var tokenType = modelBuilder.Model.FindEntityType("IdentityServiceDomain.Entities.RefreshToken");
-        tokenType.Should().NotBeNull();
+        var auditType = modelBuilder.Model.FindEntityType("IdentityServiceDomain.Entities.AuditLogEntry");
+        auditType.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void BuildModel_NoLongerRegistersRefreshTokenEntity()
+    {
+        _snapshotType.Should().NotBeNull();
+
+        var instance     = Activator.CreateInstance(_snapshotType!);
+        var method       = _snapshotType!.GetMethod("BuildModel", BindingFlags.NonPublic | BindingFlags.Instance);
+        var modelBuilder = new ModelBuilder();
+        method!.Invoke(instance, new object[] { modelBuilder });
+
+        modelBuilder.Model.FindEntityType("IdentityServiceDomain.Entities.RefreshToken")
+            .Should().BeNull();
     }
 
     [Fact]

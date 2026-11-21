@@ -1,87 +1,91 @@
-function getToken(): string | null {
-  return localStorage.getItem('accessToken');
-}
+import { getToken, updateToken } from '../auth/keycloak';
 
-let _isRefreshing = false;
-let _waitQueue: Array<(token: string | null) => void> = [];
+/**
+ * How far ahead of expiry a token is considered still good. keycloak-js refreshes
+ * silently when the remaining lifetime is under this, so a 401 almost always
+ * means the session is genuinely gone rather than the token being stale.
+ */
+const MIN_TOKEN_VALIDITY_SECONDS = 5;
 
-async function tryRefresh(): Promise<string | null> {
-  const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) return null;
-  try {
-    const res = await fetch('/api/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      return null;
-    }
-    const data = await res.json();
-    localStorage.setItem('accessToken', data.accessToken);
-    if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
-    return data.accessToken as string;
-  } catch {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    return null;
-  }
-}
-
-async function getRefreshedToken(): Promise<string | null> {
-  if (_isRefreshing) {
-    return new Promise<string | null>(resolve => { _waitQueue.push(resolve); });
-  }
-  _isRefreshing = true;
-  const newToken = await tryRefresh();
-  _isRefreshing = false;
-  _waitQueue.forEach(resolve => resolve(newToken));
-  _waitQueue = [];
-  return newToken;
+async function authHeader(): Promise<Record<string, string>> {
+  const token = await updateToken(MIN_TOKEN_VALIDITY_SECONDS);
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
+    ...(await authHeader()),
+    ...(options.headers as Record<string, string> | undefined),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  let res = await fetch(path, { ...options, headers });
+  const res = await fetch(path, { ...options, headers });
 
   if (res.status === 401) {
-    const newToken = await getRefreshedToken();
-    if (newToken) {
-      headers['Authorization'] = `Bearer ${newToken}`;
-      res = await fetch(path, { ...options, headers });
-    } else {
-      window.location.href = '/login';
-      throw new Error('Сесія закінчилась. Будь ласка, увійдіть знову.');
+    // One retry: the token may have been revoked server-side between our refresh
+    // and this call, and updateToken is a no-op while the session is still good.
+    const retried = await updateToken(-1);
+    if (retried && !path.startsWith('/api/auth/me')) {
+      const retryHeaders: Record<string, string> = {
+        ...headers,
+        Authorization: `Bearer ${retried}`,
+      };
+      const retry = await fetch(path, { ...options, headers: retryHeaders });
+      if (retry.ok) return parseBody<T>(retry);
+      throw await toError(retry);
     }
+    // The session is gone. Leave it to the route guard to send the user to login.
+    throw await toError(res);
   }
 
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try {
-      const raw = await res.text();
-      const body = raw ? JSON.parse(raw) : null;
-      const base = body?.title ?? body?.message
-        ?? (Array.isArray(body) ? body.map((e: { description?: string }) => e.description).join('; ') : null)
-        ?? message;
-      const detail = body?.details ? ` (${body.details})` : '';
-      message = base + detail;
-    } catch {
-      // тіло помилки не є валідним JSON, лишаємо повідомлення за замовчуванням
-    }
-    throw new Error(message);
-  }
+  if (!res.ok) throw await toError(res);
 
+  return parseBody<T>(res);
+}
+
+async function parseBody<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!text) return undefined as T;
+  // ASP.NET sends a bare string result (e.g. the URL from /api/media/upload) as
+  // text/plain, without JSON quotes; only JSON bodies go through JSON.parse.
+  const type = res.headers.get('content-type') ?? '';
+  if (!type.includes('json')) return text as T;
   return JSON.parse(text) as T;
+}
+
+async function toError(res: Response): Promise<Error> {
+  let message = `HTTP ${res.status}`;
+  try {
+    const raw = await res.text();
+    const body = raw ? JSON.parse(raw) : null;
+    const base = body?.title ?? body?.message
+      ?? (Array.isArray(body) ? body.map((e: { description?: string }) => e.description).join('; ') : null)
+      ?? message;
+    const detail = body?.details ? ` (${body.details})` : '';
+    message = base + detail;
+  } catch {
+    // тіло помилки не є валідним JSON, лишаємо повідомлення за замовчуванням
+  }
+  return new Error(message);
+}
+
+/**
+ * Multipart uploads must not carry a JSON content-type: the browser has to add
+ * the multipart boundary itself.
+ */
+export async function upload<T>(path: string, form: FormData, method = 'POST'): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) throw await toError(res);
+  return parseBody<T>(res);
+}
+
+/** Used by endpoints that are readable anonymously, so a missing token is fine. */
+export function peekToken(): string | null {
+  return getToken();
 }
 
 export const api = {
@@ -90,4 +94,5 @@ export const api = {
   put:    <T>(path: string, body?: unknown)    => request<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
   patch:  <T>(path: string, body?: unknown)    => request<T>(path, { method: 'PATCH',  body: JSON.stringify(body) }),
   delete: <T>(path: string, body?: unknown)    => request<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
+  upload,
 };

@@ -15,7 +15,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer"
+            TeamId = "team-1", Role = "Developer"
         };
 
         var result = validator.Validate(command);
@@ -29,7 +29,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer",
+            TeamId = "team-1", Role = "Developer",
             Message = "Please accept me."
         };
 
@@ -44,7 +44,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = teamId, FromUserId = "user-1", Role = "Developer"
+            TeamId = teamId, Role = "Developer"
         };
 
         var result = validator.Validate(command);
@@ -55,28 +55,12 @@ public class CollaborationRequestValidatorsTests
     }
 
     [Fact]
-    public void CreateRequest_WhenFromUserIdEmpty_FailsValidation()
-    {
-        var validator = new CreateCollaborationRequestCommandValidator();
-        var command = new CreateCollaborationRequestCommand
-        {
-            TeamId = "team-1", FromUserId = "", Role = "Developer"
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "FromUserId" && e.ErrorMessage == "FromUserId is required.");
-    }
-
-    [Fact]
     public void CreateRequest_WhenRoleEmpty_FailsValidation()
     {
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = ""
+            TeamId = "team-1", Role = ""
         };
 
         var result = validator.Validate(command);
@@ -92,7 +76,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = new string('x', 101)
+            TeamId = "team-1", Role = new string('x', 101)
         };
 
         var result = validator.Validate(command);
@@ -108,7 +92,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer", Message = null
+            TeamId = "team-1", Role = "Developer", Message = null
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -120,7 +104,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CreateCollaborationRequestCommandValidator();
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer",
+            TeamId = "team-1", Role = "Developer",
             Message = new string('x', 1001)
         };
 
@@ -140,7 +124,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new AcceptCollaborationRequestCommandValidator();
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "user-1"
+            RequestId = "req-1"
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -152,7 +136,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new AcceptCollaborationRequestCommandValidator();
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "", UserId = "user-1"
+            RequestId = ""
         };
 
         var result = validator.Validate(command);
@@ -160,22 +144,6 @@ public class CollaborationRequestValidatorsTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
             e.PropertyName == "RequestId" && e.ErrorMessage == "RequestId is required.");
-    }
-
-    [Fact]
-    public void AcceptRequest_WhenUserIdEmpty_FailsValidation()
-    {
-        var validator = new AcceptCollaborationRequestCommandValidator();
-        var command = new AcceptCollaborationRequestCommand
-        {
-            RequestId = "req-1", UserId = ""
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "UserId" && e.ErrorMessage == "UserId is required.");
     }
 
     // ── CancelCollaborationRequestCommandValidator ────────────────────────────
@@ -186,7 +154,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CancelCollaborationRequestCommandValidator();
         var command = new CancelCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "user-1"
+            RequestId = "req-1"
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -198,7 +166,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new CancelCollaborationRequestCommandValidator();
         var command = new CancelCollaborationRequestCommand
         {
-            RequestId = "", UserId = "user-1"
+            RequestId = ""
         };
 
         var result = validator.Validate(command);
@@ -206,22 +174,6 @@ public class CollaborationRequestValidatorsTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
             e.PropertyName == "RequestId" && e.ErrorMessage == "RequestId is required.");
-    }
-
-    [Fact]
-    public void CancelRequest_WhenUserIdEmpty_FailsValidation()
-    {
-        var validator = new CancelCollaborationRequestCommandValidator();
-        var command = new CancelCollaborationRequestCommand
-        {
-            RequestId = "req-1", UserId = ""
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "UserId" && e.ErrorMessage == "UserId is required.");
     }
 
     // ── RejectCollaborationRequestCommandValidator ────────────────────────────
@@ -232,7 +184,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new RejectCollaborationRequestCommandValidator();
         var command = new RejectCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "user-1"
+            RequestId = "req-1"
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -244,7 +196,7 @@ public class CollaborationRequestValidatorsTests
         var validator = new RejectCollaborationRequestCommandValidator();
         var command = new RejectCollaborationRequestCommand
         {
-            RequestId = "", UserId = "user-1"
+            RequestId = ""
         };
 
         var result = validator.Validate(command);
@@ -253,18 +205,4 @@ public class CollaborationRequestValidatorsTests
         result.Errors.Should().Contain(e => e.PropertyName == "RequestId");
     }
 
-    [Fact]
-    public void RejectRequest_WhenUserIdEmpty_FailsValidation()
-    {
-        var validator = new RejectCollaborationRequestCommandValidator();
-        var command = new RejectCollaborationRequestCommand
-        {
-            RequestId = "req-1", UserId = ""
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
-    }
 }

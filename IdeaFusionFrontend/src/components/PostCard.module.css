@@ -1,0 +1,207 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+/* ── Who posted ─────────────────────────────────────────────────────── */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+}
+.authorLink {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.authorName {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a.authorName:hover {
+  text-decoration: none;
+  color: var(--accent-text);
+}
+.meta {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.headRight {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(255, 179, 71, 0.45);
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.flagRed {
+  border-color: rgba(255, 107, 107, 0.5);
+  color: var(--red);
+}
+.flag:hover {
+  text-decoration: none;
+  background: var(--surface-2);
+}
+
+/* ── The work ───────────────────────────────────────────────────────── */
+.media {
+  cursor: pointer;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-2) 0;
+}
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  min-width: 40px;
+  justify-content: center;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: none;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: 500;
+}
+.action:hover {
+  text-decoration: none;
+  color: var(--text-2);
+}
+.save {
+  margin-left: auto;
+}
+.liked,
+.liked:hover {
+  color: var(--red);
+}
+.saved,
+.saved:hover {
+  color: var(--accent-text);
+}
+
+/* ── Caption ────────────────────────────────────────────────────────── */
+.body {
+  padding: 2px var(--sp-4) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.likes {
+  font-weight: 600;
+  font-size: var(--fs-md);
+}
+.title {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+.title a {
+  color: var(--text);
+}
+.title a:hover {
+  text-decoration: none;
+  color: var(--accent-text);
+}
+.desc {
+  color: var(--text-2);
+  font-size: 0.9375rem;
+  white-space: pre-line;
+}
+.descClamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.more {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text-3);
+  font-size: var(--fs-md);
+}
+.more:hover {
+  color: var(--text);
+}
+.tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.tags a {
+  color: var(--accent-text);
+}
+.allComments {
+  color: var(--text-3);
+  font-size: var(--fs-md);
+}
+.allComments:hover {
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    margin: 0 calc(-1 * var(--sp-4));
+  }
+  .flag {
+    font-size: 0;
+    gap: 0;
+    width: 26px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* The author's email, under the name and smaller. */
+.email {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}

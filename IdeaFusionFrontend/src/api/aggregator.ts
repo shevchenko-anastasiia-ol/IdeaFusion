@@ -8,7 +8,11 @@ import type {
 
 export const aggregatorApi = {
   getFeed: (currentUserId?: number | null, skip = 0, take = 10, sortBy?: 'time' | 'popular') => {
-    const params = new URLSearchParams({ skip: String(skip), take: String(take) });
+    const params = new URLSearchParams({ 
+        skip: String(skip), 
+        take: String(take),
+        _t: String(Date.now()) 
+    });
     if (currentUserId != null) params.set('currentUserId', String(currentUserId));
     if (sortBy === 'popular') params.set('sortBy', 'popular');
     return api.get<PostWithEngagementDto[]>(`/api/aggregator/posts/feed?${params}`);
