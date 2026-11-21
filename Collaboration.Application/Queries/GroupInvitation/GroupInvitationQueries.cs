@@ -19,9 +19,9 @@ public class GetGroupInvitationsByTeamQuery : IQuery<IEnumerable<Domain.Entities
     public string TeamId { get; init; } = default!;
 }
  
-public class GetGroupInvitationsByUserQuery : IQuery<IEnumerable<Domain.Entities.GroupInvitation>>
+/// <summary>The invitations addressed to the caller. No user id: it is the token's.</summary>
+public class GetMyGroupInvitationsQuery : IQuery<IEnumerable<Domain.Entities.GroupInvitation>>
 {
-    public string UserId { get; init; } = default!;
 }
  
 public class GetExpiredGroupInvitationsQuery : IQuery<IEnumerable<Domain.Entities.GroupInvitation>> { }

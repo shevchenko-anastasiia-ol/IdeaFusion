@@ -1,0 +1,171 @@
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 260px;
+  padding: var(--sp-8) var(--sp-4);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  color: var(--text-3);
+  text-align: center;
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.zoneDrag,
+.gridDrag {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft);
+}
+.zoneIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: var(--sp-2);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.pick {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--fs-base);
+}
+.pick:hover {
+  color: var(--accent-text);
+}
+.or {
+  font-size: var(--fs-sm);
+}
+.hint {
+  margin-top: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+  border-radius: var(--r-lg);
+  border: 1.5px dashed transparent;
+}
+.tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.tileFirst {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.fileTile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--sp-3);
+  color: var(--text-3);
+  text-align: center;
+}
+.fileName {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fileSize {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.index {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: rgba(14, 14, 17, 0.85);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 22px;
+  text-align: center;
+}
+.badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+}
+.remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(14, 14, 17, 0.85);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.remove:hover {
+  background: var(--red);
+  color: #fff;
+}
+.add {
+  width: 100%;
+  height: 100%;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  color: var(--text-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+}
+.tile:has(.add) {
+  border: 0;
+  background: none;
+}
+.add:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

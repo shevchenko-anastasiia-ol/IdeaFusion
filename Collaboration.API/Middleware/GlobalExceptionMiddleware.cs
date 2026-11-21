@@ -64,6 +64,15 @@ public class GlobalExceptionMiddleware
                 context.Response.StatusCode = StatusCodes.Status409Conflict;
                 break;
 
+            // Distinct from DomainException (400) on purpose: the request was
+            // well-formed, the caller is simply not allowed to make it.
+            case ForbiddenException forbidden:
+                problemDetails.Status = StatusCodes.Status403Forbidden;
+                problemDetails.Title = "Forbidden";
+                problemDetails.Detail = forbidden.Message;
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                break;
+
             case DomainException domain:
                 problemDetails.Status = StatusCodes.Status400BadRequest;
                 problemDetails.Title = "Domain Error";

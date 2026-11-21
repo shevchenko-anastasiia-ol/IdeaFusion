@@ -1,28 +1,24 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using Grpc.Core;
+﻿using Grpc.Core;
 using IdeaFusion.Grpc.Users;
-using IdentityBLL.Configuration;
+using IdentityBLL.DTOs;
 using IdentityBLL.Interfaces;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+using IdentityServiceDomain.Entities;
 
 namespace IdentityAPI.GrpcServices;
 
 public class UserGrpcServiceImpl : UserGrpcService.UserGrpcServiceBase
 {
     private readonly IUserService _userService;
-    private readonly JwtSettings _jwtSettings;
+    private readonly IAuditService _auditService;
     private readonly ILogger<UserGrpcServiceImpl> _logger;
 
     public UserGrpcServiceImpl(
         IUserService userService,
-        IOptions<JwtSettings> jwtSettings,
+        IAuditService auditService,
         ILogger<UserGrpcServiceImpl> logger)
     {
         _userService = userService;
-        _jwtSettings = jwtSettings.Value;
+        _auditService = auditService;
         _logger = logger;
     }
 
@@ -36,17 +32,7 @@ public class UserGrpcServiceImpl : UserGrpcService.UserGrpcServiceBase
         if (user == null)
             throw new RpcException(new Status(StatusCode.NotFound, $"User {userId} not found."));
 
-        return new UserResponse
-        {
-            User = new UserDto
-            {
-                UserId    = user.Id.ToString(),
-                UserName  = user.Email,
-                Email     = user.Email,
-                AvatarUrl = string.Empty,
-                CreatedAt = user.CreatedAt.ToString("O")
-            }
-        };
+        return new UserResponse { User = ToUserDto(user) };
     }
 
     public override async Task<UsersResponse> GetUsersByIds(GetUsersByIdsRequest request, ServerCallContext context)
@@ -58,65 +44,15 @@ public class UserGrpcServiceImpl : UserGrpcService.UserGrpcServiceBase
                 ? _userService.GetUserByIdAsync(guid, context.CancellationToken)
                 : Task.FromResult<IdentityBLL.DTOs.UserDto?>(null));
 
+        // One bad id in the batch is skipped rather than failing the whole call, so
+        // a single malformed id cannot break a page of a list.
         var users = await Task.WhenAll(tasks);
 
         response.Users.AddRange(users
             .Where(u => u != null)
-            .Select(u => new UserDto
-            {
-                UserId    = u!.Id.ToString(),
-                UserName  = u.Email,
-                Email     = u.Email,
-                AvatarUrl = string.Empty,
-                CreatedAt = u.CreatedAt.ToString("O")
-            }));
+            .Select(ToUserDto));
 
         return response;
-    }
-
-    public override Task<ValidateTokenResponse> ValidateToken(ValidateTokenRequest request, ServerCallContext context)
-    {
-        try
-        {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var validationParams = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey         = key,
-                ValidateIssuer           = true,
-                ValidIssuer              = _jwtSettings.Issuer,
-                ValidateAudience         = true,
-                ValidAudience            = _jwtSettings.Audience,
-                ValidateLifetime         = true,
-                ClockSkew                = TimeSpan.Zero
-            };
-
-            var principal = tokenHandler.ValidateToken(
-                request.AccessToken, validationParams, out _);
-
-            var userId   = principal.FindFirstValue(ClaimTypes.NameIdentifier)
-                           ?? principal.FindFirstValue("sub")
-                           ?? string.Empty;
-            var userName = principal.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
-            var email    = principal.FindFirstValue(ClaimTypes.Email)
-                           ?? principal.FindFirstValue("email")
-                           ?? string.Empty;
-
-            return Task.FromResult(new ValidateTokenResponse
-            {
-                IsValid  = true,
-                UserId   = userId,
-                UserName = userName,
-                Email    = email
-            });
-        }
-        catch (SecurityTokenException ex)
-        {
-            _logger.LogWarning(ex, "Token validation failed.");
-            return Task.FromResult(new ValidateTokenResponse { IsValid = false });
-        }
     }
 
     public override async Task<CheckUserExistsResponse> CheckUserExists(CheckUserExistsRequest request, ServerCallContext context)
@@ -128,4 +64,63 @@ public class UserGrpcServiceImpl : UserGrpcService.UserGrpcServiceBase
 
         return new CheckUserExistsResponse { Exists = user != null };
     }
+
+    public override async Task<RecordAuditResponse> RecordAudit(RecordAuditRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.Action) ||
+            string.IsNullOrWhiteSpace(request.TargetType) ||
+            string.IsNullOrWhiteSpace(request.TargetId))
+        {
+            throw new RpcException(new Status(
+                StatusCode.InvalidArgument,
+                "action, target_type and target_id are required."));
+        }
+
+        // A caller that cannot name itself is not a caller we can attribute the
+        // action to, so refuse rather than store a zero-actor entry.
+        if (!Guid.TryParse(request.ActorId, out var actorId) || actorId == Guid.Empty)
+        {
+            throw new RpcException(new Status(
+                StatusCode.InvalidArgument,
+                "actor_id must be a non-empty GUID."));
+        }
+
+        var entry = await _auditService.RecordAsync(
+            new AuditRecordDto
+            {
+                ActorId = actorId,
+                ActorName = request.ActorName,
+                Action = request.Action,
+                TargetType = request.TargetType,
+                TargetId = request.TargetId,
+                TargetName = request.TargetName,
+                Details = request.Details,
+                Category = ParseCategory(request.Category)
+            },
+            context.CancellationToken);
+
+        return new RecordAuditResponse
+        {
+            EntryId = entry.Id.ToString(),
+            Recorded = true
+        };
+    }
+
+    private static AuditCategory ParseCategory(string? category)
+        => Enum.TryParse<AuditCategory>(category, ignoreCase: true, out var parsed)
+            ? parsed
+            : AuditCategory.User;
+
+    /// <summary>
+    /// Falls back to the email when no display name is set, so consumers always
+    /// get something to render rather than an empty string.
+    /// </summary>
+    private static IdeaFusion.Grpc.Users.UserDto ToUserDto(IdentityBLL.DTOs.UserDto user) => new()
+    {
+        UserId = user.Id.ToString(),
+        UserName = string.IsNullOrWhiteSpace(user.UserName) ? user.Email : user.UserName,
+        Email = user.Email,
+        AvatarUrl = user.AvatarUrl ?? string.Empty,
+        CreatedAt = user.CreatedAt.ToString("O")
+    };
 }

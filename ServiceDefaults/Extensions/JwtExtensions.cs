@@ -20,8 +20,8 @@ public static class JwtExtensions
                            ?? configuration["services:keycloak:http:0"]
                            ?? "http://localhost:8080";
 
-            var realm = configuration["Keycloak:Realm"] ?? "GameNest";
-            var audience = configuration["Keycloak:Audience"] ?? "gamenest_api";
+            var realm = configuration["Keycloak:Realm"] ?? "IdeaFusion";
+            var audience = configuration["Keycloak:Audience"] ?? "ideafusion_api";
 
             var authority = $"{keycloakUrl}/realms/{realm}";
 
@@ -40,6 +40,8 @@ public static class JwtExtensions
                     options.Audience = audience;
                     options.RequireHttpsMetadata = false; // For local dev with HTTP
 
+                    options.MapInboundClaims = false;
+
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
@@ -47,18 +49,16 @@ public static class JwtExtensions
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
 
-                        ValidAudiences = new[]
-                        {
-                            audience,
-                            "account",  // Default Keycloak audience
-                            "api://default"
-                        },
+                        // Only the API's own audience. "account" and "api://default"
+                        // are Keycloak defaults that do not belong to this realm.
+                        ValidAudiences = new[] { audience },
 
                         ValidIssuers = new[] { authority },
 
-                        // Keycloak claim mappings
+                        // The realm emits a flat "role" claim, so that is the claim
+                        // RequireRole must read.
                         NameClaimType = "preferred_username",
-                        RoleClaimType = "realm_access.roles",
+                        RoleClaimType = "role",
 
                         ClockSkew = TimeSpan.FromMinutes(5)
                     };
@@ -87,13 +87,6 @@ public static class JwtExtensions
                             var username = context.Principal?.Identity?.Name ?? "Unknown";
                             logger.LogInformation("Token validated for user: {Username}", username);
 
-                            var permissionsClaim = context.Principal?.FindFirst("authorization")?.Value;
-                            if (!string.IsNullOrEmpty(permissionsClaim))
-                            {
-                                logger.LogDebug("User has permissions claim: {Permissions}",
-                                    permissionsClaim);
-                            }
-
                             return Task.CompletedTask;
                         },
 
@@ -112,31 +105,6 @@ public static class JwtExtensions
                         }
                     };
                 });
-
-            services.AddAuthorization(options =>
-            {
-                // Basic authenticated user policy
-                options.AddPolicy("RequireAuthenticatedUser", policy =>
-                {
-                    policy.RequireAuthenticatedUser();
-                });
-
-                // Role-based policies
-                options.AddPolicy("RequireAdminRole", policy =>
-                {
-                    policy.RequireRole("admin");
-                });
-
-                options.AddPolicy("RequireManagerRole", policy =>
-                {
-                    policy.RequireRole("admin", "manager");
-                });
-
-                options.AddPolicy("RequireUserRole", policy =>
-                {
-                    policy.RequireRole("admin", "manager", "user");
-                });
-            });
 
             return services;
         }

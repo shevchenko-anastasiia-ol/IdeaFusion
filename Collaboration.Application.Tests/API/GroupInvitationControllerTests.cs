@@ -1,4 +1,5 @@
 using Collaboration.API.Controllers;
+using Collaboration.API.Services;
 using Collaboration.Application.Commands.GroupInvitation;
 using Collaboration.Application.Queries.GroupInvitation;
 using Collaboration.Domain.Common.Helpers;
@@ -16,11 +17,12 @@ namespace Collaboration.Application.Tests.API;
 public class GroupInvitationControllerTests
 {
     private readonly Mock<IMediator> _mediatorMock = new();
+    private readonly Mock<ICollaborationAuditWriter> _auditMock = new();
     private readonly GroupInvitationController _controller;
 
     public GroupInvitationControllerTests()
     {
-        _controller = new GroupInvitationController(_mediatorMock.Object)
+        _controller = new GroupInvitationController(_mediatorMock.Object, _auditMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -105,16 +107,16 @@ public class GroupInvitationControllerTests
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(invitations);
     }
 
-    // ── GET api/group-invitations/user/{userId} ───────────────────────────────
+    // ── GET api/group-invitations/mine ───────────────────────────────────────
 
     [Fact]
-    public async Task GetByUser_ReturnsOkWithInvitations()
+    public async Task GetMine_ReturnsOkWithInvitations()
     {
         var invitations = new List<Domain.Entities.GroupInvitation> { CreateInvitation() };
-        _mediatorMock.Setup(m => m.Send(It.IsAny<GetGroupInvitationsByUserQuery>(), default))
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetMyGroupInvitationsQuery>(), default))
                      .ReturnsAsync(invitations);
 
-        var result = await _controller.GetByUser("invited-user", default);
+        var result = await _controller.GetMine(default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(invitations);
     }
@@ -144,7 +146,7 @@ public class GroupInvitationControllerTests
 
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "u2", InvitedByUserId = "u1", Role = "Dev"
+            TeamId = "team-1", InvitedUserId = "u2", Role = "Dev"
         };
         var result = await _controller.Create(command, default);
 
@@ -161,7 +163,7 @@ public class GroupInvitationControllerTests
 
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "u2", InvitedByUserId = "u1", Role = "Dev"
+            TeamId = "team-1", InvitedUserId = "u2", Role = "Dev"
         };
         var result = await _controller.Create(command, default);
 
@@ -173,10 +175,7 @@ public class GroupInvitationControllerTests
     [Fact]
     public async Task Accept_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new AcceptGroupInvitationCommand
-        {
-            InvitationId = "other-id", UserId = "u1", Username = "alice"
-        };
+        var command = new AcceptGroupInvitationCommand { InvitationId = "other-id" };
 
         var result = await _controller.Accept("inv-1", command, default);
 
@@ -190,10 +189,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AcceptGroupInvitationCommand>(), default))
                      .ReturnsAsync(invitation);
 
-        var command = new AcceptGroupInvitationCommand
-        {
-            InvitationId = "inv-1", UserId = "u1", Username = "alice"
-        };
+        var command = new AcceptGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Accept("inv-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(invitation);
@@ -205,10 +201,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AcceptGroupInvitationCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new AcceptGroupInvitationCommand
-        {
-            InvitationId = "inv-1", UserId = "u1", Username = "alice"
-        };
+        var command = new AcceptGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Accept("inv-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -219,7 +212,7 @@ public class GroupInvitationControllerTests
     [Fact]
     public async Task Decline_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new DeclineGroupInvitationCommand { InvitationId = "other-id", UserId = "u1" };
+        var command = new DeclineGroupInvitationCommand { InvitationId = "other-id" };
 
         var result = await _controller.Decline("inv-1", command, default);
 
@@ -233,7 +226,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeclineGroupInvitationCommand>(), default))
                      .ReturnsAsync(invitation);
 
-        var command = new DeclineGroupInvitationCommand { InvitationId = "inv-1", UserId = "u1" };
+        var command = new DeclineGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Decline("inv-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(invitation);
@@ -245,7 +238,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeclineGroupInvitationCommand>(), default))
                      .ThrowsAsync(new DomainException("already declined"));
 
-        var command = new DeclineGroupInvitationCommand { InvitationId = "inv-1", UserId = "u1" };
+        var command = new DeclineGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Decline("inv-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -256,7 +249,7 @@ public class GroupInvitationControllerTests
     [Fact]
     public async Task Revoke_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new RevokeGroupInvitationCommand { InvitationId = "other-id", UserId = "u1" };
+        var command = new RevokeGroupInvitationCommand { InvitationId = "other-id" };
 
         var result = await _controller.Revoke("inv-1", command, default);
 
@@ -269,7 +262,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<RevokeGroupInvitationCommand>(), default))
                      .ReturnsAsync(Unit.Value);
 
-        var command = new RevokeGroupInvitationCommand { InvitationId = "inv-1", UserId = "u1" };
+        var command = new RevokeGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Revoke("inv-1", command, default);
 
         result.Should().BeOfType<NoContentResult>();
@@ -281,7 +274,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<RevokeGroupInvitationCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new RevokeGroupInvitationCommand { InvitationId = "inv-1", UserId = "u1" };
+        var command = new RevokeGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Revoke("inv-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -312,12 +305,12 @@ public class GroupInvitationControllerTests
     }
 
     [Fact]
-    public async Task GetByUser_WhenException_ReturnsBadRequest()
+    public async Task GetMine_WhenException_ReturnsBadRequest()
     {
-        _mediatorMock.Setup(m => m.Send(It.IsAny<GetGroupInvitationsByUserQuery>(), default))
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetMyGroupInvitationsQuery>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var result = await _controller.GetByUser("user-1", default);
+        var result = await _controller.GetMine(default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -339,10 +332,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AcceptGroupInvitationCommand>(), default))
                      .ThrowsAsync(new DomainException("already accepted"));
 
-        var command = new AcceptGroupInvitationCommand
-        {
-            InvitationId = "inv-1", UserId = "u1", Username = "alice"
-        };
+        var command = new AcceptGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Accept("inv-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -354,7 +344,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeclineGroupInvitationCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new DeclineGroupInvitationCommand { InvitationId = "inv-1", UserId = "u1" };
+        var command = new DeclineGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Decline("inv-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -366,7 +356,7 @@ public class GroupInvitationControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<RevokeGroupInvitationCommand>(), default))
                      .ThrowsAsync(new DomainException("already revoked"));
 
-        var command = new RevokeGroupInvitationCommand { InvitationId = "inv-1", UserId = "u1" };
+        var command = new RevokeGroupInvitationCommand { InvitationId = "inv-1" };
         var result = await _controller.Revoke("inv-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -380,7 +370,7 @@ public class GroupInvitationControllerTests
 
         var command = new CreateGroupInvitationCommand
         {
-            TeamId = "team-1", InvitedUserId = "u2", InvitedByUserId = "u1", Role = "Dev"
+            TeamId = "team-1", InvitedUserId = "u2", Role = "Dev"
         };
         var result = await _controller.Create(command, default);
 

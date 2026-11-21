@@ -52,6 +52,12 @@ public sealed record SearchRequest
 
     /// <summary>Leave out this user's own documents (subscriptions; not exposed in the API).</summary>
     public string? ExcludeOwnerId { get; init; }
+
+    /// <summary>
+    /// The person searching: their own profile is left out of the hits and the counts, since
+    /// nobody searches for themselves. Their posts stay. Set from the token, not exposed in the API.
+    /// </summary>
+    public string? ViewerId { get; init; }
 }
 
 public enum SearchSort

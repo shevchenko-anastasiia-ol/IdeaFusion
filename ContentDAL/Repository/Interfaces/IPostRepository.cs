@@ -5,6 +5,7 @@ namespace ContentDAL.Repository.Interfaces;
 
 public interface IPostRepository
 {
+    Task<IEnumerable<Post>> SearchAsync(string query, CancellationToken ct = default);
     Task AddAsync(Post entity, CancellationToken ct = default);
     Task UpdateAsync(Post entity, CancellationToken ct = default);
     Task DeleteAsync(int id, CancellationToken ct = default);
@@ -21,6 +22,4 @@ public interface IPostRepository
     Task<string> GetMediaUrlAsync(PostMedia media, CancellationToken ct = default);
     Task<IEnumerable<PostMedia>> GetMediaByPostIdAsync(int postId, CancellationToken ct = default);
     Task DeleteMediaAsync(int postId, CancellationToken ct = default);
-    Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default);
-    Task<int> EnsurePostAuthorByUserIdAsync(int userId, string userName, string? avatarUrl = null, CancellationToken ct = default);
 }

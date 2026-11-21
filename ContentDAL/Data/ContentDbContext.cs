@@ -49,7 +49,17 @@ public class ContentDbContext(DbContextOptions<ContentDbContext> options) : DbCo
             entity.HasKey(a => a.PostAuthorId);
  
             entity.HasIndex(a => a.UserId).IsUnique();
- 
+
+            // One row per Keycloak subject. Filtered so the demo rows seeded before
+            // the realm existed can all keep a null ExternalId, and so a future row
+            // can never claim a subject that is already taken.
+            entity.HasIndex(a => a.ExternalId)
+                .IsUnique()
+                .HasFilter("externalid IS NOT NULL");
+
+            entity.Property(a => a.ExternalId)
+                .HasMaxLength(100);
+
             entity.Property(a => a.UserName)
                 .HasMaxLength(100)
                 .IsRequired();

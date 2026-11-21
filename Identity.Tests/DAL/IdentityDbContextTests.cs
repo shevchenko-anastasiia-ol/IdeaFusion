@@ -28,69 +28,9 @@ public class IdentityDbContextTests : IDisposable
     }
 
     [Fact]
-    public void RefreshTokens_DbSetIsNotNull()
+    public void AuditLogEntries_DbSetIsNotNull()
     {
-        _context.RefreshTokens.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task AddRefreshToken_CanBeRetrievedById()
-    {
-        var user = new ApplicationUser
-        {
-            Id    = Guid.NewGuid(),
-            Email = "test@test.com",
-            UserName = "testuser"
-        };
-        _context.Users.Add(user);
-
-        var token = new RefreshToken
-        {
-            Token     = "test-token",
-            Expires   = DateTime.UtcNow.AddDays(7),
-            CreatedAt = DateTime.UtcNow,
-            UserId    = user.Id
-        };
-        await _context.RefreshTokens.AddAsync(token);
-        await _context.SaveChangesAsync();
-
-        var retrieved = await _context.RefreshTokens.FindAsync(token.Id);
-        retrieved.Should().NotBeNull();
-        retrieved!.Token.Should().Be("test-token");
-    }
-
-    [Fact]
-    public async Task AddMultipleRefreshTokens_AllAreStoredAndQueryable()
-    {
-        var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "u@u.com", UserName = "u" };
-        _context.Users.Add(user);
-
-        _context.RefreshTokens.Add(new RefreshToken
-            { Token = "t1", Expires = DateTime.UtcNow.AddDays(1), CreatedAt = DateTime.UtcNow, UserId = user.Id });
-        _context.RefreshTokens.Add(new RefreshToken
-            { Token = "t2", Expires = DateTime.UtcNow.AddDays(1), CreatedAt = DateTime.UtcNow, UserId = user.Id });
-        await _context.SaveChangesAsync();
-
-        var count = await _context.RefreshTokens.CountAsync();
-        count.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task UpdateRefreshToken_ChangesArePersisted()
-    {
-        var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "u@u.com", UserName = "u" };
-        _context.Users.Add(user);
-        var token = new RefreshToken
-            { Token = "tok", Expires = DateTime.UtcNow.AddDays(7), CreatedAt = DateTime.UtcNow, UserId = user.Id };
-        _context.RefreshTokens.Add(token);
-        await _context.SaveChangesAsync();
-
-        token.IsRevoked = true;
-        _context.RefreshTokens.Update(token);
-        await _context.SaveChangesAsync();
-
-        var updated = await _context.RefreshTokens.FindAsync(token.Id);
-        updated!.IsRevoked.Should().BeTrue();
+        _context.AuditLogEntries.Should().NotBeNull();
     }
 
     [Fact]
@@ -113,22 +53,97 @@ public class IdentityDbContextTests : IDisposable
     }
 
     [Fact]
-    public async Task RefreshTokens_FilterByUserId_ReturnsCorrectTokens()
+    public async Task AddAuditEntry_CanBeRetrievedById()
     {
-        var user1 = new ApplicationUser { Id = Guid.NewGuid(), Email = "a@a.com", UserName = "a" };
-        var user2 = new ApplicationUser { Id = Guid.NewGuid(), Email = "b@b.com", UserName = "b" };
-        _context.Users.AddRange(user1, user2);
-        _context.RefreshTokens.Add(new RefreshToken
-            { Token = "u1-tok", Expires = DateTime.UtcNow.AddDays(1), CreatedAt = DateTime.UtcNow, UserId = user1.Id });
-        _context.RefreshTokens.Add(new RefreshToken
-            { Token = "u2-tok", Expires = DateTime.UtcNow.AddDays(1), CreatedAt = DateTime.UtcNow, UserId = user2.Id });
+        var entry = NewEntry(action: "user.role.grant");
+        await _context.AuditLogEntries.AddAsync(entry);
         await _context.SaveChangesAsync();
 
-        var user1Tokens = await _context.RefreshTokens
-            .Where(t => t.UserId == user1.Id)
+        var retrieved = await _context.AuditLogEntries.FindAsync(entry.Id);
+        retrieved.Should().NotBeNull();
+        retrieved!.Action.Should().Be("user.role.grant");
+        retrieved.TargetId.Should().Be("target-1");
+    }
+
+    [Fact]
+    public async Task AddMultipleAuditEntries_AllAreStoredAndQueryable()
+    {
+        await _context.AuditLogEntries.AddRangeAsync(
+            NewEntry(action: "a", createdAt: DateTime.UtcNow.AddMinutes(-1)),
+            NewEntry(action: "b", createdAt: DateTime.UtcNow));
+        await _context.SaveChangesAsync();
+
+        (await _context.AuditLogEntries.CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task AuditEntries_AreQueryableByActor()
+    {
+        var actor = Guid.NewGuid();
+        var other = Guid.NewGuid();
+
+        await _context.AuditLogEntries.AddRangeAsync(
+            NewEntry(action: "mine", actorId: actor),
+            NewEntry(action: "theirs", actorId: other));
+        await _context.SaveChangesAsync();
+
+        var mine = await _context.AuditLogEntries.Where(e => e.ActorId == actor).ToListAsync();
+
+        mine.Should().HaveCount(1);
+        mine[0].Action.Should().Be("mine");
+    }
+
+    [Fact]
+    public async Task AuditEntries_AreQueryableByCategory()
+    {
+        await _context.AuditLogEntries.AddRangeAsync(
+            NewEntry(action: "post.delete", category: AuditCategory.Content),
+            NewEntry(action: "user.role.grant", category: AuditCategory.User));
+        await _context.SaveChangesAsync();
+
+        var content = await _context.AuditLogEntries
+            .Where(e => e.Category == AuditCategory.Content)
             .ToListAsync();
 
-        user1Tokens.Should().HaveCount(1);
-        user1Tokens[0].Token.Should().Be("u1-tok");
+        content.Should().HaveCount(1);
+        content[0].Action.Should().Be("post.delete");
     }
+
+    [Fact]
+    public async Task UpdateAuditEntry_ChangesArePersisted()
+    {
+        var entry = NewEntry(action: "post.delete");
+        await _context.AuditLogEntries.AddAsync(entry);
+        await _context.SaveChangesAsync();
+
+        entry.Details = "{\"reason\":\"spam\"}";
+        _context.AuditLogEntries.Update(entry);
+        await _context.SaveChangesAsync();
+
+        var updated = await _context.AuditLogEntries.FindAsync(entry.Id);
+        updated!.Details.Should().Be("{\"reason\":\"spam\"}");
+    }
+
+    [Fact]
+    public void NewAuditEntry_GetsAnIdAndTimestampByDefault()
+    {
+        var entry = NewEntry(action: "x");
+
+        entry.Id.Should().NotBe(Guid.Empty);
+        entry.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    private static AuditLogEntry NewEntry(
+        string action,
+        Guid? actorId = null,
+        AuditCategory category = AuditCategory.User,
+        DateTime? createdAt = null) => new()
+        {
+            ActorId = actorId ?? Guid.NewGuid(),
+            Action = action,
+            TargetType = "user",
+            TargetId = "target-1",
+            Category = category,
+            CreatedAt = createdAt ?? DateTime.UtcNow
+        };
 }

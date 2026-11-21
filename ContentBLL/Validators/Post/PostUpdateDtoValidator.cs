@@ -21,10 +21,6 @@ public class PostUpdateDtoValidator : AbstractValidator<PostUpdateDto>
             .WithMessage("ExternalLink має бути валідним URL.")
             .When(x => !string.IsNullOrEmpty(x.ExternalLink));
 
-        RuleFor(x => x.UpdatedBy)
-            .NotEmpty().WithMessage("UpdatedBy є обов'язковим.")
-            .MaximumLength(100).WithMessage("UpdatedBy не може перевищувати 100 символів.");
-
         // Перевірка тегів
         RuleFor(x => x.TagIds)
             .NotNull().WithMessage("TagIds не може бути null.")

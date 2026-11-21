@@ -1,4 +1,5 @@
 ﻿using Collaboration.Application.Commands.Team;
+using Collaboration.Domain.Entities;
 using FluentValidation;
 
 namespace Collaboration.Application.Validators;
@@ -20,13 +21,6 @@ public class CreateTeamCommandValidator : AbstractValidator<CreateTeamCommand>
  
         RuleFor(x => x.Tags)
             .Must(tags => tags.Count <= 10).WithMessage("Team cannot have more than 10 tags.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
- 
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.")
-            .MaximumLength(100).WithMessage("Username cannot exceed 100 characters.");
     }
 }
  
@@ -50,9 +44,6 @@ public class UpdateTeamCommandValidator : AbstractValidator<UpdateTeamCommand>
  
         RuleFor(x => x.Tags)
             .Must(tags => tags.Count <= 10).WithMessage("Team cannot have more than 10 tags.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -74,9 +65,6 @@ public class SetTeamStatusCommandValidator : AbstractValidator<SetTeamStatusComm
  
         RuleFor(x => x.Status)
             .IsInEnum().WithMessage("Invalid team status.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -86,20 +74,19 @@ public class AddTeamMemberCommandValidator : AbstractValidator<AddTeamMemberComm
     {
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
- 
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.")
-            .MaximumLength(100).WithMessage("Username cannot exceed 100 characters.");
+
+        // The member being added, not the caller: only the target's subject is required.
+        RuleFor(x => x.MemberUserId)
+            .NotEmpty().WithMessage("MemberUserId is required.");
+
+        // The name and avatar are resolved from Identity, so they are optional here.
+        RuleFor(x => x.MemberUsername)
+            .MaximumLength(100).WithMessage("MemberUsername cannot exceed 100 characters.")
+            .When(x => x.MemberUsername is not null);
  
         RuleFor(x => x.Role)
             .NotEmpty().WithMessage("Role is required.")
-            .MaximumLength(100).WithMessage("Role cannot exceed 100 characters.");
- 
-        RuleFor(x => x.RequestedByUserId)
-            .NotEmpty().WithMessage("RequestedByUserId is required.");
+            .Must(TeamRole.IsKnown).WithMessage("Role is not a known team role.");
     }
 }
  
@@ -110,11 +97,8 @@ public class RemoveTeamMemberCommandValidator : AbstractValidator<RemoveTeamMemb
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
  
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
- 
-        RuleFor(x => x.RequestedByUserId)
-            .NotEmpty().WithMessage("RequestedByUserId is required.");
+        RuleFor(x => x.MemberUserId)
+            .NotEmpty().WithMessage("MemberUserId is required.");
     }
 }
  
@@ -132,23 +116,11 @@ public class AddRequiredRoleCommandValidator : AbstractValidator<AddRequiredRole
         RuleFor(x => x.Description)
             .MaximumLength(500).WithMessage("Description cannot exceed 500 characters.")
             .When(x => x.Description is not null);
-  
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
 
 public class UpdateTeamMemberPermissionsCommandValidator : AbstractValidator<UpdateTeamMemberPermissionsCommand>
 {
-    private static readonly string[] Known = new[]
-    {
-        Collaboration.Domain.Entities.TeamPermission.PublishPosts,
-        Collaboration.Domain.Entities.TeamPermission.EditPosts,
-        Collaboration.Domain.Entities.TeamPermission.InviteMembers,
-        Collaboration.Domain.Entities.TeamPermission.RemoveMembers,
-        Collaboration.Domain.Entities.TeamPermission.EditTeam
-    };
-
     public UpdateTeamMemberPermissionsCommandValidator()
     {
         RuleFor(x => x.TeamId)
@@ -158,10 +130,25 @@ public class UpdateTeamMemberPermissionsCommandValidator : AbstractValidator<Upd
             .NotEmpty().WithMessage("TargetMemberId is required.");
 
         RuleFor(x => x.Permissions)
-            .Must(permissions => permissions.All(permission => Known.Contains(permission)))
+            .Must(permissions => permissions.All(permission => TeamRole.AllPermissions.Contains(permission)))
             .WithMessage("One or more permissions are not recognized.");
+    }
+}
 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
+public class SetTeamMemberRoleCommandValidator : AbstractValidator<SetTeamMemberRoleCommand>
+{
+    public SetTeamMemberRoleCommandValidator()
+    {
+        RuleFor(x => x.TeamId)
+            .NotEmpty().WithMessage("TeamId is required.");
+
+        RuleFor(x => x.TargetMemberId)
+            .NotEmpty().WithMessage("TargetMemberId is required.");
+
+        RuleFor(x => x.Role)
+            .NotEmpty().WithMessage("Role is required.")
+            .Must(TeamRole.IsKnown).WithMessage("Role is not a known team role.")
+            .Must(role => role != TeamRole.Owner)
+            .WithMessage("A team's owner cannot be reassigned.");
     }
 }

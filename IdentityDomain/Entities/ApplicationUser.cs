@@ -8,5 +8,11 @@ public class ApplicationUser : IdentityUser<Guid>
     public string? AvatarUrl { get; set; }
     public string? FullName { get; set; }
     public string? Specialization { get; set; }
-    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    /// <summary>
+    /// Passwords live in Keycloak. This column stays as a sentinel ("!") so the
+    /// ASP.NET Identity user store never treats a row as password-less or
+    /// unvalidated, which keeps <c>UserManager</c> queries working.
+    /// </summary>
+    public const string ExternalPasswordSentinel = "!";
 }

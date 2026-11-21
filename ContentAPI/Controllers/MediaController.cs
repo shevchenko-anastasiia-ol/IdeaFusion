@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Minio;
 using Minio.DataModel.Args;
@@ -6,6 +7,7 @@ namespace ContentAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class MediaController : ControllerBase
 {
     private readonly IMinioClient _minio;
@@ -35,7 +37,11 @@ public class MediaController : ControllerBase
             await _minio.SetPolicyAsync(new SetPolicyArgs().WithBucket(_bucket).WithPolicy(policy), ct);
         }
 
-        var objectName  = $"media/{Guid.NewGuid()}_{file.FileName}";
+        // The original name stays in the message; the object key is only a guid and the
+        // extension, so spaces or Cyrillic in a file name never end up in a URL.
+        var ext = Path.GetExtension(file.FileName);
+        if (ext.Length > 10 || ext.Any(c => !char.IsLetterOrDigit(c) && c != '.')) ext = "";
+        var objectName  = $"media/{Guid.NewGuid()}{ext.ToLowerInvariant()}";
         var contentType = string.IsNullOrEmpty(file.ContentType) ? "application/octet-stream" : file.ContentType;
 
         await _minio.PutObjectAsync(new PutObjectArgs()

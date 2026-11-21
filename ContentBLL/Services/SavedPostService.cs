@@ -11,50 +11,74 @@ public class SavedPostService : ISavedPostService
 {
     private readonly IUnitOfWork _uow;
     private readonly IMapper _mapper;
- 
-    public SavedPostService(IUnitOfWork uow, IMapper mapper)
+    private readonly IPostAuthorResolver _authorResolver;
+
+    public SavedPostService(IUnitOfWork uow, IMapper mapper, IPostAuthorResolver authorResolver)
     {
         _uow = uow;
         _mapper = mapper;
+        _authorResolver = authorResolver;
     }
- 
+
     public async Task<SavedPostDto> SaveAsync(SavedPostCreateDto dto, CancellationToken ct = default)
     {
         var post = await _uow.PostRepository.GetByIdAsync(dto.PostId, ct)
                    ?? throw new NotFoundException($"Пост з id={dto.PostId} не знайдено.");
- 
-        var alreadySaved = await _uow.SavedPostRepository.ExistsAsync(dto.PostId, dto.UserId, ct);
+
+        // A saved post belongs to the caller, always.
+        var caller = await _authorResolver.ResolveForWriteAsync(ct: ct);
+
+        var alreadySaved = await _uow.SavedPostRepository.ExistsAsync(dto.PostId, caller.UserId, ct);
         if (alreadySaved)
             throw new BusinessConflictException("Користувач вже зберіг цей пост.");
- 
+
         var savedPost = _mapper.Map<SavedPost>(dto);
+        savedPost.UserId = caller.UserId;
         savedPost.SavedAt = DateTime.UtcNow;
- 
+
         await _uow.SavedPostRepository.AddAsync(savedPost, ct);
- 
+
         // підтягуємо пост для маппінгу SavedPostDto
         savedPost.Post = post;
- 
+
         return _mapper.Map<SavedPostDto>(savedPost);
     }
- 
-    public async Task UnsaveAsync(int postId, int userId, CancellationToken ct = default)
+
+    public async Task UnsaveAsync(int postId, CancellationToken ct = default)
     {
-        var exists = await _uow.SavedPostRepository.ExistsAsync(postId, userId, ct);
+        var caller = await _authorResolver.ResolveAsync(ct);
+
+        var exists = await _uow.SavedPostRepository.ExistsAsync(postId, caller.UserId, ct);
         if (!exists)
-            throw new NotFoundException($"Збережений пост від userId={userId} на постId={postId} не знайдено.");
- 
-        await _uow.SavedPostRepository.DeleteAsync(postId, userId, ct);
+            throw new NotFoundException($"Збережений пост на postId={postId} не знайдено.");
+
+        await _uow.SavedPostRepository.DeleteAsync(postId, caller.UserId, ct);
     }
- 
-    public async Task<bool> ExistsAsync(int postId, int userId, CancellationToken ct = default)
+
+    public async Task<bool> ExistsAsync(int postId, CancellationToken ct = default)
     {
-        return await _uow.SavedPostRepository.ExistsAsync(postId, userId, ct);
+        // No author row means the caller has never saved anything, which is an
+        // answer rather than a 404.
+        var caller = await _authorResolver.FindAsync(ct);
+        if (caller is null)
+        {
+            return false;
+        }
+
+        return await _uow.SavedPostRepository.ExistsAsync(postId, caller.UserId, ct);
     }
- 
-    public async Task<IEnumerable<SavedPostDto>> GetByUserIdAsync(int userId, CancellationToken ct = default)
+
+    /// <summary>The caller's own saved posts. There is no by-user read any more.</summary>
+    public async Task<IEnumerable<SavedPostDto>> GetMineAsync(CancellationToken ct = default)
     {
-        var saved = await _uow.SavedPostRepository.GetByUserIdAsync(userId, ct);
+        // A caller who has never saved anything gets an empty list, not a 404.
+        var caller = await _authorResolver.FindAsync(ct);
+        if (caller is null)
+        {
+            return Array.Empty<SavedPostDto>();
+        }
+
+        var saved = await _uow.SavedPostRepository.GetByUserIdAsync(caller.UserId, ct);
         var result = new List<SavedPostDto>();
         foreach (var s in saved)
         {

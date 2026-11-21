@@ -1,4 +1,5 @@
 ﻿using Collaboration.Application.Commands.CollaborationRequest;
+using Collaboration.Domain.Entities;
 using FluentValidation;
 
 namespace Collaboration.Application.Validators;
@@ -10,9 +11,7 @@ public class CreateCollaborationRequestCommandValidator : AbstractValidator<Crea
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
  
-        RuleFor(x => x.FromUserId)
-            .NotEmpty().WithMessage("FromUserId is required.");
- 
+        // The position the person asks to join as; access is always a plain Member.
         RuleFor(x => x.Role)
             .NotEmpty().WithMessage("Role is required.")
             .MaximumLength(100).WithMessage("Role cannot exceed 100 characters.");
@@ -20,6 +19,12 @@ public class CreateCollaborationRequestCommandValidator : AbstractValidator<Crea
         RuleFor(x => x.Message)
             .MaximumLength(1000).WithMessage("Message cannot exceed 1000 characters.")
             .When(x => x.Message is not null);
+
+        // A request addressed to somebody is still the caller's own; comparing it with
+        // the token's subject is done in the handler, where the token is available.
+        RuleFor(x => x.ToUserId)
+            .MaximumLength(100).WithMessage("ToUserId cannot exceed 100 characters.")
+            .When(x => x.ToUserId is not null);
     }
 }
  
@@ -29,9 +34,6 @@ public class AcceptCollaborationRequestCommandValidator : AbstractValidator<Acce
     {
         RuleFor(x => x.RequestId)
             .NotEmpty().WithMessage("RequestId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -41,9 +43,6 @@ public class RejectCollaborationRequestCommandValidator : AbstractValidator<Reje
     {
         RuleFor(x => x.RequestId)
             .NotEmpty().WithMessage("RequestId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -53,8 +52,5 @@ public class CancelCollaborationRequestCommandValidator : AbstractValidator<Canc
     {
         RuleFor(x => x.RequestId)
             .NotEmpty().WithMessage("RequestId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }

@@ -25,8 +25,10 @@ export const teamsApi = {
   getById: (id: string) =>
     api.get<TeamEntity>(`/api/team/${id}`),
 
-  getByMember: (userId: string) =>
-    api.get<TeamEntity[]>(`/api/team/member/${userId}`),
+  // The server answers for the token's subject.
+  getMine: () => api.get<TeamEntity[]>('/api/team/mine'),
+  /** The teams a person is in (public, like the member lists on team pages). */
+  getByMember: (userId: string) => api.get<TeamEntity[]>(`/api/team/member/${encodeURIComponent(userId)}`),
 
   search: (name: string) =>
     api.get<TeamEntity[]>(`/api/team/search?name=${encodeURIComponent(name)}`),
@@ -40,8 +42,8 @@ export const teamsApi = {
   setStatus: (id: string, cmd: SetTeamStatusCommand) =>
     api.patch<TeamEntity>(`/api/team/${id}/status`, cmd),
 
-  removeMember: (teamId: string, memberId: string, requestedByUserId: string) =>
-    api.delete<TeamEntity>(`/api/team/${teamId}/members/${memberId}?requestedByUserId=${encodeURIComponent(requestedByUserId)}`),
+  removeMember: (teamId: string, memberId: string) =>
+    api.delete<TeamEntity>(`/api/team/${teamId}/members/${memberId}`),
 
   addRequiredRole: (id: string, cmd: AddRequiredRoleCommand) =>
     api.post<TeamEntity>(`/api/team/${id}/required-roles`, cmd),
@@ -52,16 +54,14 @@ export const teamsApi = {
   setMemberPermissions: (id: string, cmd: UpdateTeamMemberPermissionsCommand) =>
     api.patch<TeamEntity>(`/api/team/${id}/members/${cmd.targetMemberId}/permissions`, cmd),
 
-  deleteTeam: (id: string, requestedByUserId: string) =>
-    api.delete<void>(`/api/team/${id}?requestedByUserId=${encodeURIComponent(requestedByUserId)}`),
+  deleteTeam: (id: string) => api.delete<void>(`/api/team/${id}`),
 };
 
 export const collaborationRequestsApi = {
   getByTeam: (teamId: string) =>
     api.get<CollaborationRequestEntity[]>(`/api/collaboration-requests/team/${teamId}`),
 
-  getByUser: (userId: string) =>
-    api.get<CollaborationRequestEntity[]>(`/api/collaboration-requests/user/${userId}`),
+  getMine: () => api.get<CollaborationRequestEntity[]>('/api/collaboration-requests/mine'),
 
   create: (cmd: CreateCollaborationRequestCommand) =>
     api.post<CollaborationRequestEntity>('/api/collaboration-requests', cmd),
@@ -74,8 +74,7 @@ export const collaborationRequestsApi = {
 };
 
 export const groupInvitationsApi = {
-  getByUser: (userId: string) =>
-    api.get<GroupInvitationEntity[]>(`/api/group-invitations/user/${userId}`),
+  getMine: () => api.get<GroupInvitationEntity[]>('/api/group-invitations/mine'),
 
   getByTeam: (teamId: string) =>
     api.get<GroupInvitationEntity[]>(`/api/group-invitations/team/${teamId}`),

@@ -8,7 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.1.39" />
+      <!-- Microsoft.AspNetCore.Identity was discontinued after 2.2; the IdentityUser
+           and IdentityRole base types now live in Microsoft.Extensions.Identity.Core,
+           which the EF Core package pulls in. -->
       <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.14" />
     </ItemGroup>
 

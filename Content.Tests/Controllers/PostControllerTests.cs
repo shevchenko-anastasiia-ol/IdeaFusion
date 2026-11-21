@@ -1,4 +1,5 @@
 using ContentAPI.Controllers;
+using ContentAPI.Services;
 using ContentBLL.DTO.Post;
 using ContentBLL.Services.Interfaces;
 using FluentAssertions;
@@ -11,9 +12,10 @@ namespace Content.Tests.Controllers;
 public class PostControllerTests
 {
     private readonly Mock<IPostService> _svcMock = new();
+    private readonly Mock<IContentAuditWriter> _auditMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
 
-    private PostController Ctrl() => new(_svcMock.Object);
+    private PostController Ctrl() => new(_svcMock.Object, _auditMock.Object);
 
     // ── GetAll ────────────────────────────────────────────────────────────────
 
@@ -110,7 +112,7 @@ public class PostControllerTests
         var created = new PostDto { PostId = 5, Title = "New Post" };
         _svcMock.Setup(s => s.CreateAsync(It.IsAny<PostCreateDto>(), _ct)).ReturnsAsync(created);
 
-        var result = await Ctrl().Create(new PostCreateDto { Title = "New Post", CreatedBy = "user", PostAuthorId = 1 }, _ct);
+        var result = await Ctrl().Create(new PostCreateDto { Title = "New Post" }, _ct);
 
         var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
         ((PostDto)createdResult.Value!).PostId.Should().Be(5);
@@ -124,7 +126,7 @@ public class PostControllerTests
         var updated = new PostDto { PostId = 1, Title = "Updated" };
         _svcMock.Setup(s => s.UpdateAsync(1, It.IsAny<PostUpdateDto>(), _ct)).ReturnsAsync(updated);
 
-        var result = await Ctrl().Update(1, new PostUpdateDto { Title = "Updated", UpdatedBy = "user" }, _ct);
+        var result = await Ctrl().Update(1, new PostUpdateDto { Title = "Updated" }, _ct);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         ((PostDto)ok.Value!).Title.Should().Be("Updated");

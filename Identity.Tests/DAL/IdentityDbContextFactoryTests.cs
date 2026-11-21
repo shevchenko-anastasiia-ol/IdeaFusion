@@ -26,12 +26,12 @@ public class IdentityDbContextFactoryTests
     }
 
     [Fact]
-    public void CreateDbContext_ContextHasRefreshTokensDbSet()
+    public void CreateDbContext_ContextHasAuditLogEntriesDbSet()
     {
         var factory = new IdentityDbContextFactory();
         using var context = factory.CreateDbContext(Array.Empty<string>());
 
-        context.RefreshTokens.Should().NotBeNull();
+        context.AuditLogEntries.Should().NotBeNull();
     }
 
     [Fact]

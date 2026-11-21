@@ -1,5 +1,7 @@
 using Collaboration.API.Controllers;
+using Collaboration.API.Services;
 using Collaboration.Application.Commands.Team;
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Application.Queries.Team;
 using Collaboration.Domain.Common.Helpers;
 using Collaboration.Domain.Entities;
@@ -17,11 +19,13 @@ namespace Collaboration.Application.Tests.API;
 public class TeamControllerTests
 {
     private readonly Mock<IMediator> _mediatorMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
+    private readonly Mock<ICollaborationAuditWriter> _auditMock = new();
     private readonly TeamController _controller;
 
     public TeamControllerTests()
     {
-        _controller = new TeamController(_mediatorMock.Object)
+        _controller = new TeamController(_mediatorMock.Object, _callerMock.Object, _auditMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -123,15 +127,15 @@ public class TeamControllerTests
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(paged);
     }
 
-    // ── GET api/team/member/{userId} ──────────────────────────────────────────
+    // ── GET api/team/mine ─────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetByMember_ReturnsOkWithTeams()
+    public async Task GetMyTeams_ReturnsOkWithTeams()
     {
         var teams = new List<Domain.Entities.Team> { CreateTeam() };
-        _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamsByMemberQuery>(), default)).ReturnsAsync(teams);
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetMyTeamsQuery>(), default)).ReturnsAsync(teams);
 
-        var result = await _controller.GetByMember("owner-id", default);
+        var result = await _controller.GetMyTeams(default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(teams);
     }
@@ -144,7 +148,7 @@ public class TeamControllerTests
         var team = CreateTeam();
         _mediatorMock.Setup(m => m.Send(It.IsAny<CreateTeamCommand>(), default)).ReturnsAsync(team);
 
-        var command = new CreateTeamCommand { Name = "Team", Description = "desc", Category = "Design", UserId = "u1", Username = "alice" };
+        var command = new CreateTeamCommand { Name = "Team", Description = "desc", Category = "Design" };
         var result = await _controller.Create(command, default);
 
         var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
@@ -158,7 +162,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<CreateTeamCommand>(), default))
                      .ThrowsAsync(new DomainException("Name exists"));
 
-        var command = new CreateTeamCommand { Name = "Team", Description = "d", Category = "X", UserId = "u1", Username = "alice" };
+        var command = new CreateTeamCommand { Name = "Team", Description = "d", Category = "X" };
         var result = await _controller.Create(command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -169,7 +173,7 @@ public class TeamControllerTests
     [Fact]
     public async Task Update_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new UpdateTeamCommand { TeamId = "other-id", Name = "X", Description = "d", Category = "C", UserId = "u1" };
+        var command = new UpdateTeamCommand { TeamId = "other-id", Name = "X", Description = "d", Category = "C" };
         var result = await _controller.Update("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -183,7 +187,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamByIdQuery>(), default)).ReturnsAsync(existing);
         _mediatorMock.Setup(m => m.Send(It.IsAny<UpdateTeamCommand>(), default)).ReturnsAsync(updated);
 
-        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "New", Description = "d", Category = "C", UserId = "u1" };
+        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "New", Description = "d", Category = "C" };
         var result = await _controller.Update("team-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>();
@@ -194,7 +198,7 @@ public class TeamControllerTests
     [Fact]
     public async Task SetStatus_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new SetTeamStatusCommand { TeamId = "other", Status = TeamStatus.Active, UserId = "u1" };
+        var command = new SetTeamStatusCommand { TeamId = "other", Status = TeamStatus.Active };
         var result = await _controller.SetStatus("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -206,7 +210,7 @@ public class TeamControllerTests
         var team = CreateTeam();
         _mediatorMock.Setup(m => m.Send(It.IsAny<SetTeamStatusCommand>(), default)).ReturnsAsync(team);
 
-        var command = new SetTeamStatusCommand { TeamId = "team-1", Status = TeamStatus.Active, UserId = "u1" };
+        var command = new SetTeamStatusCommand { TeamId = "team-1", Status = TeamStatus.Active };
         var result = await _controller.SetStatus("team-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(team);
@@ -240,7 +244,7 @@ public class TeamControllerTests
     [Fact]
     public async Task AddMember_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new AddTeamMemberCommand { TeamId = "other", UserId = "u2", Username = "bob", Role = "Dev", RequestedByUserId = "u1" };
+        var command = new AddTeamMemberCommand { TeamId = "other", MemberUserId = "u2", MemberUsername = "bob", Role = "Dev" };
         var result = await _controller.AddMember("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -252,7 +256,7 @@ public class TeamControllerTests
         var team = CreateTeam();
         _mediatorMock.Setup(m => m.Send(It.IsAny<AddTeamMemberCommand>(), default)).ReturnsAsync(team);
 
-        var command = new AddTeamMemberCommand { TeamId = "team-1", UserId = "u2", Username = "bob", Role = "Dev", RequestedByUserId = "u1" };
+        var command = new AddTeamMemberCommand { TeamId = "team-1", MemberUserId = "u2", MemberUsername = "bob", Role = "Dev" };
         var result = await _controller.AddMember("team-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(team);
@@ -266,7 +270,7 @@ public class TeamControllerTests
         var team = CreateTeam();
         _mediatorMock.Setup(m => m.Send(It.IsAny<RemoveTeamMemberCommand>(), default)).ReturnsAsync(team);
 
-        var result = await _controller.RemoveMember("team-1", "u2", "u1", default);
+        var result = await _controller.RemoveMember("team-1", "u2", default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(team);
     }
@@ -276,7 +280,7 @@ public class TeamControllerTests
     [Fact]
     public async Task AddRequiredRole_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new AddRequiredRoleCommand { TeamId = "other", Role = "Dev", UserId = "u1" };
+        var command = new AddRequiredRoleCommand { TeamId = "other", Role = "Dev" };
         var result = await _controller.AddRequiredRole("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -288,7 +292,7 @@ public class TeamControllerTests
         var team = CreateTeam();
         _mediatorMock.Setup(m => m.Send(It.IsAny<AddRequiredRoleCommand>(), default)).ReturnsAsync(team);
 
-        var command = new AddRequiredRoleCommand { TeamId = "team-1", Role = "Dev", UserId = "u1" };
+        var command = new AddRequiredRoleCommand { TeamId = "team-1", Role = "Dev" };
         var result = await _controller.AddRequiredRole("team-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(team);
@@ -299,7 +303,7 @@ public class TeamControllerTests
     [Fact]
     public async Task SetAvatarUrl_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new SetTeamAvatarUrlCommand { TeamId = "other", AvatarUrl = "url", UserId = "u1" };
+        var command = new SetTeamAvatarUrlCommand { TeamId = "other", AvatarUrl = "url" };
         var result = await _controller.SetAvatarUrl("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -311,7 +315,7 @@ public class TeamControllerTests
         var team = CreateTeam();
         _mediatorMock.Setup(m => m.Send(It.IsAny<SetTeamAvatarUrlCommand>(), default)).ReturnsAsync(team);
 
-        var command = new SetTeamAvatarUrlCommand { TeamId = "team-1", AvatarUrl = "https://avatar.png", UserId = "u1" };
+        var command = new SetTeamAvatarUrlCommand { TeamId = "team-1", AvatarUrl = "https://avatar.png" };
         var result = await _controller.SetAvatarUrl("team-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(team);
@@ -351,7 +355,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamByIdQuery>(), default))
                      .ReturnsAsync((Domain.Entities.Team?)null);
 
-        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "X", Description = "d", Category = "C", UserId = "u1" };
+        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "X", Description = "d", Category = "C" };
         var result = await _controller.Update("team-1", command, default);
 
         result.Should().BeOfType<NotFoundResult>();
@@ -364,7 +368,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamByIdQuery>(), default)).ReturnsAsync(existing);
         _controller.Request.Headers["If-Match"] = "\"non-matching-etag\"";
 
-        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "X", Description = "d", Category = "C", UserId = "u1" };
+        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "X", Description = "d", Category = "C" };
         var result = await _controller.Update("team-1", command, default);
 
         result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(412);
@@ -380,7 +384,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamByIdQuery>(), default)).ReturnsAsync(existing);
         _mediatorMock.Setup(m => m.Send(It.IsAny<UpdateTeamCommand>(), default)).ReturnsAsync(updated);
 
-        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "New", Description = "d", Category = "C", UserId = "u1" };
+        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "New", Description = "d", Category = "C" };
         var result = await _controller.Update("team-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>();
@@ -434,12 +438,12 @@ public class TeamControllerTests
     }
 
     [Fact]
-    public async Task GetByMember_WhenException_ReturnsBadRequest()
+    public async Task GetMyTeams_WhenException_ReturnsBadRequest()
     {
-        _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamsByMemberQuery>(), default))
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetMyTeamsQuery>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var result = await _controller.GetByMember("owner-id", default);
+        var result = await _controller.GetMyTeams(default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -450,7 +454,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<GetTeamByIdQuery>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "X", Description = "d", Category = "C", UserId = "u1" };
+        var command = new UpdateTeamCommand { TeamId = "team-1", Name = "X", Description = "d", Category = "C" };
         var result = await _controller.Update("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -462,7 +466,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<SetTeamStatusCommand>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var command = new SetTeamStatusCommand { TeamId = "team-1", Status = TeamStatus.Active, UserId = "u1" };
+        var command = new SetTeamStatusCommand { TeamId = "team-1", Status = TeamStatus.Active };
         var result = await _controller.SetStatus("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -474,7 +478,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AddTeamMemberCommand>(), default))
                      .ThrowsAsync(new DomainException("already member"));
 
-        var command = new AddTeamMemberCommand { TeamId = "team-1", UserId = "u2", Username = "bob", Role = "Dev", RequestedByUserId = "u1" };
+        var command = new AddTeamMemberCommand { TeamId = "team-1", MemberUserId = "u2", MemberUsername = "bob", Role = "Dev" };
         var result = await _controller.AddMember("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -486,7 +490,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<RemoveTeamMemberCommand>(), default))
                      .ThrowsAsync(new DomainException("not member"));
 
-        var result = await _controller.RemoveMember("team-1", "u2", "u1", default);
+        var result = await _controller.RemoveMember("team-1", "u2", default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -497,7 +501,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AddRequiredRoleCommand>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var command = new AddRequiredRoleCommand { TeamId = "team-1", Role = "Dev", UserId = "u1" };
+        var command = new AddRequiredRoleCommand { TeamId = "team-1", Role = "Dev" };
         var result = await _controller.AddRequiredRole("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -509,7 +513,7 @@ public class TeamControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<SetTeamAvatarUrlCommand>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var command = new SetTeamAvatarUrlCommand { TeamId = "team-1", AvatarUrl = "url", UserId = "u1" };
+        var command = new SetTeamAvatarUrlCommand { TeamId = "team-1", AvatarUrl = "url" };
         var result = await _controller.SetAvatarUrl("team-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();

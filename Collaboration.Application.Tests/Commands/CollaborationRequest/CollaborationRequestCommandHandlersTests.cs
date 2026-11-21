@@ -15,7 +15,14 @@ public class CollaborationRequestCommandHandlersTests
     private readonly Mock<ICollaborationRequestRepository> _requestRepoMock = new();
     private readonly Mock<ITeamRepository> _teamRepoMock = new();
     private readonly Mock<IUserSnapshotService> _snapshotServiceMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    private void SetCaller(string userId, string? username = null)
+    {
+        _callerMock.Setup(c => c.UserId).Returns(userId);
+        _callerMock.Setup(c => c.Username).Returns(username ?? userId);
+    }
 
     private static Domain.Entities.Team CreateTeam(string id = "team-1")
     {
@@ -57,13 +64,12 @@ public class CollaborationRequestCommandHandlersTests
             .Setup(r => r.CreateAsync(It.IsAny<Domain.Entities.CollaborationRequest>(), _ct))
             .Returns<Domain.Entities.CollaborationRequest, CancellationToken>((req, _) => Task.FromResult(req));
 
+        SetCaller("user-1", "alice");
         var handler = new CreateCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateCollaborationRequestCommand
         {
             TeamId = "team-1",
-            FromUserId = "user-1",
-            FromUsername = "alice",
             Role = "Developer",
             Message = "Hi!"
         };
@@ -83,11 +89,12 @@ public class CollaborationRequestCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct))
                      .ReturnsAsync((Domain.Entities.Team?)null);
 
+        SetCaller("user-1", "alice");
         var handler = new CreateCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer"
+            TeamId = "team-1", Role = "Developer"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -102,11 +109,12 @@ public class CollaborationRequestCommandHandlersTests
         team.MarkAsDeleted();
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
 
+        SetCaller("user-1", "alice");
         var handler = new CreateCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer"
+            TeamId = "team-1", Role = "Developer"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -121,11 +129,12 @@ public class CollaborationRequestCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.IsUserMemberAsync("team-1", "user-1", _ct)).ReturnsAsync(true);
 
+        SetCaller("user-1", "alice");
         var handler = new CreateCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer"
+            TeamId = "team-1", Role = "Developer"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -142,11 +151,12 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.HasPendingRequestAsync("team-1", "user-1", "Developer", _ct))
                         .ReturnsAsync(true);
 
+        SetCaller("user-1", "alice");
         var handler = new CreateCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Developer"
+            TeamId = "team-1", Role = "Developer"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -166,11 +176,12 @@ public class CollaborationRequestCommandHandlersTests
         _teamRepoMock.Setup(r => r.UpdateAsync(team, _ct)).ReturnsAsync(team);
         _requestRepoMock.Setup(r => r.UpdateAsync(colReq, _ct)).ReturnsAsync(colReq);
 
+        SetCaller("owner-id");
         var handler = new AcceptCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object, _callerMock.Object);
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -194,11 +205,12 @@ public class CollaborationRequestCommandHandlersTests
         _snapshotServiceMock.Setup(s => s.GetUserSnapshotDataAsync("user-1", _ct))
                             .ReturnsAsync(("alice", "https://img/avatar.png"));
 
+        SetCaller("owner-id");
         var handler = new AcceptCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object, _callerMock.Object);
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -213,17 +225,18 @@ public class CollaborationRequestCommandHandlersTests
     {
         var colReq = CreatePendingRequest(fromUsername: "alice");
         var team = CreateTeam();
-        team.AddMember(new UserSnapshot("user-1", "alice"), "Developer");
+        team.Join(new UserSnapshot("user-1", "alice"), "Developer");
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(colReq);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
         _teamRepoMock.Setup(r => r.UpdateAsync(team, _ct)).ReturnsAsync(team);
         _requestRepoMock.Setup(r => r.UpdateAsync(colReq, _ct)).ReturnsAsync(colReq);
 
+        SetCaller("owner-id");
         var handler = new AcceptCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object, _callerMock.Object);
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         await handler.Handle(command, _ct);
@@ -237,11 +250,12 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct))
                         .ReturnsAsync((Domain.Entities.CollaborationRequest?)null);
 
+        SetCaller("owner-id");
         var handler = new AcceptCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object, _callerMock.Object);
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -257,11 +271,12 @@ public class CollaborationRequestCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct))
                      .ReturnsAsync((Domain.Entities.Team?)null);
 
+        SetCaller("owner-id");
         var handler = new AcceptCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object, _callerMock.Object);
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -278,11 +293,12 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(colReq);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(team);
 
+        SetCaller("owner-id");
         var handler = new AcceptCollaborationRequestCommandHandler(
-            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object);
+            _requestRepoMock.Object, _teamRepoMock.Object, _snapshotServiceMock.Object, _callerMock.Object);
         var command = new AcceptCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -299,10 +315,11 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(colReq);
         _requestRepoMock.Setup(r => r.UpdateAsync(colReq, _ct)).ReturnsAsync(colReq);
 
-        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object, _callerMock.Object);
         var command = new CancelCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "user-1"
+            RequestId = "req-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -318,10 +335,11 @@ public class CollaborationRequestCommandHandlersTests
         var colReq = CreatePendingRequest(fromUserId: "user-1");
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(colReq);
 
-        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object);
+        SetCaller("other-user");
+        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object, _callerMock.Object);
         var command = new CancelCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "other-user"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -335,10 +353,11 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct))
                         .ReturnsAsync((Domain.Entities.CollaborationRequest?)null);
 
-        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object, _callerMock.Object);
         var command = new CancelCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "user-1"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -353,10 +372,11 @@ public class CollaborationRequestCommandHandlersTests
         colReq.Cancel("user-1");
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(colReq);
 
-        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object);
+        SetCaller("user-1");
+        var handler = new CancelCollaborationRequestCommandHandler(_requestRepoMock.Object, _callerMock.Object);
         var command = new CancelCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "user-1"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -374,10 +394,11 @@ public class CollaborationRequestCommandHandlersTests
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
         _requestRepoMock.Setup(r => r.UpdateAsync(colReq, _ct)).ReturnsAsync(colReq);
 
-        var handler = new RejectCollaborationRequestCommandHandler(_requestRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("owner-id");
+        var handler = new RejectCollaborationRequestCommandHandler(_requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RejectCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         var result = await handler.Handle(command, _ct);
@@ -392,10 +413,11 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct))
                         .ReturnsAsync((Domain.Entities.CollaborationRequest?)null);
 
-        var handler = new RejectCollaborationRequestCommandHandler(_requestRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("owner-id");
+        var handler = new RejectCollaborationRequestCommandHandler(_requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RejectCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))
@@ -411,10 +433,11 @@ public class CollaborationRequestCommandHandlersTests
         _requestRepoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(colReq);
         _teamRepoMock.Setup(r => r.GetByIdAsync("team-1", _ct)).ReturnsAsync(CreateTeam());
 
-        var handler = new RejectCollaborationRequestCommandHandler(_requestRepoMock.Object, _teamRepoMock.Object);
+        SetCaller("owner-id");
+        var handler = new RejectCollaborationRequestCommandHandler(_requestRepoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var command = new RejectCollaborationRequestCommand
         {
-            RequestId = "req-1", UserId = "owner-id"
+            RequestId = "req-1"
         };
 
         await handler.Invoking(h => h.Handle(command, _ct))

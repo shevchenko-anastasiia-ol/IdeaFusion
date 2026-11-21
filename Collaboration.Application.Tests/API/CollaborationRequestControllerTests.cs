@@ -105,16 +105,16 @@ public class CollaborationRequestControllerTests
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(requests);
     }
 
-    // ── GET api/collaboration-requests/user/{userId} ──────────────────────────
+    // ── GET api/collaboration-requests/mine ───────────────────────────────────
 
     [Fact]
-    public async Task GetByUser_ReturnsOkWithRequests()
+    public async Task GetMine_ReturnsOkWithRequests()
     {
         var requests = new List<Domain.Entities.CollaborationRequest> { CreateRequest() };
-        _mediatorMock.Setup(m => m.Send(It.IsAny<GetCollaborationRequestsByUserQuery>(), default))
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetMyCollaborationRequestsQuery>(), default))
                      .ReturnsAsync(requests);
 
-        var result = await _controller.GetByUser("user-1", default);
+        var result = await _controller.GetMine(default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(requests);
     }
@@ -130,7 +130,7 @@ public class CollaborationRequestControllerTests
 
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Dev"
+            TeamId = "team-1", Role = "Dev"
         };
         var result = await _controller.Create(command, default);
 
@@ -147,7 +147,7 @@ public class CollaborationRequestControllerTests
 
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Dev"
+            TeamId = "team-1", Role = "Dev"
         };
         var result = await _controller.Create(command, default);
 
@@ -159,7 +159,7 @@ public class CollaborationRequestControllerTests
     [Fact]
     public async Task Accept_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new AcceptCollaborationRequestCommand { RequestId = "other-id", UserId = "u1" };
+        var command = new AcceptCollaborationRequestCommand { RequestId = "other-id" };
 
         var result = await _controller.Accept("req-1", command, default);
 
@@ -173,7 +173,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AcceptCollaborationRequestCommand>(), default))
                      .ReturnsAsync(request);
 
-        var command = new AcceptCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new AcceptCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Accept("req-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(request);
@@ -185,7 +185,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AcceptCollaborationRequestCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new AcceptCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new AcceptCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Accept("req-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -196,7 +196,7 @@ public class CollaborationRequestControllerTests
     [Fact]
     public async Task Reject_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new RejectCollaborationRequestCommand { RequestId = "other-id", UserId = "u1" };
+        var command = new RejectCollaborationRequestCommand { RequestId = "other-id" };
 
         var result = await _controller.Reject("req-1", command, default);
 
@@ -210,7 +210,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<RejectCollaborationRequestCommand>(), default))
                      .ReturnsAsync(request);
 
-        var command = new RejectCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new RejectCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Reject("req-1", command, default);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(request);
@@ -221,7 +221,7 @@ public class CollaborationRequestControllerTests
     [Fact]
     public async Task Cancel_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new CancelCollaborationRequestCommand { RequestId = "other-id", UserId = "u1" };
+        var command = new CancelCollaborationRequestCommand { RequestId = "other-id" };
 
         var result = await _controller.Cancel("req-1", command, default);
 
@@ -234,7 +234,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<CancelCollaborationRequestCommand>(), default))
                      .ReturnsAsync(Unit.Value);
 
-        var command = new CancelCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new CancelCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Cancel("req-1", command, default);
 
         result.Should().BeOfType<NoContentResult>();
@@ -246,7 +246,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<CancelCollaborationRequestCommand>(), default))
                      .ThrowsAsync(new DomainException("already cancelled"));
 
-        var command = new CancelCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new CancelCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Cancel("req-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -277,12 +277,12 @@ public class CollaborationRequestControllerTests
     }
 
     [Fact]
-    public async Task GetByUser_WhenException_ReturnsBadRequest()
+    public async Task GetMine_WhenException_ReturnsBadRequest()
     {
-        _mediatorMock.Setup(m => m.Send(It.IsAny<GetCollaborationRequestsByUserQuery>(), default))
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetMyCollaborationRequestsQuery>(), default))
                      .ThrowsAsync(new DomainException("error"));
 
-        var result = await _controller.GetByUser("user-1", default);
+        var result = await _controller.GetMine(default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -293,7 +293,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<RejectCollaborationRequestCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new RejectCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new RejectCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Reject("req-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -305,7 +305,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<AcceptCollaborationRequestCommand>(), default))
                      .ThrowsAsync(new DomainException("already accepted"));
 
-        var command = new AcceptCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new AcceptCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Accept("req-1", command, default);
 
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -317,7 +317,7 @@ public class CollaborationRequestControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<CancelCollaborationRequestCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new CancelCollaborationRequestCommand { RequestId = "req-1", UserId = "u1" };
+        var command = new CancelCollaborationRequestCommand { RequestId = "req-1" };
         var result = await _controller.Cancel("req-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -331,7 +331,7 @@ public class CollaborationRequestControllerTests
 
         var command = new CreateCollaborationRequestCommand
         {
-            TeamId = "team-1", FromUserId = "user-1", Role = "Dev"
+            TeamId = "team-1", Role = "Dev"
         };
         var result = await _controller.Create(command, default);
 

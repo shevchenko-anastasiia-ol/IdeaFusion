@@ -31,7 +31,8 @@ public sealed class SearchController(
             return BadRequest(new { error = "from must be earlier than to" });
         if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
 
-        var request = query.ToRequest();
+        // The searcher's own profile is never a result: not in the hits, not in the "people" count.
+        var request = query.ToRequest() with { ViewerId = User.TryGetUserId()?.ToString() };
         var started = System.Diagnostics.Stopwatch.StartNew();
         SearchResponse response;
         try
@@ -53,7 +54,7 @@ public sealed class SearchController(
     public async Task<ActionResult<SuggestResponse>> Suggest([FromQuery] string? q, [FromQuery] int limit = 8, CancellationToken ct = default)
     {
         if (!sync.SchemaReady.IsCompleted) return IndexNotReady();
-        return await search.SuggestAsync(q, limit, ct);
+        return await search.SuggestAsync(q, limit, ct, User.TryGetUserId()?.ToString());
     }
 
     /// <summary>Tag autocomplete by any spelling or synonym; an empty q lists the most used tags.</summary>

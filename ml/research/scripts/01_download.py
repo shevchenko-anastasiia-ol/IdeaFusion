@@ -1,11 +1,7 @@
 """Download source artworks from Hugging Face and unpack them into data/raw/<source>/.
 
-    uv run python scripts/01_download.py artbench-pd                 # ~1.5 GB, 46k public-domain works
-    uv run python scripts/01_download.py wikiart --max-shards 5      # ~2.6 GB of 34 GB, has style labels
-
-The original ArtBench server (artbench.eecs.berkeley.edu) returns 404, so the public-domain
-ArtBench subset mirrored on Hugging Face is used instead. It keeps only public-domain works,
-which matches the licensing requirement for the custom dataset.
+    uv run python scripts/01_download.py artbench-pd
+    uv run python scripts/01_download.py wikiart --max-shards 5
 
 Result: data/raw/<source>/images/<artist>/<image_id>.jpg and data/raw/<source>/catalog.parquet
 """

@@ -3,3 +3,17 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+
+# Local secrets. Keycloak/Gmail/Google values live in user-secrets or environment
+# variables, never in infrastructure/IdeaFusion-realm.json.
+.env
+.env.*
+!.env.example
+*.user
+
+# Generated coverage output (coverlet). These HTML/XML reports embed whole copies
+# of the source, so they must never be committed.
+coveragereport/
+CoverageReport_integration/
+**/coverage/
+TestResults/

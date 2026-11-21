@@ -125,63 +125,6 @@ public class GetUsersByIdsRequestTests
     }
 }
 
-public class ValidateTokenRequestTests
-{
-    [Fact]
-    public void Default_AccessTokenIsEmpty()
-    {
-        var req = new ValidateTokenRequest();
-        req.AccessToken.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void WithAccessToken_ReturnsAssignedValue()
-    {
-        var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-        var req   = new ValidateTokenRequest { AccessToken = token };
-
-        req.AccessToken.Should().Be(token);
-    }
-
-    [Fact]
-    public void SerializeAndDeserialize_PreservesAccessToken()
-    {
-        var token        = "test-jwt-token-value";
-        var req          = new ValidateTokenRequest { AccessToken = token };
-        var deserialized = ValidateTokenRequest.Parser.ParseFrom(req.ToByteArray());
-
-        deserialized.AccessToken.Should().Be(token);
-    }
-
-    [Fact]
-    public void Equality_SameTokenIsEqual()
-    {
-        var r1 = new ValidateTokenRequest { AccessToken = "token-abc" };
-        var r2 = new ValidateTokenRequest { AccessToken = "token-abc" };
-
-        r1.Should().Be(r2);
-    }
-
-    [Fact]
-    public void Equality_DifferentTokensAreNotEqual()
-    {
-        var r1 = new ValidateTokenRequest { AccessToken = "token-1" };
-        var r2 = new ValidateTokenRequest { AccessToken = "token-2" };
-
-        r1.Should().NotBe(r2);
-    }
-
-    [Fact]
-    public void Clone_CreatesEqualButDistinctInstance()
-    {
-        var original = new ValidateTokenRequest { AccessToken = "bearer-xyz" };
-        var clone    = original.Clone();
-
-        clone.Should().Be(original);
-        clone.Should().NotBeSameAs(original);
-    }
-}
-
 public class CheckUserExistsRequestTests
 {
     [Fact]
@@ -479,106 +422,6 @@ public class UsersResponseTests
     }
 }
 
-public class ValidateTokenResponseTests
-{
-    [Fact]
-    public void Default_IsValidIsFalseAndStringsAreEmpty()
-    {
-        var resp = new ValidateTokenResponse();
-
-        resp.IsValid.Should().BeFalse();
-        resp.UserId.Should().BeEmpty();
-        resp.UserName.Should().BeEmpty();
-        resp.Email.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void ValidToken_AllFieldsAreSet()
-    {
-        var resp = new ValidateTokenResponse
-        {
-            IsValid  = true,
-            UserId   = "user-1",
-            UserName = "alice",
-            Email    = "alice@example.com"
-        };
-
-        resp.IsValid.Should().BeTrue();
-        resp.UserId.Should().Be("user-1");
-        resp.UserName.Should().Be("alice");
-        resp.Email.Should().Be("alice@example.com");
-    }
-
-    [Fact]
-    public void InvalidToken_IsValidIsFalseAndFieldsAreEmpty()
-    {
-        var resp = new ValidateTokenResponse { IsValid = false };
-
-        resp.IsValid.Should().BeFalse();
-        resp.UserId.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void SerializeAndDeserialize_ValidToken_PreservesAllFields()
-    {
-        var original = new ValidateTokenResponse
-        {
-            IsValid  = true,
-            UserId   = "u-99",
-            UserName = "bob",
-            Email    = "bob@example.com"
-        };
-
-        var deserialized = ValidateTokenResponse.Parser.ParseFrom(original.ToByteArray());
-
-        deserialized.IsValid.Should().BeTrue();
-        deserialized.UserId.Should().Be("u-99");
-        deserialized.UserName.Should().Be("bob");
-        deserialized.Email.Should().Be("bob@example.com");
-    }
-
-    [Fact]
-    public void SerializeAndDeserialize_InvalidToken_PreservesIsValid()
-    {
-        var original     = new ValidateTokenResponse { IsValid = false };
-        var deserialized = ValidateTokenResponse.Parser.ParseFrom(original.ToByteArray());
-
-        deserialized.IsValid.Should().BeFalse();
-        deserialized.UserId.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void Equality_SameValuesAreEqual()
-    {
-        var r1 = new ValidateTokenResponse { IsValid = true, UserId = "u-1", Email = "a@b.com" };
-        var r2 = new ValidateTokenResponse { IsValid = true, UserId = "u-1", Email = "a@b.com" };
-
-        r1.Should().Be(r2);
-    }
-
-    [Fact]
-    public void Equality_DifferentUserIdIsNotEqual()
-    {
-        var r1 = new ValidateTokenResponse { IsValid = true, UserId = "u-1" };
-        var r2 = new ValidateTokenResponse { IsValid = true, UserId = "u-2" };
-
-        r1.Should().NotBe(r2);
-    }
-
-    [Fact]
-    public void Clone_CreatesEqualButDistinctInstance()
-    {
-        var original = new ValidateTokenResponse
-        {
-            IsValid = true, UserId = "u-1", UserName = "alice", Email = "alice@example.com"
-        };
-        var clone = original.Clone();
-
-        clone.Should().Be(original);
-        clone.Should().NotBeSameAs(original);
-    }
-}
-
 public class CheckUserExistsResponseTests
 {
     [Fact]
@@ -666,11 +509,11 @@ public class UserReflectionTests
 
         messageNames.Should().Contain("GetUserByIdRequest");
         messageNames.Should().Contain("GetUsersByIdsRequest");
-        messageNames.Should().Contain("ValidateTokenRequest");
+        messageNames.Should().Contain("RecordAuditRequest");
         messageNames.Should().Contain("CheckUserExistsRequest");
         messageNames.Should().Contain("UserResponse");
         messageNames.Should().Contain("UsersResponse");
-        messageNames.Should().Contain("ValidateTokenResponse");
+        messageNames.Should().Contain("RecordAuditResponse");
         messageNames.Should().Contain("CheckUserExistsResponse");
         messageNames.Should().Contain("UserDto");
     }
@@ -716,15 +559,6 @@ public class UserReflectionTests
         fieldNames.Should().Contain("avatar_url");
         fieldNames.Should().Contain("created_at");
     }
-
-    [Fact]
-    public void Descriptor_ValidateTokenResponseHasFourFields()
-    {
-        var descriptor = UserReflection.Descriptor.MessageTypes
-            .Single(m => m.Name == "ValidateTokenResponse");
-
-        descriptor.Fields.InFieldNumberOrder().Should().HaveCount(4);
-    }
 }
 
 public class UserGrpcServiceDescriptorTests
@@ -750,7 +584,7 @@ public class UserGrpcServiceDescriptorTests
 
         methodNames.Should().Contain("GetUserById");
         methodNames.Should().Contain("GetUsersByIds");
-        methodNames.Should().Contain("ValidateToken");
+        methodNames.Should().Contain("RecordAudit");
         methodNames.Should().Contain("CheckUserExists");
     }
 
@@ -790,15 +624,32 @@ public class UserGrpcServiceDescriptorTests
         method.InputType.Name.Should().Be("GetUsersByIdsRequest");
         method.OutputType.Name.Should().Be("UsersResponse");
     }
+    [Fact]
+    public void Descriptor_RecordAuditRequest_HasEightFields()
+    {
+        var descriptor = UserReflection.Descriptor.MessageTypes
+            .Single(m => m.Name == "RecordAuditRequest");
+
+        descriptor.Fields.InFieldNumberOrder().Should().HaveCount(8);
+    }
 
     [Fact]
-    public void Descriptor_ValidateToken_HasCorrectInputAndOutputTypes()
+    public void Descriptor_RecordAuditResponse_HasTwoFields()
+    {
+        var descriptor = UserReflection.Descriptor.MessageTypes
+            .Single(m => m.Name == "RecordAuditResponse");
+
+        descriptor.Fields.InFieldNumberOrder().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Descriptor_RecordAudit_HasCorrectInputAndOutputTypes()
     {
         var method = UserGrpcService.Descriptor.Methods
-            .Single(m => m.Name == "ValidateToken");
+            .Single(m => m.Name == "RecordAudit");
 
-        method.InputType.Name.Should().Be("ValidateTokenRequest");
-        method.OutputType.Name.Should().Be("ValidateTokenResponse");
+        method.InputType.Name.Should().Be("RecordAuditRequest");
+        method.OutputType.Name.Should().Be("RecordAuditResponse");
     }
 
     [Fact]

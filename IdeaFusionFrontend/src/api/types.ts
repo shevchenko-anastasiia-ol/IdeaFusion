@@ -1,11 +1,45 @@
 // ── Auth ──────────────────────────────────────────────────────────────────
-export interface LoginDto { email: string; password: string; }
-export interface RegisterDto { userName: string; email: string; password: string; }
-export interface AuthResponseDto { accessToken: string; refreshToken: string; }
+// There is no LoginDto/RegisterDto/AuthResponseDto here: Keycloak owns credentials
+// and token issuance, so the app never accepts or returns a password or a token.
 export interface UserDto { id: string; email: string; userName?: string; avatarUrl?: string; fullName?: string; specialization?: string; roles: string[]; createdAt: string; }
 export interface UpdateProfileDto { fullName?: string; specialization?: string; }
-export interface ChangePasswordDto { currentPassword: string; newPassword: string; }
-export interface TokenRequestDto { refreshToken: string; }
+
+/** Mirrors IdentityBLL/DTOs/AccountDtos.cs CurrentUserDto. */
+export interface CurrentUserDto {
+  id: string;
+  email?: string | null;
+  userName?: string | null;
+  fullName?: string | null;
+  specialization?: string | null;
+  avatarUrl?: string | null;
+  roles: string[];
+  createdAt: string;
+  justProvisioned: boolean;
+}
+
+/** Mirrors IdentityBLL/DTOs/AccountDtos.cs KeycloakUserSummaryDto. */
+export interface KeycloakUserSummaryDto {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  emailVerified: boolean;
+  enabled: boolean;
+  roles: string[];
+  twoFactorConfigured: boolean;
+  createdAt?: string | null;
+}
+
+/** Mirrors IdentityBLL/DTOs/AccountDtos.cs TwoFactorStatusDto. */
+export interface TwoFactorStatusDto {
+  twoFactorConfigured: boolean;
+  accountConsoleUrl: string;
+}
+
+/** Mirrors IdentityBLL/DTOs/AccountDtos.cs UpdateUserRolesDto. */
+export interface UpdateUserRolesDto { roles: string[]; }
+
+/** Mirrors IdentityBLL/DTOs/AccountDtos.cs UserRolesResultDto. */
+export interface UserRolesResultDto { userId: string; roles: string[]; }
 
 // ── Content ───────────────────────────────────────────────────────────────
 export interface AuthorDto {
@@ -13,6 +47,8 @@ export interface AuthorDto {
   userId: number;
   userName: string;
   avatarUrl?: string;
+  /** Identity id of the author — profile links go to /users/{externalId}. Absent for demo authors. */
+  externalId?: string;
 }
 
 export interface PostDto {
@@ -44,15 +80,24 @@ export interface CommentDto {
 
 export interface CommentCreateDto {
   postId: number;
-  postAuthorId: number;
   parentCommentId?: number;
   body: string;
-  createdBy: string;
 }
 
 export interface TagDto { tagId: number; name: string; }
 
-export interface LikeCreateDto { postId: number; userId: number; }
+export interface LikeCreateDto { postId: number; }
+
+// The caller's own content-side identity, keyed off the token. The backend
+// mints the row on first call, so there is no by-username lookup any more.
+export interface PostAuthorMeDto {
+  postAuthorId: number;
+  userId: number;
+  externalId?: string | null;
+  userName: string;
+  avatarUrl?: string | null;
+  created: boolean;
+}
 
 // ── Aggregator ────────────────────────────────────────────────────────────
 export interface AggregatorAuthorDto {
@@ -60,6 +105,8 @@ export interface AggregatorAuthorDto {
   userId: number;
   userName: string;
   avatarUrl?: string;
+  /** Identity id of the author — profile links go to /users/{externalId}. Absent for demo authors. */
+  externalId?: string;
 }
 
 export interface AggregatorCollaborationDto {
@@ -113,6 +160,7 @@ export interface AggregatorTeamMemberDto {
   username: string;
   avatarUrl?: string;
   role: string;
+  position?: string;
 }
 
 export interface AggregatorRequiredRoleDto { role: string; description?: string; }
@@ -155,7 +203,6 @@ export interface PostUpdateFrontendDto {
   description?: string;
   externalLink?: string;
   tagIds: number[];
-  updatedBy: string;
   newMediaFiles?: File[];
 }
 
@@ -247,6 +294,8 @@ export const TEAM_PERMISSIONS: { key: string; label: string }[] = [
 export interface TeamMemberEntity {
   user: { userId: string; username: string; avatarUrl?: string };
   role: string;
+  /** What the member does in the team, e.g. "Веб-розробник". */
+  position?: string;
   joinedAt: string;
   permissions?: string[];
 }
@@ -327,68 +376,56 @@ export interface UpdateTeamCommand {
   description: string;
   category: string;
   tags: string[];
-  userId: string;
 }
 
 export interface SetTeamStatusCommand {
   teamId: string;
   status: number;
-  userId: string;
 }
 
 export interface AddRequiredRoleCommand {
   teamId: string;
   role: string;
   description?: string;
-  userId: string;
 }
 
 export interface SetTeamAvatarUrlCommand {
   teamId: string;
   avatarUrl?: string;
-  userId: string;
 }
 
 export interface UpdateTeamMemberPermissionsCommand {
   teamId: string;
   targetMemberId: string;
   permissions: string[];
-  userId: string;
 }
 
 export interface CreateCollaborationRequestCommand {
   teamId: string;
-  fromUserId: string;
-  fromUsername?: string;
-  fromAvatarUrl?: string;
   role: string;
   message?: string;
   toUserId?: string;
 }
 
-export interface AcceptCollaborationRequestCommand { requestId: string; userId: string; }
-export interface RejectCollaborationRequestCommand { requestId: string; userId: string; }
+export interface AcceptCollaborationRequestCommand { requestId: string; }
+export interface RejectCollaborationRequestCommand { requestId: string; }
 
 export interface CreateGroupInvitationCommand {
   teamId: string;
   invitedUserId: string;
-  invitedByUserId: string;
   role: string;
   message?: string;
   expirationDays?: number;
 }
 
-export interface AcceptGroupInvitationCommand { invitationId: string; userId: string; username: string; avatarUrl?: string; }
-export interface DeclineGroupInvitationCommand { invitationId: string; userId: string; }
+export interface AcceptGroupInvitationCommand { invitationId: string; }
+export interface DeclineGroupInvitationCommand { invitationId: string; }
 
 export interface CreateTeamCommand {
   name: string;
   description: string;
   category: string;
   tags: string[];
-  userId: string;
-  username: string;
-  avatarUrl?: string;
   teamAvatarUrl?: string;
 }
 
@@ -401,6 +438,72 @@ export interface ChatMessageDto {
   senderAvatarUrl?: string;
   text: string;
   sentAt: string;
+  /** Absent on messages from servers that predate attachments. */
+  attachments?: ChatAttachmentDto[];
+}
+
+export type ChatAttachmentKind = "image" | "video" | "audio" | "file";
+
+export interface ChatAttachmentDto {
+  url: string;
+  kind: ChatAttachmentKind;
+  name?: string;
+  contentType?: string;
+  size: number;
+}
+
+/** A file already uploaded to storage, ready to be sent with a message. */
+export interface ChatAttachmentInput {
+  url: string;
+  name?: string;
+  contentType?: string;
+  size: number;
+}
+
+/** Same wording as the server's ChatMessage.Preview(), for list updates made on the client. */
+export function chatMessagePreview(m: Pick<ChatMessageDto, "text" | "attachments">): string {
+  const files = m.attachments ?? [];
+  if (m.text || files.length === 0) return m.text;
+  if (files.every(f => f.kind === "image")) return files.length === 1 ? "📷 Фото" : `📷 Фото (${files.length})`;
+  if (files.length === 1 && files[0].kind === "video") return "🎬 Відео";
+  return files.length === 1 ? `📎 ${files[0].name ?? "Файл"}` : `📎 Файли (${files.length})`;
+}
+
+// ── Direct (one-to-one) chats ─────────────────────────────────────────
+export type DirectStatus = "pending" | "accepted" | "blocked";
+
+/** A one-to-one chat as the caller sees it; the server works out every flag. */
+export interface DirectConversationDto {
+  id: string;
+  otherUserId: string;
+  otherUsername: string;
+  otherAvatarUrl?: string;
+  status: DirectStatus;
+  requestedByMe: boolean;
+  blockedByMe: boolean;
+  canSend: boolean;
+  canAccept: boolean;
+  canUnblock: boolean;
+  pendingMessagesLeft: number;
+  lastMessage?: string;
+  lastSenderId?: string;
+  lastMessageAt?: string;
+  createdAt: string;
+}
+
+export interface DirectHistoryPage extends ChatHistoryPage {
+  conversation: DirectConversationDto;
+}
+
+export interface DirectSendResult {
+  conversation: DirectConversationDto;
+  message: ChatMessageDto;
+}
+
+/** Pushed over the hub to each participant: a new message, or a change of status. */
+export interface DirectUpdate {
+  conversation: DirectConversationDto;
+  message?: ChatMessageDto | null;
 }
 
 export interface ChatSummaryDto {
@@ -423,10 +526,8 @@ export interface ChatHistoryPage {
 
 export interface SendChatMessageCommand {
   chatId: string;
-  senderId: string;
-  senderName: string;
-  senderAvatarUrl?: string;
-  text: string;
+  text?: string;
+  attachments?: ChatAttachmentInput[];
 }
 
 // ── Team vacancies ────────────────────────────────────────────────────────
@@ -472,17 +573,23 @@ export interface VacancyPage {
 
 export interface CreateTeamVacancyCommand {
   teamId: string;
-  userId: string;
   role: string;
   description?: string;
   requirements?: string;
 }
 
-export interface CloseTeamVacancyCommand { vacancyId: string; userId: string; }
-export interface ApplyToVacancyCommand { vacancyId: string; userId: string; message?: string; }
-export interface AcceptVacancyApplicationCommand { applicationId: string; userId: string; }
-export interface RejectVacancyApplicationCommand { applicationId: string; userId: string; }
-export interface CancelVacancyApplicationCommand { applicationId: string; userId: string; }
+export interface UpdateTeamVacancyCommand {
+  vacancyId: string;
+  role: string;
+  description?: string;
+  requirements?: string;
+}
+
+export interface CloseTeamVacancyCommand { vacancyId: string; }
+export interface ApplyToVacancyCommand { vacancyId: string; message?: string; }
+export interface AcceptVacancyApplicationCommand { applicationId: string; }
+export interface RejectVacancyApplicationCommand { applicationId: string; }
+export interface CancelVacancyApplicationCommand { applicationId: string; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 export function teamStatusLabel(status: number | string): string {

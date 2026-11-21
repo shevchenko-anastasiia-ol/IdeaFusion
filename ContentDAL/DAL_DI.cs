@@ -35,6 +35,7 @@ public static class DAL_DI
         });
 
         services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<IPostAuthorRepository, PostAuthorRepository>();
         services.AddScoped<ILikeRepository, LikeRepository>();
         services.AddScoped<IPostViewRepository, PostViewRepository>();
         services.AddScoped<ISavedPostRepository, SavedPostRepository>();

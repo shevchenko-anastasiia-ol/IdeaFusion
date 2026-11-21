@@ -29,6 +29,9 @@ public class PostMappingProfiles : Profile
         // Мапінг PostCreateDto в Post
         CreateMap<PostCreateDto, Post>()
             .ForMember(dest => dest.PostId,                  opt => opt.Ignore())
+            // The author comes from the token, so the DTO has no author id to map.
+            .ForMember(dest => dest.PostAuthorId,            opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedBy,               opt => opt.Ignore())
             .ForMember(dest => dest.Status,                  opt => opt.MapFrom(src => ParseStatus(src.Status)))
             .ForMember(dest => dest.CreatedAt,               opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt,               opt => opt.Ignore())

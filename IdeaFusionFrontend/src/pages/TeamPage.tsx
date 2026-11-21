@@ -1,11 +1,14 @@
-import { FunctionComponent, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
 import { teamsApi } from "../api/teams";
 import { useAuth } from "../context/AuthContext";
-import styles from "./TeamPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Loading } from "../ui";
 
-const TeamPage: FunctionComponent = () => {
+/** /team: opens the caller's first team, or the create form when there is none. */
+export default function TeamPage() {
+  usePageMeta("Команда");
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
@@ -16,25 +19,14 @@ const TeamPage: FunctionComponent = () => {
       return;
     }
     teamsApi
-      .getByMember(user.id)
-      .then((teams) => {
-        if (teams.length > 0) {
-          navigate(`/teams/${teams[0].id}`, { replace: true });
-        } else {
-          navigate("/team/new", { replace: true });
-        }
-      })
+      .getMine()
+      .then(teams => navigate(teams.length > 0 ? `/teams/${teams[0].id}` : "/team/new", { replace: true }))
       .catch(() => navigate("/team/new", { replace: true }));
   }, [user, authLoading, navigate]);
 
   return (
-    <div className={styles.page}>
-      <FrameComponent2 />
-      <div style={{ marginLeft: 124, padding: 40, color: "#888", fontSize: 16 }}>
-        Завантаження...
-      </div>
-    </div>
+    <Page>
+      <Loading label="Відкриваємо вашу команду…" />
+    </Page>
   );
-};
-
-export default TeamPage;
+}

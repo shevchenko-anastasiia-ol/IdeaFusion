@@ -1,7 +1,9 @@
-import { FunctionComponent, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { copyCheckApi, MATCH_TYPE_LABELS, ZONE_LABELS, type CopyCheckResult } from '../api/copycheck';
-import styles from './CopyCheckNotice.module.css';
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { copyCheckApi, MATCH_TYPE_LABELS, ZONE_LABELS, type CopyCheckResult, type CopyZone } from "../api/copycheck";
+import { Spinner, cx } from "../ui";
+import { IconAlert, IconCheck, IconInfo } from "../ui/icons";
+import s from "./CopyCheckNotice.module.css";
 
 interface Props {
   file: File;
@@ -9,54 +11,95 @@ interface Props {
   onResult?: (result: CopyCheckResult | null) => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const ZONE_COLOR: Record<CopyZone, string> = {
+  red: "var(--red)",
+  yellow: "var(--amber)",
+  green: "var(--teal)",
+};
+
 /**
- * Checks one image against works already published on the platform and tells the author
- * what it resembles, before the post goes out. It never blocks: the author decides, and a
- * moderator sees the match later if the post is published anyway.
+ * One image in the "image check" panel of the post form. The image is compared with works
+ * already published on the platform before the post goes out. It never blocks: the author
+ * decides, and a moderator sees the match on the post if it is published anyway.
  */
-const CopyCheckNotice: FunctionComponent<Props> = ({ file, onResult }) => {
-  const [state, setState] = useState<'checking' | 'done' | 'unavailable'>('checking');
+export default function CopyCheckNotice({ file, onResult }: Props) {
+  const [state, setState] = useState<"checking" | "done" | "unavailable">("checking");
   const [result, setResult] = useState<CopyCheckResult | null>(null);
+  const preview = useMemo(() => URL.createObjectURL(file), [file]);
+
+  useEffect(() => () => URL.revokeObjectURL(preview), [preview]);
 
   useEffect(() => {
     let cancelled = false;
-    setState('checking');
-    copyCheckApi.preview(file)
+    setState("checking");
+    copyCheckApi
+      .preview(file)
       .then(r => {
         if (cancelled) return;
         setResult(r);
-        setState('done');
+        setState("done");
         onResult?.(r);
       })
       .catch(() => {
         if (cancelled) return;
-        setState('unavailable');
+        setState("unavailable");
         onResult?.(null);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // onResult is a fresh closure on every render of the page; the check depends on the file only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 
-  if (state === 'checking') return <p className={styles.muted}>Перевіряємо на збіги з опублікованими роботами…</p>;
-  if (state === 'unavailable') return <p className={styles.muted}>Перевірка на копії зараз недоступна.</p>;
-  if (!result || result.zone === 'green' || !result.best) return <p className={styles.ok}>✓ {ZONE_LABELS.green}</p>;
+  const match = state === "done" && result && result.zone !== "green" && result.best ? result : null;
+  const tone = match ? match.zone : state === "done" ? "green" : null;
 
-  const best = result.best;
   return (
-    <div className={result.zone === 'red' ? styles.red : styles.yellow}>
-      <strong>{ZONE_LABELS[result.zone]}</strong>
-      <span>
-        {' '}— {MATCH_TYPE_LABELS[best.match_type]} роботи{' '}
-        <Link to={`/posts/${best.post_id}`} target="_blank">#{best.post_id}</Link>
-        {' '}(ймовірність копії {(best.p_copy * 100).toFixed(0)}%).
-      </span>
-      <p className={styles.hint}>
-        Якщо це ваша робота, опублікована раніше з іншого акаунта, або вона використана з дозволу —
-        можна публікувати: остаточне рішення ухвалює модератор, автоматичних санкцій немає.
-      </p>
-    </div>
+    <li className={cx(s.row, match && (match.zone === "red" ? s.red : s.yellow))} role="status">
+      <div className={s.main}>
+        <img src={preview} alt="" className={s.thumb} />
+        <span className={s.text}>
+          <span className={s.name}>{file.name}</span>
+          <span className={s.state}>
+            {state === "checking" && (
+              <>
+                <Spinner /> перевіряється…
+              </>
+            )}
+            {state === "unavailable" && (
+              <>
+                <IconInfo size={13} /> перевірка зараз недоступна
+              </>
+            )}
+            {state === "done" && !match && (
+              <>
+                <IconCheck size={13} /> {ZONE_LABELS.green.toLowerCase()}
+              </>
+            )}
+            {match && (
+              <>
+                <IconAlert size={13} /> {ZONE_LABELS[match.zone].toLowerCase()}
+              </>
+            )}
+          </span>
+        </span>
+        {tone && result && (
+          <span className={s.score} style={{ color: ZONE_COLOR[tone] }}>
+            {Math.round((match ? match.best!.p_copy : result.score) * 100)}%
+          </span>
+        )}
+      </div>
+      {match && (
+        <p className={s.detail}>
+          {MATCH_TYPE_LABELS[match.best!.match_type]} — найближча робота{" "}
+          <Link to={`/posts/${match.best!.post_id}`} target="_blank">
+            #{match.best!.post_id}
+          </Link>
+          . Якщо це ваша робота або вона використана з дозволу — можна публікувати: рішення ухвалює модератор, автоматичних санкцій немає.
+        </p>
+      )}
+    </li>
   );
-};
-
-export default CopyCheckNotice;
+}

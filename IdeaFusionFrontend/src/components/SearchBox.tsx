@@ -1,8 +1,10 @@
-import { FunctionComponent, useEffect, useRef, useState } from "react";
-import { Box, ClickAwayListener, InputBase, Paper } from "@mui/material";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { KIND_LABEL, hitLink, searchApi } from "../api/search";
 import type { HistoryEntry, SuggestResponse } from "../api/search";
+import { IconButton } from "../ui";
+import { IconClose, IconHistory, IconSearch } from "../ui/icons";
+import s from "./SearchBox.module.css";
 
 export type SearchBoxProps = {
   value: string;
@@ -14,42 +16,94 @@ export type SearchBoxProps = {
   /** A history entry was picked: restore its query and filters. */
   onPickHistory?: (entry: HistoryEntry) => void;
   placeholder?: string;
+  autoFocus?: boolean;
+  /** Changes every time focus is asked for again (Ctrl+K while already on the page). */
+  focusToken?: unknown;
 };
 
 const SUGGEST_DELAY_MS = 200;
 
-const rowSx = {
-  px: "18px", py: "9px", cursor: "pointer", display: "flex", alignItems: "center", gap: "10px",
-  color: "#ddd", fontSize: 15, fontFamily: "var(--font-inter)",
-  "&:hover, &.active": { background: "#232323" },
-} as const;
+type Row =
+  | { kind: "history"; entry: HistoryEntry }
+  | { kind: "completion"; text: string }
+  | { kind: "doc"; doc: SuggestResponse["documents"][number] };
 
-const groupSx = { px: "18px", pt: "10px", pb: "4px", fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: ".06em" } as const;
+function describeFilters(h: HistoryEntry): string[] {
+  const f = h.filters;
+  const parts: string[] = [];
+  if (f.kind) parts.push(KIND_LABEL[f.kind]);
+  if (f.category) parts.push(f.category);
+  if (f.tags?.length) parts.push(f.tags.map(t => `#${t}`).join(" "));
+  if (f.role) parts.push(`роль: ${f.role}`);
+  if (f.hasOpenVacancies) parts.push("з вакансіями");
+  return parts;
+}
 
 /**
  * The search field: autocomplete of words, tags and documents while typing, and the
  * user's recent searches when the field is empty or starts like one of them.
  */
-const SearchBox: FunctionComponent<SearchBoxProps> = ({
-  value, onChange, onSubmit, onPickTag, onPickHistory, placeholder = "Пошук постів, команд, вакансій, людей…",
-}) => {
+export default function SearchBox({
+  value,
+  onChange,
+  onSubmit,
+  onPickTag,
+  onPickHistory,
+  placeholder = "Пошук постів, команд, вакансій, людей…",
+  autoFocus,
+  focusToken,
+}: SearchBoxProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [suggest, setSuggest] = useState<SuggestResponse | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [active, setActive] = useState(-1);
   const seq = useRef(0);
+  const wrap = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (autoFocus) {
+      input.current?.focus();
+      input.current?.select();
+    }
+  }, [autoFocus, focusToken]);
 
   useEffect(() => {
     if (!open) return;
     const id = ++seq.current;
     const timer = setTimeout(() => {
       const text = value.trim();
-      searchApi.history(text, text ? 3 : 8).then(h => { if (id === seq.current) setHistory(h); }).catch(() => setHistory([]));
-      if (!text) { setSuggest(null); return; }
-      searchApi.suggest(text, 6).then(s => { if (id === seq.current) setSuggest(s); }).catch(() => setSuggest(null));
+      searchApi
+        .history(text, text ? 3 : 8)
+        .then(h => {
+          if (id === seq.current) setHistory(h);
+        })
+        .catch(() => setHistory([]));
+      if (!text) {
+        setSuggest(null);
+        return;
+      }
+      searchApi
+        .suggest(text, 6)
+        .then(r => {
+          if (id === seq.current) setSuggest(r);
+        })
+        .catch(() => setSuggest(null));
     }, SUGGEST_DELAY_MS);
     return () => clearTimeout(timer);
   }, [value, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  useEffect(() => setActive(-1), [suggest, history]);
 
   const submit = (text: string) => {
     setOpen(false);
@@ -66,125 +120,190 @@ const SearchBox: FunctionComponent<SearchBoxProps> = ({
     setHistory([]);
   };
 
-  const hasSuggestions = !!suggest && (suggest.completions.length + suggest.tags.length + suggest.documents.length) > 0;
-  const showPanel = open && (history.length > 0 || hasSuggestions);
+  const rows: Row[] = [
+    ...history.map(entry => ({ kind: "history" as const, entry })),
+    ...(suggest?.completions ?? []).map(text => ({ kind: "completion" as const, text })),
+    ...(suggest?.documents ?? []).map(doc => ({ kind: "doc" as const, doc })),
+  ];
+  const tags = onPickTag ? suggest?.tags ?? [] : [];
+  const showPanel = open && (rows.length > 0 || tags.length > 0);
+
+  function activate(row: Row) {
+    setOpen(false);
+    if (row.kind === "history") onPickHistory?.(row.entry);
+    else if (row.kind === "completion") {
+      onChange(row.text);
+      onSubmit(row.text);
+    } else navigate(hitLink(row.doc));
+  }
+
+  function onKey(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") setOpen(false);
+    else if (e.key === "ArrowDown" && rows.length) {
+      e.preventDefault();
+      setOpen(true);
+      setActive(i => Math.min(rows.length - 1, i + 1));
+    } else if (e.key === "ArrowUp" && rows.length) {
+      e.preventDefault();
+      setActive(i => Math.max(-1, i - 1));
+    } else if (e.key === "Enter" && open && active >= 0 && rows[active]) {
+      e.preventDefault();
+      activate(rows[active]);
+    }
+  }
+
+  let idx = -1;
+  const rowProps = (row: Row) => {
+    idx += 1;
+    const i = idx;
+    return {
+      id: `sb-row-${i}`,
+      role: "option" as const,
+      "aria-selected": active === i,
+      className: active === i ? `${s.row} ${s.rowActive}` : s.row,
+      onMouseEnter: () => setActive(i),
+      onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
+      onClick: () => activate(row),
+    };
+  };
 
   return (
-    <ClickAwayListener onClickAway={() => setOpen(false)}>
-      <Box sx={{ position: "relative", width: "100%" }}>
-        <Box component="form" role="search"
-          onSubmit={e => { e.preventDefault(); submit(value); }}
-          sx={{ display: "flex", alignItems: "center", gap: "14px", height: 64, px: "24px",
-            background: "#161616", border: "1px solid #6d6c6c", borderRadius: "40px",
-            "&:focus-within": { borderColor: "#7c5cfc" } }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" stroke="#6d6c6c" strokeWidth="1.8" />
-            <path d="M16.5 16.5L21 21" stroke="#6d6c6c" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          <InputBase
-            value={value}
-            placeholder={placeholder}
-            onChange={e => { onChange(e.target.value); setOpen(true); }}
-            onFocus={() => setOpen(true)}
-            onKeyDown={e => { if (e.key === "Escape") setOpen(false); }}
-            inputProps={{ "aria-label": "Пошук", maxLength: 200 }}
-            sx={{ flex: 1, color: "#eee", fontSize: 20, fontFamily: "var(--font-inter)" }}
-          />
-          {value && (
-            <Box component="button" type="button" aria-label="Очистити"
-              onClick={() => { onChange(""); setOpen(true); }}
-              sx={{ background: "none", border: "none", color: "#6d6c6c", fontSize: 22, cursor: "pointer" }}>
-              ×
-            </Box>
-          )}
-        </Box>
-
-        {showPanel && (
-          <Paper elevation={8} sx={{ position: "absolute", top: 70, left: 0, right: 0, zIndex: 20,
-            background: "#1b1b1b", border: "1px solid #2a2a2a", borderRadius: "20px", overflow: "hidden", pb: "8px" }}>
-            {history.length > 0 && (
-              <>
-                <Box sx={{ ...groupSx, display: "flex", justifyContent: "space-between" }}>
-                  <span>Нещодавні пошуки</span>
-                  {!value.trim() && (
-                    <Box component="span" onClick={clearHistory} sx={{ cursor: "pointer", color: "#a48fff", textTransform: "none" }}>
-                      Очистити
-                    </Box>
-                  )}
-                </Box>
-                {history.map(h => (
-                  <Box key={h.id} sx={rowSx} onClick={() => { setOpen(false); onPickHistory?.(h); }}>
-                    <Box component="span" sx={{ color: "#666" }}>↺</Box>
-                    <Box sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {h.query || "Без запиту"}
-                      {describeFilters(h).length > 0 && (
-                        <Box component="span" sx={{ color: "#777", fontSize: 13 }}> · {describeFilters(h).join(", ")}</Box>
-                      )}
-                    </Box>
-                    <Box component="span" sx={{ color: "#555", fontSize: 12 }}>{h.resultsCount}</Box>
-                    <Box component="button" type="button" aria-label="Видалити з історії"
-                      onClick={e => { e.stopPropagation(); removeHistory(h); }}
-                      sx={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 16 }}>
-                      ×
-                    </Box>
-                  </Box>
-                ))}
-              </>
-            )}
-
-            {suggest && suggest.completions.length > 0 && (
-              <>
-                <Box sx={groupSx}>Запити</Box>
-                {suggest.completions.map(c => (
-                  <Box key={c} sx={rowSx} onClick={() => { onChange(c); submit(c); }}>
-                    <Box component="span" sx={{ color: "#666" }}>⌕</Box>{c}
-                  </Box>
-                ))}
-              </>
-            )}
-
-            {suggest && suggest.tags.length > 0 && onPickTag && (
-              <>
-                <Box sx={groupSx}>Теги</Box>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px", px: "18px", py: "6px" }}>
-                  {suggest.tags.map(t => (
-                    <Box key={t.key} onClick={() => { setOpen(false); onPickTag(t.key); }}
-                      sx={{ cursor: "pointer", px: "12px", py: "4px", borderRadius: "30px", fontSize: 13,
-                        border: "1px solid #7c5cfc", color: "#a48fff", background: "rgba(124,92,252,.12)" }}>
-                      #{t.label} <Box component="span" sx={{ color: "#777" }}>{t.documents}</Box>
-                    </Box>
-                  ))}
-                </Box>
-              </>
-            )}
-
-            {suggest && suggest.documents.length > 0 && (
-              <>
-                <Box sx={groupSx}>Знайдено</Box>
-                {suggest.documents.map(d => (
-                  <Box key={d.id} sx={rowSx} onClick={() => { setOpen(false); navigate(hitLink(d)); }}>
-                    <Box component="span" sx={{ fontSize: 11, color: "#7c5cfc", minWidth: 64 }}>{KIND_LABEL[d.kind]}</Box>
-                    <Box sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</Box>
-                  </Box>
-                ))}
-              </>
-            )}
-          </Paper>
+    <div className={s.wrap} ref={wrap}>
+      <form
+        role="search"
+        className={s.form}
+        onSubmit={e => {
+          e.preventDefault();
+          submit(value);
+        }}
+      >
+        <IconSearch size={20} className={s.icon} />
+        <input
+          ref={input}
+          className={s.input}
+          value={value}
+          placeholder={placeholder}
+          aria-label="Пошук"
+          maxLength={200}
+          role="combobox"
+          aria-expanded={showPanel}
+          aria-controls="search-suggestions"
+          aria-activedescendant={active >= 0 ? `sb-row-${active}` : undefined}
+          onChange={e => {
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKey}
+        />
+        {value && (
+          <IconButton
+            label="Очистити"
+            size="sm"
+            onClick={() => {
+              onChange("");
+              setOpen(true);
+              input.current?.focus();
+            }}
+          >
+            <IconClose size={16} />
+          </IconButton>
         )}
-      </Box>
-    </ClickAwayListener>
+        <kbd className={s.kbd}>Enter</kbd>
+      </form>
+
+      {showPanel && (
+        <div className={s.panel} id="search-suggestions" role="listbox">
+          {history.length > 0 && (
+            <div className={s.group}>
+              <div className={s.groupHead}>
+                <span>нещодавні пошуки</span>
+                {!value.trim() && (
+                  <button type="button" className={s.clear} onMouseDown={e => e.preventDefault()} onClick={() => void clearHistory()}>
+                    очистити
+                  </button>
+                )}
+              </div>
+              {history.map(h => {
+                const extra = describeFilters(h);
+                return (
+                  <div key={h.id} {...rowProps({ kind: "history", entry: h })}>
+                    <IconHistory size={15} className={s.rowIcon} />
+                    <span className={s.rowText}>
+                      {h.query || "без запиту"}
+                      {extra.length > 0 && <span className={s.rowExtra}> · {extra.join(", ")}</span>}
+                    </span>
+                    <span className={s.rowCount}>{h.resultsCount}</span>
+                    <button
+                      type="button"
+                      className={s.rowRemove}
+                      aria-label="Видалити з історії"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={e => {
+                        e.stopPropagation();
+                        void removeHistory(h);
+                      }}
+                    >
+                      <IconClose size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {suggest && suggest.completions.length > 0 && (
+            <div className={s.group}>
+              <div className={s.groupHead}>
+                <span>запити</span>
+              </div>
+              {suggest.completions.map(c => (
+                <div key={c} {...rowProps({ kind: "completion", text: c })}>
+                  <IconSearch size={15} className={s.rowIcon} />
+                  <span className={s.rowText}>{c}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {tags.length > 0 && (
+            <div className={s.group}>
+              <div className={s.groupHead}>
+                <span>теги</span>
+              </div>
+              <div className={s.tags}>
+                {tags.map(t => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className={s.tag}
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => {
+                      setOpen(false);
+                      onPickTag?.(t.key);
+                    }}
+                  >
+                    #{t.label} <span>{t.documents}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {suggest && suggest.documents.length > 0 && (
+            <div className={s.group}>
+              <div className={s.groupHead}>
+                <span>знайдено</span>
+              </div>
+              {suggest.documents.map(d => (
+                <div key={d.id} {...rowProps({ kind: "doc", doc: d })}>
+                  <span className={s.kind} data-kind={d.kind}>
+                    {KIND_LABEL[d.kind]}
+                  </span>
+                  <span className={s.rowText}>{d.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
-};
-
-function describeFilters(h: HistoryEntry): string[] {
-  const f = h.filters;
-  const parts: string[] = [];
-  if (f.kind) parts.push(KIND_LABEL[f.kind]);
-  if (f.category) parts.push(f.category);
-  if (f.tags?.length) parts.push(f.tags.map(t => `#${t}`).join(" "));
-  if (f.role) parts.push(`роль: ${f.role}`);
-  if (f.hasOpenVacancies) parts.push("з вакансіями");
-  return parts;
 }
-
-export default SearchBox;

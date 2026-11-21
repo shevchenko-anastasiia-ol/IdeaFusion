@@ -4,7 +4,7 @@ namespace ServiceDefaults.Metrics;
 
 public static class CacheMetrics
 {
-    private static readonly Meter Meter = new("GameNest.Cache", "1.0.0");
+    private static readonly Meter Meter = new("IdeaFusion.Cache", "1.0.0");
 
     public static readonly Counter<long> MemoryCacheHits = Meter.CreateCounter<long>("cache_memory_hit_total", "hits", "Number of L1 memory cache hits");
     public static readonly Counter<long> MemoryCacheMisses = Meter.CreateCounter<long>("cache_memory_miss_total", "misses", "Number of L1 memory cache misses");

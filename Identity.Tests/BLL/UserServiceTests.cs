@@ -1,38 +1,28 @@
 using AutoMapper;
 using FluentAssertions;
-using Identity.Tests.Helpers;
 using IdentityBLL.DTOs;
-using IdentityBLL.MappingProfiles;
 using IdentityBLL.Interfaces;
+using IdentityBLL.MappingProfiles;
 using IdentityBLL.Services;
-using IdentityDAL.Interfaces;
 using IdentityServiceDomain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Security.Authentication;
 using Xunit;
 
 namespace Identity.Tests.BLL;
 
 public class UserServiceTests
 {
-    private readonly Mock<UserManager<ApplicationUser>>  _userManagerMock;
-    private readonly Mock<RoleManager<ApplicationRole>>  _roleManagerMock;
-    private readonly Mock<ITokenService>                 _tokenServiceMock = new();
-    private readonly Mock<IRefreshTokenRepository>       _repoMock         = new();
-    private readonly Mock<ILogger<UserService>>          _loggerMock       = new();
-    private readonly IMapper                             _mapper;
+    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
+    private readonly Mock<ILogger<UserService>>        _loggerMock = new();
+    private readonly IMapper                           _mapper;
 
     public UserServiceTests()
     {
         var userStore = new Mock<IUserStore<ApplicationUser>>();
         _userManagerMock = new Mock<UserManager<ApplicationUser>>(
             userStore.Object, null!, null!, null!, null!, null!, null!, null!, null!);
-
-        var roleStore = new Mock<IRoleStore<ApplicationRole>>();
-        _roleManagerMock = new Mock<RoleManager<ApplicationRole>>(
-            roleStore.Object, null!, null!, null!, null!);
 
         _mapper = new MapperConfiguration(
                 cfg => cfg.AddProfile<IdentityProfile>(),
@@ -42,386 +32,284 @@ public class UserServiceTests
 
     private UserService CreateService() => new(
         _userManagerMock.Object,
-        _roleManagerMock.Object,
-        _tokenServiceMock.Object,
         _mapper,
-        _repoMock.Object,
         _loggerMock.Object);
 
-    private static ApplicationUser MakeUser(string email = "user@example.com", string userName = "testuser") => new()
+    private static ApplicationUser MakeUser(
+        Guid? id = null,
+        string email = "user@example.com",
+        string userName = "testuser") => new()
     {
-        Id       = Guid.NewGuid(),
+        Id       = id ?? Guid.NewGuid(),
         Email    = email,
         UserName = userName
     };
 
-    // ── RegisterUserAsync ─────────────────────────────────────────────────────
+    // ── GetOrCreateAsync ──────────────────────────────────────────────────────
 
     [Fact]
-    public async Task RegisterUserAsync_WhenSuccessful_ReturnsSucceededResult()
+    public async Task GetOrCreate_ReturnsTheExistingRowWithoutCreatingOne()
     {
-        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), "User"))
-            .ReturnsAsync(IdentityResult.Success);
+        var subject = Guid.NewGuid();
+        var existing = MakeUser(subject, "anna@ideafusion.com", "AnnoGray");
 
-        var result = await CreateService().RegisterUserAsync(
-            new RegisterDto { UserName = "alice", Email = "alice@example.com", Password = "Pass@1234" });
-
-        result.Succeeded.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task RegisterUserAsync_WhenSuccessful_AddsUserToUserRole()
-    {
-        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), "User"))
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync(existing);
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
             .ReturnsAsync(IdentityResult.Success);
 
-        await CreateService().RegisterUserAsync(
-            new RegisterDto { UserName = "alice", Email = "alice@example.com", Password = "Pass@1234" });
+        var result = await CreateService().GetOrCreateAsync(subject, "anna@ideafusion.com", "AnnoGray");
 
-        _userManagerMock.Verify(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), "User"), Times.Once);
+        result.Id.Should().Be(subject);
+        result.Email.Should().Be("anna@ideafusion.com");
+        _userManagerMock.Verify(m => m.CreateAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]
-    public async Task RegisterUserAsync_WhenCreationFails_DoesNotAddToRole()
+    public async Task GetOrCreate_CreatesTheRowKeyedBySubjectOnFirstCall()
     {
-        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
-            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Duplicate email." }));
+        var subject = Guid.NewGuid();
 
-        await CreateService().RegisterUserAsync(
-            new RegisterDto { UserName = "alice", Email = "dup@example.com", Password = "Pass@1234" });
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        _userManagerMock.Verify(m => m.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+        ApplicationUser? captured = null;
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .Callback<ApplicationUser>(u => captured = u)
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await CreateService().GetOrCreateAsync(subject, "anna@ideafusion.com", "AnnoGray");
+
+        result.Id.Should().Be(subject);
+
+        captured.Should().NotBeNull();
+        captured!.Email.Should().Be("anna@ideafusion.com");
+        captured.UserName.Should().Be("AnnoGray");
     }
 
     [Fact]
-    public async Task RegisterUserAsync_WhenCreationFails_ReturnsFailedResult()
+    public async Task GetOrCreate_StoresTheSentinelPasswordHash()
     {
-        var error = new IdentityError { Description = "Weak password." };
-        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
-            .ReturnsAsync(IdentityResult.Failed(error));
+        var subject = Guid.NewGuid();
 
-        var result = await CreateService().RegisterUserAsync(
-            new RegisterDto { UserName = "bob", Email = "bob@example.com", Password = "weak" });
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        result.Succeeded.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Description == "Weak password.");
-    }
+        ApplicationUser? captured = null;
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .Callback<ApplicationUser>(u => captured = u)
+            .ReturnsAsync(IdentityResult.Success);
 
-    // ── LoginUserAsync ────────────────────────────────────────────────────────
+        await CreateService().GetOrCreateAsync(subject, "a@b.com", "a");
 
-    [Fact]
-    public async Task LoginUserAsync_WhenUserNotFound_ThrowsAuthenticationException()
-    {
-        _userManagerMock.Setup(m => m.FindByEmailAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        var act = () => CreateService().LoginUserAsync(
-            new LoginDto { Email = "ghost@example.com", Password = "Pass@1234" });
-
-        await act.Should().ThrowAsync<AuthenticationException>()
-            .WithMessage("*Invalid email or password*");
+        captured!.PasswordHash.Should().Be(ApplicationUser.ExternalPasswordSentinel);
     }
 
     [Fact]
-    public async Task LoginUserAsync_WhenPasswordInvalid_ThrowsAuthenticationException()
+    public async Task GetOrCreate_FallsBackToAPlaceholderEmailWhenTheTokenHasNone()
     {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.CheckPasswordAsync(user, It.IsAny<string>())).ReturnsAsync(false);
+        var subject = Guid.NewGuid();
 
-        var act = () => CreateService().LoginUserAsync(
-            new LoginDto { Email = user.Email!, Password = "WrongPass" });
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        await act.Should().ThrowAsync<AuthenticationException>()
-            .WithMessage("*Invalid email or password*");
+        ApplicationUser? captured = null;
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .Callback<ApplicationUser>(u => captured = u)
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await CreateService().GetOrCreateAsync(subject, null, null);
+
+        result.Email.Should().Be($"{subject}@keycloak.local");
+        captured!.UserName.Should().Be($"{subject}@keycloak.local");
     }
 
     [Fact]
-    public async Task LoginUserAsync_WhenCredentialsValid_ReturnsAuthResponse()
+    public async Task GetOrCreate_FallsBackToTheEmailWhenTheTokenHasNoUsername()
     {
-        var user     = MakeUser();
-        var expected = new AuthResponseDto { AccessToken = "jwt", RefreshToken = "rt" };
-        _userManagerMock.Setup(m => m.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.CheckPasswordAsync(user, "Pass@1234")).ReturnsAsync(true);
-        _tokenServiceMock.Setup(t => t.GenerateTokensAsync(user, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expected);
+        var subject = Guid.NewGuid();
 
-        var result = await CreateService().LoginUserAsync(
-            new LoginDto { Email = user.Email!, Password = "Pass@1234" });
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        result.Should().Be(expected);
-    }
+        ApplicationUser? captured = null;
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .Callback<ApplicationUser>(u => captured = u)
+            .ReturnsAsync(IdentityResult.Success);
 
-    // ── GetUsersAsync ─────────────────────────────────────────────────────────
+        await CreateService().GetOrCreateAsync(subject, "anna@ideafusion.com", "   ");
 
-    [Fact]
-    public async Task GetUsersAsync_WhenNoUsers_ReturnsEmptyList()
-    {
-        _userManagerMock.Setup(m => m.Users)
-            .Returns(new List<ApplicationUser>().AsAsyncQueryable());
-
-        var result = await CreateService().GetUsersAsync();
-
-        result.Should().BeEmpty();
+        captured!.UserName.Should().Be("anna@ideafusion.com");
     }
 
     [Fact]
-    public async Task GetUsersAsync_MapsUsersAndEnrichesRoles()
+    public async Task GetOrCreate_TreatsALostCreationRaceAsSuccess()
     {
-        var user = MakeUser("alice@example.com", "alice");
-        _userManagerMock.Setup(m => m.Users)
-            .Returns(new List<ApplicationUser> { user }.AsAsyncQueryable());
-        _userManagerMock.Setup(m => m.GetRolesAsync(user))
-            .ReturnsAsync(new List<string> { "User" });
+        var subject = Guid.NewGuid();
+        var winner = MakeUser(subject, "anna@ideafusion.com", "AnnoGray");
 
-        var result = (await CreateService().GetUsersAsync()).ToList();
+        // First lookup misses, but by the time the insert is rejected a concurrent
+        // request has already created the row.
+        _userManagerMock.SetupSequence(m => m.FindByIdAsync(subject.ToString()))
+            .ReturnsAsync((ApplicationUser?)null)
+            .ReturnsAsync(winner);
 
-        result.Should().HaveCount(1);
-        result[0].Email.Should().Be("alice@example.com");
-        result[0].Roles.Should().ContainSingle().Which.Should().Be("User");
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "duplicate key" }));
+
+        var result = await CreateService().GetOrCreateAsync(subject, "anna@ideafusion.com", "AnnoGray");
+
+        result.Id.Should().Be(subject);
+        result.Email.Should().Be("anna@ideafusion.com");
+    }
+
+    [Fact]
+    public async Task GetOrCreate_ThrowsWhenCreationFailsAndTheRowIsStillAbsent()
+    {
+        var subject = Guid.NewGuid();
+
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "validator said no" }));
+
+        var act = () => CreateService().GetOrCreateAsync(subject, "a@b.com", "a");
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*profile*");
+    }
+
+    [Fact]
+    public async Task GetOrCreate_TrimsWhitespaceFromTheEmailAndUsername()
+    {
+        var subject = Guid.NewGuid();
+
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
+
+        ApplicationUser? captured = null;
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .Callback<ApplicationUser>(u => captured = u)
+            .ReturnsAsync(IdentityResult.Success);
+
+        await CreateService().GetOrCreateAsync(subject, "  anna@ideafusion.com  ", "  AnnoGray  ");
+
+        captured!.Email.Should().Be("anna@ideafusion.com");
+        captured.UserName.Should().Be("AnnoGray");
+    }
+
+    [Fact]
+    public async Task GetOrCreate_LeavesRolesEmpty_BecauseRolesComeFromTheToken()
+    {
+        var subject = Guid.NewGuid();
+
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await CreateService().GetOrCreateAsync(subject, "a@b.com", "a");
+
+        result.Roles.Should().BeEmpty();
     }
 
     // ── GetUserByIdAsync ──────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetUserByIdAsync_WhenUserNotFound_ReturnsNull()
+    public async Task GetUserById_ReturnsNullWhenTheRowIsAbsent()
     {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
+        var subject = Guid.NewGuid();
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        var result = await CreateService().GetUserByIdAsync(Guid.NewGuid());
-
-        result.Should().BeNull();
+        (await CreateService().GetUserByIdAsync(subject)).Should().BeNull();
     }
 
     [Fact]
-    public async Task GetUserByIdAsync_WhenFound_ReturnsMappedUserWithRoles()
+    public async Task GetUserById_MapsTheStoredProfile()
     {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin" });
+        var subject = Guid.NewGuid();
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString()))
+            .ReturnsAsync(MakeUser(subject, "anna@ideafusion.com", "AnnoGray"));
 
-        var result = await CreateService().GetUserByIdAsync(user.Id);
+        var result = await CreateService().GetUserByIdAsync(subject);
 
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(user.Id);
-        result.Roles.Should().ContainSingle().Which.Should().Be("Admin");
-    }
-
-    // ── GetUserRefreshTokensAsync ─────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetUserRefreshTokensAsync_ReturnsMappedTokens()
-    {
-        var userId = Guid.NewGuid();
-        var token = new RefreshToken
-        {
-            Id = 1, Token = "tok", Expires = DateTime.UtcNow.AddDays(7),
-            UserId = userId, User = new ApplicationUser { Email = "u@u.com" }
-        };
-        _repoMock.Setup(r => r.GetUserTokensAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<RefreshToken> { token });
-
-        var result = (await CreateService().GetUserRefreshTokensAsync(userId)).ToList();
-
-        result.Should().HaveCount(1);
-        result[0].Token.Should().Be("tok");
-    }
-
-    // ── AddUserToRoleAsync ────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task AddUserToRoleAsync_WhenUserNotFound_ReturnsFailedResult()
-    {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        var result = await CreateService().AddUserToRoleAsync(Guid.NewGuid(), "Admin");
-
-        result.Succeeded.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Description == "User not found.");
-    }
-
-    [Fact]
-    public async Task AddUserToRoleAsync_WhenRoleNotFound_ReturnsFailedResult()
-    {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _roleManagerMock.Setup(m => m.RoleExistsAsync("NonExistent")).ReturnsAsync(false);
-
-        var result = await CreateService().AddUserToRoleAsync(user.Id, "NonExistent");
-
-        result.Succeeded.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Description == "Role not found.");
-    }
-
-    [Fact]
-    public async Task AddUserToRoleAsync_WhenBothExist_AddsToRole()
-    {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _roleManagerMock.Setup(m => m.RoleExistsAsync("Admin")).ReturnsAsync(true);
-        _userManagerMock.Setup(m => m.AddToRoleAsync(user, "Admin")).ReturnsAsync(IdentityResult.Success);
-
-        var result = await CreateService().AddUserToRoleAsync(user.Id, "Admin");
-
-        result.Succeeded.Should().BeTrue();
-    }
-
-    // ── RemoveUserFromRoleAsync ───────────────────────────────────────────────
-
-    [Fact]
-    public async Task RemoveUserFromRoleAsync_WhenUserNotFound_ReturnsFailedResult()
-    {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        var result = await CreateService().RemoveUserFromRoleAsync(Guid.NewGuid(), "User");
-
-        result.Succeeded.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Description == "User not found.");
-    }
-
-    [Fact]
-    public async Task RemoveUserFromRoleAsync_WhenUserFound_RemovesFromRole()
-    {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.RemoveFromRoleAsync(user, "User")).ReturnsAsync(IdentityResult.Success);
-
-        var result = await CreateService().RemoveUserFromRoleAsync(user.Id, "User");
-
-        result.Succeeded.Should().BeTrue();
+        result!.Id.Should().Be(subject);
+        result.UserName.Should().Be("AnnoGray");
     }
 
     // ── UpdateAvatarUrlAsync ──────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdateAvatarUrlAsync_WhenUserNotFound_DoesNotCallUpdate()
+    public async Task UpdateAvatarUrl_SetsAndPersistsTheUrl()
     {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
+        var subject = Guid.NewGuid();
+        var user = MakeUser(subject);
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        await CreateService().UpdateAvatarUrlAsync(Guid.NewGuid(), "https://example.com/avatar.jpg");
+        await CreateService().UpdateAvatarUrlAsync(subject, "http://minio/a.png");
 
-        _userManagerMock.Verify(m => m.UpdateAsync(It.IsAny<ApplicationUser>()), Times.Never);
+        user.AvatarUrl.Should().Be("http://minio/a.png");
+        _userManagerMock.Verify(m => m.UpdateAsync(user), Times.Once);
     }
 
     [Fact]
-    public async Task UpdateAvatarUrlAsync_WhenUserFound_UpdatesAvatarUrl()
+    public async Task UpdateAvatarUrl_DoesNothingWhenTheRowIsAbsent()
     {
-        var user    = MakeUser();
-        var newUrl  = "https://cdn.example.com/new-avatar.jpg";
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+        var subject = Guid.NewGuid();
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        await CreateService().UpdateAvatarUrlAsync(user.Id, newUrl);
+        await CreateService().UpdateAvatarUrlAsync(subject, "http://minio/a.png");
 
-        user.AvatarUrl.Should().Be(newUrl);
-        _userManagerMock.Verify(m => m.UpdateAsync(user), Times.Once);
+        _userManagerMock.Verify(m => m.UpdateAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     // ── UpdateProfileAsync ────────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdateProfileAsync_WhenUserNotFound_ReturnsNull()
+    public async Task UpdateProfile_ReturnsNullWhenTheRowIsAbsent()
     {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
+        var subject = Guid.NewGuid();
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        var result = await CreateService().UpdateProfileAsync(Guid.NewGuid(),
-            new UpdateProfileDto { FullName = "Alice" });
-
-        result.Should().BeNull();
+        (await CreateService().UpdateProfileAsync(subject, new UpdateProfileDto { FullName = "Anna" }))
+            .Should().BeNull();
     }
 
     [Fact]
-    public async Task UpdateProfileAsync_TrimsAndSavesFullNameAndSpecialization()
+    public async Task UpdateProfile_TrimsAndStoresFullNameAndSpecialization()
     {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
+        var subject = Guid.NewGuid();
+        var user = MakeUser(subject);
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync(user);
         _userManagerMock.Setup(m => m.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
 
-        var result = await CreateService().UpdateProfileAsync(user.Id,
-            new UpdateProfileDto { FullName = "  Alice Smith  ", Specialization = "  Developer  " });
+        var result = await CreateService().UpdateProfileAsync(subject, new UpdateProfileDto
+        {
+            FullName = "  Anna Gray  ",
+            Specialization = "  Backend  "
+        });
 
-        user.FullName.Should().Be("Alice Smith");
-        user.Specialization.Should().Be("Developer");
-    }
-
-    [Fact]
-    public async Task UpdateProfileAsync_WhenSuccessful_ReturnsMappedUserDto()
-    {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
-        _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "User" });
-
-        var result = await CreateService().UpdateProfileAsync(user.Id,
-            new UpdateProfileDto { FullName = "Alice", Specialization = "Dev" });
-
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(user.Id);
-    }
-
-    // ── ChangePasswordAsync ───────────────────────────────────────────────────
-
-    [Fact]
-    public async Task ChangePasswordAsync_WhenUserNotFound_ReturnsFailedResult()
-    {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
-
-        var result = await CreateService().ChangePasswordAsync(Guid.NewGuid(),
-            new ChangePasswordDto { CurrentPassword = "Old@1234", NewPassword = "New@1234" });
-
-        result.Succeeded.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.Description == "User not found.");
-    }
-
-    [Fact]
-    public async Task ChangePasswordAsync_WhenUserFound_ChangesPassword()
-    {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.ChangePasswordAsync(user, "Old@1234", "New@1234"))
-            .ReturnsAsync(IdentityResult.Success);
-
-        var result = await CreateService().ChangePasswordAsync(user.Id,
-            new ChangePasswordDto { CurrentPassword = "Old@1234", NewPassword = "New@1234" });
-
-        result.Succeeded.Should().BeTrue();
+        user.FullName.Should().Be("Anna Gray");
+        user.Specialization.Should().Be("Backend");
+        result!.FullName.Should().Be("Anna Gray");
     }
 
     // ── DeleteUserAsync ───────────────────────────────────────────────────────
 
     [Fact]
-    public async Task DeleteUserAsync_WhenUserNotFound_ReturnsFailedResult()
+    public async Task DeleteUser_ReportsNotFoundWhenTheRowIsAbsent()
     {
-        _userManagerMock.Setup(m => m.FindByIdAsync(It.IsAny<string>()))
-            .ReturnsAsync((ApplicationUser?)null);
+        var subject = Guid.NewGuid();
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync((ApplicationUser?)null);
 
-        var result = await CreateService().DeleteUserAsync(Guid.NewGuid());
+        var result = await CreateService().DeleteUserAsync(subject);
 
         result.Succeeded.Should().BeFalse();
         result.Errors.Should().ContainSingle(e => e.Code == "UserNotFound");
     }
 
     [Fact]
-    public async Task DeleteUserAsync_WhenUserFound_DeletesAndReturnsSuccess()
+    public async Task DeleteUser_DelegatesToUserManager()
     {
-        var user = MakeUser();
-        _userManagerMock.Setup(m => m.FindByIdAsync(user.Id.ToString())).ReturnsAsync(user);
+        var subject = Guid.NewGuid();
+        var user = MakeUser(subject);
+        _userManagerMock.Setup(m => m.FindByIdAsync(subject.ToString())).ReturnsAsync(user);
         _userManagerMock.Setup(m => m.DeleteAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var result = await CreateService().DeleteUserAsync(user.Id);
-
-        result.Succeeded.Should().BeTrue();
+        (await CreateService().DeleteUserAsync(subject)).Succeeded.Should().BeTrue();
         _userManagerMock.Verify(m => m.DeleteAsync(user), Times.Once);
     }
 }

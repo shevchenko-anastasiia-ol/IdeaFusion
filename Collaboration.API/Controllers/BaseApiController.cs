@@ -27,6 +27,8 @@ public abstract class BaseApiController : ControllerBase
             
             ConflictException conflict => Conflict(new { message = conflict.Message }),
             
+            ForbiddenException forbidden => StatusCode(403, new { message = forbidden.Message }),
+            
             DomainException domain => BadRequest(new { message = domain.Message }),
             
             // Validation exceptions

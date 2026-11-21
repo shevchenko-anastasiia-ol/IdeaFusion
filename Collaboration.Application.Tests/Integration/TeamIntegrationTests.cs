@@ -37,8 +37,6 @@ public class TeamIntegrationTests : IClassFixture<CollaborationWebApplicationFac
         Description = "A test team description",
         Category    = "Technology",
         Tags        = new List<string> { "dotnet" },
-        UserId      = "user-1",
-        Username    = "testuser",
     };
 
     // ─── POST /api/team ───────────────────────────────────────────────────────
@@ -71,26 +69,6 @@ public class TeamIntegrationTests : IClassFixture<CollaborationWebApplicationFac
             Description = "Description",
             Category    = "Technology",
             Tags        = new List<string>(),
-            UserId      = "user-1",
-            Username    = "testuser",
-        };
-
-        var response = await _client.PostAsJsonAsync("/api/team", command);
-
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task Create_MissingUserId_Returns400()
-    {
-        var command = new CreateTeamCommand
-        {
-            Name        = "Some Team",
-            Description = "Desc",
-            Category    = "Technology",
-            Tags        = new List<string>(),
-            UserId      = "",          // ← empty triggers FluentValidation
-            Username    = "testuser",
         };
 
         var response = await _client.PostAsJsonAsync("/api/team", command);
@@ -238,11 +216,10 @@ public class TeamIntegrationTests : IClassFixture<CollaborationWebApplicationFac
 
         var command = new AddTeamMemberCommand
         {
-            TeamId            = team.Id,
-            UserId            = "new-user-2",
-            Username          = "NewMember",
-            Role              = "Developer",
-            RequestedByUserId = "user-1",
+            TeamId        = team.Id,
+            MemberUserId  = "new-user-2",
+            MemberUsername = "NewMember",
+            Role          = "Developer",
         };
 
         var response = await _client.PostAsJsonAsync($"/api/team/{team.Id}/members", command);
@@ -267,7 +244,6 @@ public class TeamIntegrationTests : IClassFixture<CollaborationWebApplicationFac
         {
             TeamId = team.Id,
             Status = TeamStatus.Active,
-            UserId = "user-1",
         };
 
         var response = await _client.PatchAsJsonAsync($"/api/team/{team.Id}/status", command);

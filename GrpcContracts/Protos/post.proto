@@ -74,6 +74,7 @@ message PostAuthorDto {
   string user_id    = 1;
   string user_name  = 2;
   string avatar_url = 3;
+  string external_id = 4;  // Identity id of the author; empty for seeded demo authors
 }
 
 message PostTeamDto {

@@ -21,6 +21,8 @@ public class PostRepositoryTests : IDisposable
     private PostRepository Repo() =>
         new(_db, _minioMock.Object, "test-bucket", "minio.local", null);
 
+    private PostAuthorRepository AuthorRepo() => new(_db);
+
     private Post MakePost(int? postAuthorId = null) => new()
     {
         PostAuthorId = postAuthorId,
@@ -240,50 +242,44 @@ public class PostRepositoryTests : IDisposable
         result.Should().AllSatisfy(m => m.PostId.Should().Be(seeded.PostId));
     }
 
-    // ── EnsurePostAuthorAsync ─────────────────────────────────────────────────
+    // ── Author lookup by username (PostAuthorRepository) ─────────────────────
 
     [Fact]
-    public async Task EnsurePostAuthorAsync_WhenNotExists_InsertsAndReturnsBothIds()
+    public async Task GetByUserNameAsync_WhenRowExists_ReturnsIt()
     {
-        var result = await Repo().EnsurePostAuthorAsync("newuser");
-        result.PostAuthorId.Should().BeGreaterThan(0);
-        result.UserId.Should().BeGreaterThan(0);
+        await SeedAuthorAsync(77, "existing");
 
+        var author = await AuthorRepo().GetByUserNameAsync("existing");
+
+        author.Should().NotBeNull();
+        author!.UserId.Should().Be(77);
+        author.PostAuthorId.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task GetByUserNameAsync_WhenNoRow_ReturnsNullAndCreatesNothing()
+    {
+        var author = await AuthorRepo().GetByUserNameAsync("nobody");
+
+        author.Should().BeNull();
         var count = await _db.ExecuteScalarAsync<int>(
-            "SELECT COUNT(1) FROM PostAuthors WHERE UserName = 'newuser'");
-        count.Should().Be(1);
+            "SELECT COUNT(1) FROM PostAuthors WHERE UserName = 'nobody'");
+        count.Should().Be(0);
     }
 
     [Fact]
-    public async Task EnsurePostAuthorAsync_WhenExists_ReturnsExistingUserId()
+    public async Task GetByExternalIdAsync_WhenRowExists_ReturnsIt()
     {
+        var externalId = Guid.NewGuid().ToString();
         await _db.ExecuteAsync(
-            "INSERT INTO PostAuthors (UserId, UserName, SyncedAt) VALUES (77, 'existing', @Now)",
-            new { Now = DateTime.UtcNow.ToString("o") });
+            "INSERT INTO PostAuthors (UserId, ExternalId, UserName, SyncedAt) VALUES (88, @ExternalId, 'veteran', @Now)",
+            new { ExternalId = externalId, Now = DateTime.UtcNow.ToString("o") });
 
-        var result = await Repo().EnsurePostAuthorAsync("existing");
-        result.UserId.Should().Be(77);
-        result.PostAuthorId.Should().BeGreaterThan(0);
-    }
+        var author = await AuthorRepo().GetByExternalIdAsync(externalId);
 
-    // ── EnsurePostAuthorByUserIdAsync ─────────────────────────────────────────
-
-    [Fact]
-    public async Task EnsurePostAuthorByUserIdAsync_WhenNotExists_InsertAndReturnsPostAuthorId()
-    {
-        var postAuthorId = await Repo().EnsurePostAuthorByUserIdAsync(userId: 100, userName: "newbie");
-        postAuthorId.Should().BeGreaterThan(0);
-    }
-
-    [Fact]
-    public async Task EnsurePostAuthorByUserIdAsync_WhenExists_ReturnsExistingPostAuthorId()
-    {
-        var existingId = await _db.ExecuteScalarAsync<int>(
-            "INSERT INTO PostAuthors (UserId, UserName, SyncedAt) VALUES (88, 'veteran', @Now) RETURNING PostAuthorId",
-            new { Now = DateTime.UtcNow.ToString("o") });
-
-        var result = await Repo().EnsurePostAuthorByUserIdAsync(userId: 88, userName: "veteran");
-        result.Should().Be(existingId);
+        author.Should().NotBeNull();
+        author!.UserId.Should().Be(88);
+        author.ExternalId.Should().Be(externalId);
     }
 
     // ── DeleteMediaAsync ──────────────────────────────────────────────────────
@@ -518,76 +514,85 @@ public class PostRepositoryTests : IDisposable
         result.ContentType.Should().Be("application/octet-stream");
     }
 
-    // ── EnsurePostAuthorAsync: avatar update branch ───────────────────────────
+    // ── EnsureByExternalIdAsync: minting and avatar refresh ───────────────────
 
     [Fact]
-    public async Task EnsurePostAuthorAsync_WhenAvatarDiffers_UpdatesAvatar()
+    public async Task EnsureByExternalIdAsync_WhenNotExists_InsertsAndReportsCreated()
     {
+        var externalId = Guid.NewGuid().ToString();
+
+        var (author, created) = await AuthorRepo().EnsureByExternalIdAsync(externalId, "newuser");
+
+        created.Should().BeTrue();
+        author.PostAuthorId.Should().BeGreaterThan(0);
+        author.UserId.Should().BeGreaterThan(0);
+        author.ExternalId.Should().Be(externalId);
+
+        var count = await _db.ExecuteScalarAsync<int>(
+            "SELECT COUNT(1) FROM PostAuthors WHERE ExternalId = @ExternalId",
+            new { ExternalId = externalId });
+        count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task EnsureByExternalIdAsync_WhenExists_ReturnsExistingRowAndRefreshesIt()
+    {
+        var externalId = Guid.NewGuid().ToString();
         await _db.ExecuteAsync(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (66, 'user66', 'old-url', @Now)",
-            new { Now = DateTime.UtcNow.ToString("o") });
+            "INSERT INTO PostAuthors (UserId, ExternalId, UserName, SyncedAt) VALUES (77, @ExternalId, 'existing', @Now)",
+            new { ExternalId = externalId, Now = DateTime.UtcNow.ToString("o") });
 
-        var result = await Repo().EnsurePostAuthorAsync("user66", "new-url");
+        var (author, created) = await AuthorRepo().EnsureByExternalIdAsync(externalId, "existing");
 
-        result.UserId.Should().Be(66);
+        created.Should().BeFalse();
+        author.UserId.Should().Be(77);
+        author.PostAuthorId.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task EnsureByExternalIdAsync_WhenAvatarDiffers_UpdatesAvatar()
+    {
+        var externalId = Guid.NewGuid().ToString();
+        await _db.ExecuteAsync(
+            "INSERT INTO PostAuthors (UserId, ExternalId, UserName, AvatarUrl, SyncedAt) VALUES (66, @ExternalId, 'user66', 'old-url', @Now)",
+            new { ExternalId = externalId, Now = DateTime.UtcNow.ToString("o") });
+
+        var (author, _) = await AuthorRepo().EnsureByExternalIdAsync(externalId, "user66", "new-url");
+
+        author.UserId.Should().Be(66);
         var updated = await _db.ExecuteScalarAsync<string>(
-            "SELECT AvatarUrl FROM PostAuthors WHERE UserName = 'user66'");
+            "SELECT AvatarUrl FROM PostAuthors WHERE ExternalId = @ExternalId",
+            new { ExternalId = externalId });
         updated.Should().Be("new-url");
     }
 
     [Fact]
-    public async Task EnsurePostAuthorAsync_WhenAvatarSame_DoesNotUpdate()
+    public async Task EnsureByExternalIdAsync_WhenAvatarSame_KeepsIt()
     {
+        var externalId = Guid.NewGuid().ToString();
         await _db.ExecuteAsync(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (67, 'user67', 'same-url', @Now)",
-            new { Now = DateTime.UtcNow.ToString("o") });
+            "INSERT INTO PostAuthors (UserId, ExternalId, UserName, AvatarUrl, SyncedAt) VALUES (67, @ExternalId, 'user67', 'same-url', @Now)",
+            new { ExternalId = externalId, Now = DateTime.UtcNow.ToString("o") });
 
-        var result = await Repo().EnsurePostAuthorAsync("user67", "same-url");
+        var (author, _) = await AuthorRepo().EnsureByExternalIdAsync(externalId, "user67", "same-url");
 
-        result.UserId.Should().Be(67);
+        author.UserId.Should().Be(67);
+        author.AvatarUrl.Should().Be("same-url");
     }
 
     [Fact]
-    public async Task EnsurePostAuthorAsync_WhenExistsButNoAvatarPassed_DoesNotUpdate()
+    public async Task EnsureByExternalIdAsync_WhenNoAvatarPassed_KeepsTheStoredOne()
     {
+        var externalId = Guid.NewGuid().ToString();
         await _db.ExecuteAsync(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (68, 'user68', 'some-url', @Now)",
-            new { Now = DateTime.UtcNow.ToString("o") });
+            "INSERT INTO PostAuthors (UserId, ExternalId, UserName, AvatarUrl, SyncedAt) VALUES (68, @ExternalId, 'user68', 'some-url', @Now)",
+            new { ExternalId = externalId, Now = DateTime.UtcNow.ToString("o") });
 
-        var result = await Repo().EnsurePostAuthorAsync("user68");
+        await AuthorRepo().EnsureByExternalIdAsync(externalId, "user68");
 
-        result.UserId.Should().Be(68);
         var avatar = await _db.ExecuteScalarAsync<string>(
-            "SELECT AvatarUrl FROM PostAuthors WHERE UserName = 'user68'");
+            "SELECT AvatarUrl FROM PostAuthors WHERE ExternalId = @ExternalId",
+            new { ExternalId = externalId });
         avatar.Should().Be("some-url");
-    }
-
-    // ── EnsurePostAuthorByUserIdAsync: avatar update branch ──────────────────
-
-    [Fact]
-    public async Task EnsurePostAuthorByUserIdAsync_WhenAvatarDiffers_UpdatesAvatar()
-    {
-        var existingId = await _db.ExecuteScalarAsync<int>(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (99, 'user99', 'old-url', @Now) RETURNING PostAuthorId",
-            new { Now = DateTime.UtcNow.ToString("o") });
-
-        var postAuthorId = await Repo().EnsurePostAuthorByUserIdAsync(99, "user99", "new-url");
-
-        postAuthorId.Should().Be(existingId);
-        var updated = await _db.ExecuteScalarAsync<string>(
-            "SELECT AvatarUrl FROM PostAuthors WHERE UserId = 99");
-        updated.Should().Be("new-url");
-    }
-
-    [Fact]
-    public async Task EnsurePostAuthorByUserIdAsync_WhenAvatarSame_DoesNotUpdate()
-    {
-        var existingId = await _db.ExecuteScalarAsync<int>(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (100, 'user100', 'same-url', @Now) RETURNING PostAuthorId",
-            new { Now = DateTime.UtcNow.ToString("o") });
-
-        var postAuthorId = await Repo().EnsurePostAuthorByUserIdAsync(100, "user100", "same-url");
-
-        postAuthorId.Should().Be(existingId);
     }
 }

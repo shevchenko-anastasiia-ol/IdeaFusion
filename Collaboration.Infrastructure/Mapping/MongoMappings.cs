@@ -78,6 +78,24 @@ public static class MongoMappings
                 cm.AutoMap();
                 cm.SetIgnoreExtraElements(true);
             });
+
+            RegisterClassMapSafe<ChatAttachment>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+
+            RegisterClassMapSafe<DirectConversation>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
+
+            RegisterClassMapSafe<NotificationSettings>(cm =>
+            {
+                cm.AutoMap();
+                cm.SetIgnoreExtraElements(true);
+            });
             RegisterClassMapSafe<TeamVacancy>(cm =>
             {
                 cm.AutoMap();

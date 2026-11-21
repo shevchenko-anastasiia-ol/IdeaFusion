@@ -1,0 +1,17 @@
+.cell {
+  position: relative;
+}
+.unsave {
+  position: absolute !important;
+  top: 8px;
+  right: 8px;
+  background: rgba(14, 14, 17, 0.85) !important;
+  color: var(--accent-text) !important;
+}
+.unsave:hover {
+  color: var(--text) !important;
+}
+.skeletonTile {
+  aspect-ratio: 1;
+  display: flex;
+}

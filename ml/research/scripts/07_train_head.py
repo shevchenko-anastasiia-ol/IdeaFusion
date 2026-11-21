@@ -2,10 +2,6 @@
 
     uv run python scripts/07_train_head.py --config configs/head.yaml
 
-Needs the cached SSCD embeddings from 05_eval_baselines.py (val/test/background) and the
-training views from 06_embed_train.py. For every variant x seed: train, keep the epoch with
-the best val score (recall at hard-negative FPR <= 1%, ties broken by muAP), then evaluate test
-with thresholds transferred from val. Same protocol for every variant (Musgrave et al., 2020).
 
 Output in runs/head_<dataset>/:
     <variant>/seed<k>/head.pt, history.csv, metrics.json
@@ -37,8 +33,6 @@ METRICS = [
     ("p99.fpr", "hard-neg FPR @P99"),
     ("fpr1.recall", "recall @ FPR≤1% (val thr)"),
     ("fpr1.fpr", "actual hard-neg FPR"),
-    # Threshold set on test itself: equal false-accusation rate for every method, so this
-    # column compares discrimination; the two before it compare the deployable system.
     ("fpr1_oracle.recall", "recall @ FPR≤1% (oracle)"),
     ("auc_copy_vs_hard_negative", "AUC"),
 ]

@@ -54,10 +54,10 @@ public class LikeIntegrationTests : IClassFixture<ContentWebApplicationFactory>
     public async Task Exists_WhenLiked_Returns200True()
     {
         _factory.LikeServiceMock
-            .Setup(s => s.ExistsAsync(1, 2, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExistsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var response = await _client.GetAsync("/api/like/exists?postId=1&userId=2");
+        var response = await _client.GetAsync("/api/like/exists?postId=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var exists = await response.Content.ReadFromJsonAsync<bool>();
@@ -68,10 +68,10 @@ public class LikeIntegrationTests : IClassFixture<ContentWebApplicationFactory>
     public async Task Exists_WhenNotLiked_Returns200False()
     {
         _factory.LikeServiceMock
-            .Setup(s => s.ExistsAsync(1, 99, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExistsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var response = await _client.GetAsync("/api/like/exists?postId=1&userId=99");
+        var response = await _client.GetAsync("/api/like/exists?postId=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var exists = await response.Content.ReadFromJsonAsync<bool>();
@@ -89,7 +89,7 @@ public class LikeIntegrationTests : IClassFixture<ContentWebApplicationFactory>
             .ReturnsAsync(like);
 
         var response = await _client.PostAsJsonAsync("/api/like",
-            new LikeCreateDto { PostId = 1, UserId = 2 });
+            new LikeCreateDto { PostId = 1 });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<LikeDto>();
@@ -102,10 +102,10 @@ public class LikeIntegrationTests : IClassFixture<ContentWebApplicationFactory>
     public async Task Remove_Returns204()
     {
         _factory.LikeServiceMock
-            .Setup(s => s.RemoveAsync(1, 2, It.IsAny<CancellationToken>()))
+            .Setup(s => s.RemoveAsync(1, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var response = await _client.DeleteAsync("/api/like?postId=1&userId=2");
+        var response = await _client.DeleteAsync("/api/like?postId=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }

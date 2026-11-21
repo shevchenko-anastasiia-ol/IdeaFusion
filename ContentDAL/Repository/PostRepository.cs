@@ -316,6 +316,28 @@ public class PostRepository : IPostRepository
             splitOn: "PostAuthorId,CollaborationSnapshotId");
     }
 
+    public async Task<IEnumerable<Post>> SearchAsync(string query, CancellationToken ct = default)
+    {
+        var sql = @"SELECT p.*, a.*, c.*
+                    FROM Posts p
+                    LEFT JOIN PostAuthors a            ON p.PostAuthorId = a.PostAuthorId
+                    LEFT JOIN CollaborationSnapshots c ON p.CollaborationSnapshotId = c.CollaborationSnapshotId
+                    WHERE p.search_vector @@ websearch_to_tsquery('english', @Query) AND p.IsDeleted = false
+                    ORDER BY ts_rank(p.search_vector, websearch_to_tsquery('english', @Query)) DESC;";
+        
+        return await _connection.QueryAsync<Post, PostAuthor, CollaborationSnapshot, Post>(
+            sql,
+            (post, author, collab) =>
+            {
+                post.Author        = author;
+                post.Collaboration = collab;
+                return post;
+            },
+            new { Query = query },
+            transaction: _transaction,
+            splitOn: "PostAuthorId,CollaborationSnapshotId");
+    }
+
     public async Task<IEnumerable<Post>> GetByUserIdAsync(int userId, CancellationToken ct = default)
     {
         var sql = @"SELECT p.*, a.*, c.*
@@ -336,54 +358,5 @@ public class PostRepository : IPostRepository
             new { UserId = userId },
             transaction: _transaction,
             splitOn: "PostAuthorId,CollaborationSnapshotId");
-    }
-
-    public async Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
-    {
-        var existing = await _connection.QuerySingleOrDefaultAsync<(int PostAuthorId, int UserId, string? ExistingAvatar)>(
-            "SELECT PostAuthorId, UserId, AvatarUrl FROM PostAuthors WHERE UserName = @UserName LIMIT 1;",
-            new { UserName = userName });
-
-        if (existing != default)
-        {
-            if (avatarUrl != null && existing.ExistingAvatar != avatarUrl)
-            {
-                await _connection.ExecuteAsync(
-                    "UPDATE PostAuthors SET AvatarUrl = @AvatarUrl, SyncedAt = @SyncedAt WHERE UserName = @UserName;",
-                    new { AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow, UserName = userName });
-            }
-            return (existing.PostAuthorId, existing.UserId);
-        }
-
-        var newUserId = await _connection.ExecuteScalarAsync<int>(
-            "SELECT COALESCE(MAX(UserId), 200) + 1 FROM PostAuthors;");
-
-        var newPostAuthorId = await _connection.ExecuteScalarAsync<int>(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (@UserId, @UserName, @AvatarUrl, @SyncedAt) RETURNING PostAuthorId;",
-            new { UserId = newUserId, UserName = userName, AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow });
-
-        return (newPostAuthorId, newUserId);
-    }
-
-    public async Task<int> EnsurePostAuthorByUserIdAsync(int userId, string userName, string? avatarUrl = null, CancellationToken ct = default)
-    {
-        var existing = await _connection.QuerySingleOrDefaultAsync<(int PostAuthorId, string? ExistingAvatar)>(
-            "SELECT PostAuthorId, AvatarUrl FROM PostAuthors WHERE UserId = @UserId LIMIT 1;",
-            new { UserId = userId });
-
-        if (existing != default)
-        {
-            if (avatarUrl != null && existing.ExistingAvatar != avatarUrl)
-            {
-                await _connection.ExecuteAsync(
-                    "UPDATE PostAuthors SET AvatarUrl = @AvatarUrl, SyncedAt = @SyncedAt WHERE UserId = @UserId;",
-                    new { AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow, UserId = userId });
-            }
-            return existing.PostAuthorId;
-        }
-
-        return await _connection.ExecuteScalarAsync<int>(
-            "INSERT INTO PostAuthors (UserId, UserName, AvatarUrl, SyncedAt) VALUES (@UserId, @UserName, @AvatarUrl, @SyncedAt) RETURNING PostAuthorId;",
-            new { UserId = userId, UserName = userName, AvatarUrl = avatarUrl, SyncedAt = DateTime.UtcNow });
     }
 }

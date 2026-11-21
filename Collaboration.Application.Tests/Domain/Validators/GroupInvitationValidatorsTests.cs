@@ -16,7 +16,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "Developer", ExpirationDays = 7
+            Role = "Developer", ExpirationDays = 7
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -29,7 +29,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "Developer", ExpirationDays = 7
+            Role = "Developer", ExpirationDays = 7
         };
 
         var result = validator.Validate(command);
@@ -46,7 +46,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "",
-            InvitedByUserId = "owner-id", Role = "Developer", ExpirationDays = 7
+            Role = "Developer", ExpirationDays = 7
         };
 
         var result = validator.Validate(command);
@@ -57,47 +57,13 @@ public class GroupInvitationValidatorsTests
     }
 
     [Fact]
-    public void CreateInvitation_WhenInvitedByUserIdEmpty_FailsValidation()
-    {
-        var validator = new CreateGroupInvitationCommandValidator();
-        var command = new CreateGroupInvitationCommand
-        {
-            TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "", Role = "Developer", ExpirationDays = 7
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "InvitedByUserId" && e.ErrorMessage == "InvitedByUserId is required.");
-    }
-
-    [Fact]
-    public void CreateInvitation_WhenInvitingYourself_FailsValidation()
-    {
-        var validator = new CreateGroupInvitationCommandValidator();
-        var command = new CreateGroupInvitationCommand
-        {
-            TeamId = "team-1", InvitedUserId = "same-user",
-            InvitedByUserId = "same-user", Role = "Developer", ExpirationDays = 7
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "InvitedUserId" && e.ErrorMessage == "Cannot invite yourself.");
-    }
-
-    [Fact]
     public void CreateInvitation_WhenRoleEmpty_FailsValidation()
     {
         var validator = new CreateGroupInvitationCommandValidator();
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "", ExpirationDays = 7
+            Role = "", ExpirationDays = 7
         };
 
         var result = validator.Validate(command);
@@ -114,7 +80,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = new string('x', 101), ExpirationDays = 7
+            Role = new string('x', 101), ExpirationDays = 7
         };
 
         var result = validator.Validate(command);
@@ -131,7 +97,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "Developer",
+            Role = "Developer",
             Message = null, ExpirationDays = 7
         };
 
@@ -145,7 +111,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "Developer",
+            Role = "Developer",
             Message = new string('x', 1001), ExpirationDays = 7
         };
 
@@ -167,7 +133,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "Developer", ExpirationDays = days
+            Role = "Developer", ExpirationDays = days
         };
 
         var result = validator.Validate(command);
@@ -188,7 +154,7 @@ public class GroupInvitationValidatorsTests
         var command = new CreateGroupInvitationCommand
         {
             TeamId = "team-1", InvitedUserId = "user-1",
-            InvitedByUserId = "owner-id", Role = "Developer", ExpirationDays = days
+            Role = "Developer", ExpirationDays = days
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -202,7 +168,7 @@ public class GroupInvitationValidatorsTests
         var validator = new AcceptGroupInvitationCommandValidator();
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1", Username = "alice"
+            InvitationId = "inv-1"
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -214,7 +180,7 @@ public class GroupInvitationValidatorsTests
         var validator = new AcceptGroupInvitationCommandValidator();
         var command = new AcceptGroupInvitationCommand
         {
-            InvitationId = "", UserId = "user-1", Username = "alice"
+            InvitationId = ""
         };
 
         var result = validator.Validate(command);
@@ -222,22 +188,6 @@ public class GroupInvitationValidatorsTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
             e.PropertyName == "InvitationId" && e.ErrorMessage == "InvitationId is required.");
-    }
-
-    [Fact]
-    public void AcceptInvitation_WhenUserIdEmpty_FailsValidation()
-    {
-        var validator = new AcceptGroupInvitationCommandValidator();
-        var command = new AcceptGroupInvitationCommand
-        {
-            InvitationId = "inv-1", UserId = "", Username = "alice"
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "UserId" && e.ErrorMessage == "UserId is required.");
     }
 
     // ── DeclineGroupInvitationCommandValidator ────────────────────────────────
@@ -248,7 +198,7 @@ public class GroupInvitationValidatorsTests
         var validator = new DeclineGroupInvitationCommandValidator();
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1"
+            InvitationId = "inv-1"
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -260,7 +210,7 @@ public class GroupInvitationValidatorsTests
         var validator = new DeclineGroupInvitationCommandValidator();
         var command = new DeclineGroupInvitationCommand
         {
-            InvitationId = "", UserId = "user-1"
+            InvitationId = ""
         };
 
         var result = validator.Validate(command);
@@ -277,7 +227,7 @@ public class GroupInvitationValidatorsTests
         var validator = new RevokeGroupInvitationCommandValidator();
         var command = new RevokeGroupInvitationCommand
         {
-            InvitationId = "inv-1", UserId = "user-1"
+            InvitationId = "inv-1"
         };
 
         validator.Validate(command).IsValid.Should().BeTrue();
@@ -289,7 +239,7 @@ public class GroupInvitationValidatorsTests
         var validator = new RevokeGroupInvitationCommandValidator();
         var command = new RevokeGroupInvitationCommand
         {
-            InvitationId = "", UserId = "user-1"
+            InvitationId = ""
         };
 
         var result = validator.Validate(command);
@@ -298,18 +248,4 @@ public class GroupInvitationValidatorsTests
         result.Errors.Should().Contain(e => e.PropertyName == "InvitationId");
     }
 
-    [Fact]
-    public void RevokeInvitation_WhenUserIdEmpty_FailsValidation()
-    {
-        var validator = new RevokeGroupInvitationCommandValidator();
-        var command = new RevokeGroupInvitationCommand
-        {
-            InvitationId = "inv-1", UserId = ""
-        };
-
-        var result = validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
-    }
 }

@@ -1,4 +1,5 @@
 using Collaboration.API.Controllers;
+using Collaboration.API.Services;
 using Collaboration.Application.Commands.TeamPost;
 using Collaboration.Application.Queries.TeamPost;
 using Collaboration.Domain.Common.Helpers;
@@ -16,11 +17,12 @@ namespace Collaboration.Application.Tests.API;
 public class TeamPostControllerTests
 {
     private readonly Mock<IMediator> _mediatorMock = new();
+    private readonly Mock<ICollaborationAuditWriter> _auditMock = new();
     private readonly TeamPostController _controller;
 
     public TeamPostControllerTests()
     {
-        _controller = new TeamPostController(_mediatorMock.Object)
+        _controller = new TeamPostController(_mediatorMock.Object, _auditMock.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -120,8 +122,7 @@ public class TeamPostControllerTests
 
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "author-1", AuthorUsername = "alice", Title = "My Title"
+            PostId = "post-1", TeamId = "team-1", Title = "My Title"
         };
         var result = await _controller.Create(command, default);
 
@@ -138,8 +139,7 @@ public class TeamPostControllerTests
 
         var command = new CreateTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "author-1", AuthorUsername = "alice", Title = "T"
+            PostId = "post-1", TeamId = "team-1", Title = "T"
         };
         var result = await _controller.Create(command, default);
 
@@ -153,7 +153,7 @@ public class TeamPostControllerTests
     {
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "other-id", TeamId = "team-1", Title = "New Title", UserId = "u1"
+            PostId = "other-id", TeamId = "team-1", Title = "New Title"
         };
 
         var result = await _controller.UpdateTitle("post-1", command, default);
@@ -170,7 +170,7 @@ public class TeamPostControllerTests
 
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "u1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         };
         var result = await _controller.UpdateTitle("post-1", command, default);
 
@@ -186,7 +186,7 @@ public class TeamPostControllerTests
 
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New", UserId = "u1"
+            PostId = "post-1", TeamId = "team-1", Title = "New"
         };
         var result = await _controller.UpdateTitle("post-1", command, default);
 
@@ -198,7 +198,7 @@ public class TeamPostControllerTests
     [Fact]
     public async Task Delete_WhenIdMismatch_ReturnsBadRequest()
     {
-        var command = new DeleteTeamPostCommand { PostId = "other-id", TeamId = "team-1", UserId = "u1" };
+        var command = new DeleteTeamPostCommand { PostId = "other-id", TeamId = "team-1" };
 
         var result = await _controller.Delete("post-1", command, default);
 
@@ -211,7 +211,7 @@ public class TeamPostControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeleteTeamPostCommand>(), default))
                      .ReturnsAsync(Unit.Value);
 
-        var command = new DeleteTeamPostCommand { PostId = "post-1", TeamId = "team-1", UserId = "u1" };
+        var command = new DeleteTeamPostCommand { PostId = "post-1", TeamId = "team-1" };
         var result = await _controller.Delete("post-1", command, default);
 
         result.Should().BeOfType<NoContentResult>();
@@ -223,7 +223,7 @@ public class TeamPostControllerTests
         _mediatorMock.Setup(m => m.Send(It.IsAny<DeleteTeamPostCommand>(), default))
                      .ThrowsAsync(new NotFoundException("not found"));
 
-        var command = new DeleteTeamPostCommand { PostId = "post-1", TeamId = "team-1", UserId = "u1" };
+        var command = new DeleteTeamPostCommand { PostId = "post-1", TeamId = "team-1" };
         var result = await _controller.Delete("post-1", command, default);
 
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -288,7 +288,7 @@ public class TeamPostControllerTests
 
         var command = new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "u1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         };
         var result = await _controller.UpdateTitle("post-1", command, default);
 

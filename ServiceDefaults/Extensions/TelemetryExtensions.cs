@@ -77,8 +77,7 @@ public static class TelemetryExtensions
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation()
                         .AddMeter("Yarp.ReverseProxy")
-                        .AddMeter("GameNest.Cache")
-                        .AddMeter("GameNest.CatalogService.Games")
+                        .AddMeter("IdeaFusion.Cache")
                         .AddOtlpExporter();
                 });
 

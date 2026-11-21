@@ -14,14 +14,14 @@ public class LikeCreateDtoValidatorTests
     [Fact]
     public void Valid_Dto_PassesValidation()
     {
-        var dto = new LikeCreateDto { PostId = 1, UserId = 2 };
+        var dto = new LikeCreateDto { PostId = 1 };
         _validator.Validate(dto).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public void PostIdZero_FailsValidation()
     {
-        var dto = new LikeCreateDto { PostId = 0, UserId = 2 };
+        var dto = new LikeCreateDto { PostId = 0 };
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "PostId");
@@ -30,27 +30,10 @@ public class LikeCreateDtoValidatorTests
     [Fact]
     public void PostIdNegative_FailsValidation()
     {
-        var dto = new LikeCreateDto { PostId = -1, UserId = 2 };
+        var dto = new LikeCreateDto { PostId = -1 };
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "PostId");
-    }
-
-    [Fact]
-    public void UserIdZero_FailsValidation()
-    {
-        var dto = new LikeCreateDto { PostId = 1, UserId = 0 };
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
-    }
-
-    [Fact]
-    public void UserIdNegative_FailsValidation()
-    {
-        var dto = new LikeCreateDto { PostId = 1, UserId = -5 };
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
     }
 }
 
@@ -61,32 +44,23 @@ public class SavedPostCreateDtoValidatorTests
     [Fact]
     public void Valid_Dto_PassesValidation()
     {
-        var dto = new SavedPostCreateDto { PostId = 1, UserId = 3 };
+        var dto = new SavedPostCreateDto { PostId = 1 };
         _validator.Validate(dto).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public void PostIdZero_FailsValidation()
     {
-        var dto = new SavedPostCreateDto { PostId = 0, UserId = 3 };
+        var dto = new SavedPostCreateDto { PostId = 0 };
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "PostId");
     }
 
     [Fact]
-    public void UserIdZero_FailsValidation()
-    {
-        var dto = new SavedPostCreateDto { PostId = 1, UserId = 0 };
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UserId");
-    }
-
-    [Fact]
     public void PostIdNegative_FailsValidation()
     {
-        var dto = new SavedPostCreateDto { PostId = -1, UserId = 1 };
+        var dto = new SavedPostCreateDto { PostId = -1 };
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
     }

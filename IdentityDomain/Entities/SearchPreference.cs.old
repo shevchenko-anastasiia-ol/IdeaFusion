@@ -1,0 +1,14 @@
+namespace IdentityDomain.Entities;
+
+public class SearchPreference
+{
+    public string UserId { get; set; } = null!;
+    public List<string> SearchHistory { get; set; } = new();
+    public List<SavedFilter> SavedFilters { get; set; } = new();
+}
+
+public class SavedFilter
+{
+    public string Name { get; set; } = null!;
+    public string QueryJson { get; set; } = null!;
+}

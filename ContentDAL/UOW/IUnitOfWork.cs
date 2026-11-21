@@ -5,6 +5,7 @@ namespace ContentDAL.UOW;
 public interface IUnitOfWork : IAsyncDisposable
 {
     IPostRepository PostRepository { get; }
+    IPostAuthorRepository PostAuthorRepository { get; }
     ICommentRepository CommentRepository { get; }
     ILikeRepository LikeRepository { get; }
     IPostViewRepository PostViewRepository { get; }

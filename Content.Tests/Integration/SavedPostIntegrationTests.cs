@@ -43,16 +43,16 @@ public class SavedPostIntegrationTests : IClassFixture<ContentWebApplicationFact
         count.Should().Be(5);
     }
 
-    // ── GET BY USER ───────────────────────────────────────────────────────────
+    // ── GET MINE ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetByUser_Returns200WithList()
+    public async Task GetMine_Returns200WithList()
     {
         _factory.SavedPostServiceMock
-            .Setup(s => s.GetByUserIdAsync(3, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetMineAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SavedPostDto> { MakeSaved(1, 10, 3), MakeSaved(2, 11, 3) });
 
-        var response = await _client.GetAsync("/api/savedpost/by-user/3");
+        var response = await _client.GetAsync("/api/savedpost/me");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var list = await response.Content.ReadFromJsonAsync<List<SavedPostDto>>();
@@ -60,13 +60,13 @@ public class SavedPostIntegrationTests : IClassFixture<ContentWebApplicationFact
     }
 
     [Fact]
-    public async Task GetByUser_EmptyList_Returns200()
+    public async Task GetMine_EmptyList_Returns200()
     {
         _factory.SavedPostServiceMock
-            .Setup(s => s.GetByUserIdAsync(99, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetMineAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<SavedPostDto>());
 
-        var response = await _client.GetAsync("/api/savedpost/by-user/99");
+        var response = await _client.GetAsync("/api/savedpost/me");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -77,10 +77,10 @@ public class SavedPostIntegrationTests : IClassFixture<ContentWebApplicationFact
     public async Task Exists_WhenSaved_Returns200True()
     {
         _factory.SavedPostServiceMock
-            .Setup(s => s.ExistsAsync(1, 2, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExistsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var response = await _client.GetAsync("/api/savedpost/exists?postId=1&userId=2");
+        var response = await _client.GetAsync("/api/savedpost/exists?postId=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<bool>()).Should().BeTrue();
@@ -90,10 +90,10 @@ public class SavedPostIntegrationTests : IClassFixture<ContentWebApplicationFact
     public async Task Exists_WhenNotSaved_Returns200False()
     {
         _factory.SavedPostServiceMock
-            .Setup(s => s.ExistsAsync(1, 77, It.IsAny<CancellationToken>()))
+            .Setup(s => s.ExistsAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var response = await _client.GetAsync("/api/savedpost/exists?postId=1&userId=77");
+        var response = await _client.GetAsync("/api/savedpost/exists?postId=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<bool>()).Should().BeFalse();
@@ -109,7 +109,7 @@ public class SavedPostIntegrationTests : IClassFixture<ContentWebApplicationFact
             .ReturnsAsync(MakeSaved(99, 1, 2));
 
         var response = await _client.PostAsJsonAsync("/api/savedpost",
-            new SavedPostCreateDto { PostId = 1, UserId = 2 });
+            new SavedPostCreateDto { PostId = 1 });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<SavedPostDto>();
@@ -122,10 +122,10 @@ public class SavedPostIntegrationTests : IClassFixture<ContentWebApplicationFact
     public async Task Unsave_Returns204()
     {
         _factory.SavedPostServiceMock
-            .Setup(s => s.UnsaveAsync(1, 2, It.IsAny<CancellationToken>()))
+            .Setup(s => s.UnsaveAsync(1, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var response = await _client.DeleteAsync("/api/savedpost?postId=1&userId=2");
+        var response = await _client.DeleteAsync("/api/savedpost?postId=1");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
