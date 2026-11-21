@@ -1,0 +1,23 @@
+{
+  "model": "gbm: sscd+phash+kp",
+  "features": [
+    "sscd_raw",
+    "sscd_norm",
+    "sscd_gap",
+    "rank",
+    "phash_dist",
+    "kp_inliers_log",
+    "kp_inlier_ratio",
+    "kp_q_cov",
+    "kp_r_cov",
+    "kp_r_center_cov"
+  ],
+  "zones": {
+    "red": 0.5,
+    "yellow": 0.1
+  },
+  "clip_similar_composition": 0.10407646477222442,
+  "exact_hamming": 8,
+  "min_inliers": 15,
+  "candidates_k": 5
+}

@@ -1,10 +1,12 @@
 ﻿using ContentBLL.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ContentAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class PostViewController : ControllerBase
 {
     private readonly IPostViewService _postViewService;
@@ -14,11 +16,11 @@ public class PostViewController : ControllerBase
         _postViewService = postViewService;
     }
  
-    // POST: api/postview/record?postId=1&userId=2
+    // POST: api/postview/record?postId=1 — the viewer is taken from the token
     [HttpPost("record")]
-    public async Task<IActionResult> Record([FromQuery] int postId, [FromQuery] int? userId, CancellationToken ct)
+    public async Task<IActionResult> Record([FromQuery] int postId, CancellationToken ct)
     {
-        await _postViewService.RecordAsync(postId, userId, ct);
+        await _postViewService.RecordAsync(postId, ct);
         return NoContent();
     }
  

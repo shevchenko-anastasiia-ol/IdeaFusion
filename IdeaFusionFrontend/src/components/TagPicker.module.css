@@ -1,0 +1,9 @@
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.empty {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}

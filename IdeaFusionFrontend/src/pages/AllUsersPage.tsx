@@ -1,137 +1,192 @@
-import { FunctionComponent, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
-import Moderation from "../components/Moderation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { authApi, REALM_ROLES, type RealmRole } from "../api/auth";
 import type { UserDto } from "../api/types";
 import { api } from "../api/client";
-import styles from "./AllUsersPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Avatar, ButtonLink, EmptyState, ErrorState, Input, Loading, Menu, PageHeader, Pagination, Select, useDialogs, useToast } from "../ui";
+import { IconSearch, IconTrash, IconUsers } from "../ui/icons";
+import { plural } from "../lib/plural";
+import sh from "./shared.module.css";
+import s from "./AllUsersPage.module.css";
 
-const AVATAR_PALETTE = ["#4002aa","#00c9a7","#ff6b6b","#ffb347","#e040fb","#29b6f6","#ef5350","#66bb6a","#7c5cfc","#26c6da","#ec407a"];
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
-}
-
-const UserCard: FunctionComponent<{ user: UserDto; meId?: string; isAdmin?: boolean; onDelete?: (id: string) => void }> = ({ user, meId, isAdmin, onDelete }) => {
-  const navigate = useNavigate();
-  const displayName = user.fullName ?? user.userName ?? user.email.split('@')[0];
-  const initials    = displayName.slice(0, 2).toUpperCase();
-  const isMe        = user.id === meId;
-
-  return (
-    <div className={styles.userCard} onClick={() => navigate(`/users/${user.id}`)} style={{ cursor: "pointer" }}>
-      {user.avatarUrl ? (
-        <img src={user.avatarUrl} alt="" className={styles.avatar} style={{ objectFit: "cover", borderRadius: "50%" }} />
-      ) : (
-        <div className={styles.avatar} style={{ backgroundColor: avatarColor(user.id) }}>{initials}</div>
-      )}
-      <div className={styles.cardInfo}>
-        <span className={styles.userName}>{displayName}</span>
-        <span className={styles.userRole}>{user.specialization ?? user.roles.join(', ') ?? 'Користувач'}</span>
-      </div>
-      {!isMe && (
-        <button
-          className={styles.inviteBtn}
-          onClick={e => { e.stopPropagation(); navigate(`/team/invite-to-team?userId=${user.id}`); }}
-        >
-          Запросити
-        </button>
-      )}
-      {isAdmin && !isMe && !user.roles?.includes('Admin') && (
-        <button
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#ff6b6b", padding: "4px 8px", marginLeft: 4, flexShrink: 0 }}
-          title="Видалити користувача"
-          onClick={e => { e.stopPropagation(); onDelete?.(user.id); }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </button>
-      )}
-    </div>
-  );
-};
-
+const ROLE_LABELS: Record<string, string> = { author: "Автор", moderator: "Модератор", administrator: "Адміністратор" };
 const PAGE_SIZE = 15;
 
-const AllUsersPage: FunctionComponent = () => {
-  const navigate = useNavigate();
-  const { user: me } = useAuth();
-  const [users,   setUsers]   = useState<UserDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
-  const [page,    setPage]    = useState(1);
+/**
+ * Grants or revokes a realm role. The API is the enforcement point: it checks the
+ * administrator policy and writes an audit entry for every change, so the control
+ * only has to be honest about what it asked for.
+ */
+function RoleSelect({ user, onChanged }: { user: UserDto; onChanged: (userId: string, roles: string[]) => void }) {
+  const { confirm } = useDialogs();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const held = user.roles ?? [];
+  const current = REALM_ROLES.filter(r => r === "administrator" || r === "moderator").find(r => held.includes(r));
 
-  useEffect(() => {
-    api.get<UserDto[]>('/api/users')
+  async function apply(role: RealmRole | "") {
+    if (!role || role === current) return;
+    const ok = await confirm({
+      title: "Змінити роль?",
+      message: `${user.fullName ?? user.userName ?? user.email} отримає роль «${ROLE_LABELS[role]}». Зміну буде записано в журнал.`,
+      confirmLabel: "Змінити",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const superseded = current && current !== role ? [current] : [];
+      if (superseded.length) await authApi.revokeRoles(user.id, { roles: superseded });
+      const result = await authApi.grantRoles(user.id, { roles: [role] });
+      onChanged(user.id, result.roles);
+      toast.success("Роль змінено");
+    } catch (e) {
+      toast.fromError(e, "Помилка зміни ролі");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Select aria-label={`Роль ${user.email}`} className={s.roleSelect} value={current ?? ""} disabled={busy} onChange={e => void apply(e.target.value as RealmRole | "")}>
+      <option value="">Без додаткової ролі</option>
+      {REALM_ROLES.map(r => (
+        <option key={r} value={r}>
+          {ROLE_LABELS[r]}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
+export default function AllUsersPage() {
+  usePageMeta("Користувачі", [{ label: "Модерація", to: "/moderation" }]);
+  const { user: me, isAdministrator } = useAuth();
+  const { confirm } = useDialogs();
+  const toast = useToast();
+  const [users, setUsers] = useState<UserDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    api
+      .get<UserDto[]>("/api/users")
       .then(setUsers)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const isAdmin = me?.roles?.includes('Admin');
+  useEffect(load, [load]);
 
-  async function handleDeleteUser(userId: string) {
-    if (!confirm('Видалити цього користувача назавжди?')) return;
+  const handleRolesChanged = useCallback((userId: string, roles: string[]) => {
+    setUsers(prev => prev.map(u => (u.id === userId ? { ...u, roles } : u)));
+  }, []);
+
+  async function handleDeleteUser(u: UserDto) {
+    const ok = await confirm({ title: "Видалити користувача?", message: `${u.email} буде видалено назавжди.`, confirmLabel: "Видалити", danger: true });
+    if (!ok) return;
     try {
-      await api.delete<void>(`/api/users/${userId}`);
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      await api.delete<void>(`/api/users/${u.id}`);
+      setUsers(prev => prev.filter(x => x.id !== u.id));
+      toast.success("Користувача видалено");
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Помилка видалення');
+      toast.fromError(e, "Помилка видалення");
     }
   }
 
-  const allVisible = users.filter(u => u.id !== me?.id);
-  const totalPages = Math.max(1, Math.ceil(allVisible.length / PAGE_SIZE));
-  const pageUsers  = allVisible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return users
+      .filter(u => u.id !== me?.id)
+      .filter(u => !q || [u.fullName, u.userName, u.email, u.specialization].some(v => v?.toLowerCase().includes(q)));
+  }, [users, me?.id, query]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageUsers = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <div className={styles.page}>
-      <FrameComponent2 />
+    <Page>
+      <PageHeader title="Користувачі" description="Ролі та акаунти платформи. Кожна зміна ролі записується в журнал аудиту." />
 
-      <div className={styles.rightCol}>
-        <header className={styles.header}>
-          <button className={styles.backBtn} onClick={() => navigate(-1)}>← Назад</button>
-          <h1 className={styles.pageTitle}>Всі користувачі</h1>
-        </header>
-
-        <main className={styles.grid}>
-          {loading && <p style={{ color: "#aaa", padding: 24 }}>Завантаження...</p>}
-          {!loading && error && !isAdmin && (
-            <p style={{ color: "#777", padding: 24 }}>Список користувачів доступний лише адміністраторам.</p>
-          )}
-          {!loading && error && isAdmin && (
-            <p style={{ color: "#ff6b6b", padding: 24 }}>Помилка: {error}</p>
-          )}
-          {!loading && !error && pageUsers.map(u => (
-            <UserCard key={u.id} user={u} meId={me?.id} isAdmin={isAdmin} onDelete={handleDeleteUser} />
-          ))}
-        </main>
-
-        {!loading && !error && allVisible.length > PAGE_SIZE && (
-          <div className={styles.pagination}>
-            <button
-              className={styles.pageBtn}
-              disabled={page === 1}
-              onClick={() => setPage(p => p - 1)}
-            >← Назад</button>
-            <span className={styles.pageNum}>Сторінка {page} з {totalPages}</span>
-            <button
-              className={styles.pageBtn}
-              disabled={page >= totalPages}
-              onClick={() => setPage(p => p + 1)}
-            >Далі →</button>
-          </div>
-        )}
-
-        <div className={styles.footerWrap}>
-          <Moderation />
+      <div className={sh.toolbar}>
+        <div className={s.search}>
+          <IconSearch size={16} />
+          <Input
+            aria-label="Фільтр користувачів"
+            placeholder="Ім'я, логін або email"
+            value={query}
+            onChange={e => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
+        <span className={sh.mono}>{loading ? "" : `${visible.length} ${plural(visible.length, ["користувач", "користувачі", "користувачів"])}`}</span>
       </div>
-    </div>
-  );
-};
 
-export default AllUsersPage;
+      {loading && <Loading />}
+      {!loading && error && <ErrorState message={error} onRetry={load} />}
+      {!loading && !error && visible.length === 0 && <EmptyState icon={<IconUsers />} title="Нікого не знайдено" />}
+      {!loading && !error && pageUsers.length > 0 && (
+        <>
+          <div className={sh.tableWrap}>
+            <table className={`${sh.table} ${sh.tableStack}`}>
+              <thead>
+                <tr>
+                  <th>користувач</th>
+                  <th>email</th>
+                  <th>ролі</th>
+                  <th>реєстрація</th>
+                  <th aria-label="Дії" />
+                </tr>
+              </thead>
+              <tbody>
+                {pageUsers.map(u => {
+                  const name = u.fullName ?? u.userName ?? u.email.split("@")[0];
+                  const isAdmin = u.roles?.includes("administrator") ?? false;
+                  return (
+                    <tr key={u.id}>
+                      <td data-label="користувач">
+                        <Link to={`/users/${u.id}`} className={s.user}>
+                          <Avatar name={name} src={u.avatarUrl} seed={u.id} size={30} />
+                          <span className={s.userText}>
+                            <span className={s.userName}>{name}</span>
+                            {u.specialization && <span className={sh.mono}>{u.specialization}</span>}
+                          </span>
+                        </Link>
+                      </td>
+                      <td data-label="email" className={s.email}>
+                        {u.email}
+                      </td>
+                      <td data-label="ролі">{isAdministrator ? <RoleSelect user={u} onChanged={handleRolesChanged} /> : (u.roles ?? []).map(r => ROLE_LABELS[r] ?? r).join(", ")}</td>
+                      <td data-label="реєстрація" className={sh.mono}>
+                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString("uk-UA") : "—"}
+                      </td>
+                      <td className={s.actions}>
+                        <ButtonLink to={`/team/invite-to-team?userId=${u.id}`} size="sm" variant="ghost">
+                          Запросити
+                        </ButtonLink>
+                        {/* Nobody edits their own roles from this list, and the last administrator guard lives on the API. */}
+                        {isAdministrator && !isAdmin && (
+                          <Menu items={[{ label: "Видалити користувача", icon: <IconTrash size={16} />, danger: true, onSelect: () => void handleDeleteUser(u) }]} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
+        </>
+      )}
+    </Page>
+  );
+}

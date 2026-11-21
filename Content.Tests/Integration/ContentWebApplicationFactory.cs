@@ -1,5 +1,6 @@
 using ContentBLL.Services.Interfaces;
 using ContentDAL.Data;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ public class ContentWebApplicationFactory : WebApplicationFactory<global::Progra
     public Mock<ITagService>       TagServiceMock       { get; } = new(MockBehavior.Loose);
     public Mock<ISavedPostService> SavedPostServiceMock { get; } = new(MockBehavior.Loose);
     public Mock<IPostViewService>  PostViewServiceMock  { get; } = new(MockBehavior.Loose);
+    public Mock<IPostAuthorResolver> PostAuthorResolverMock { get; } = new(MockBehavior.Loose);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -49,6 +51,18 @@ public class ContentWebApplicationFactory : WebApplicationFactory<global::Progra
 
         builder.ConfigureServices(services =>
         {
+            // ── Test auth ──────────────────────────────────────────────────────
+            // PostConfigure runs after every Configure callback, including the
+            // app's own AddAuthentication(...), so the test scheme reliably wins.
+            services.AddAuthentication(TestAuthHandler.Scheme)
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
+                    TestAuthHandler.Scheme, _ => { });
+            services.PostConfigure<AuthenticationOptions>(o =>
+            {
+                o.DefaultAuthenticateScheme = TestAuthHandler.Scheme;
+                o.DefaultChallengeScheme = TestAuthHandler.Scheme;
+            });
+
             // ── InMemory EF ──────────────────────────────────────────────────
             // ContentAPI registers ContentDbContext twice (AddDataAccess + Program.cs directly),
             // both with Npgsql. Calling AddDbContext a third time with InMemory causes the
@@ -84,6 +98,9 @@ public class ContentWebApplicationFactory : WebApplicationFactory<global::Progra
             services.AddScoped<ITagService>(_       => TagServiceMock.Object);
             services.AddScoped<ISavedPostService>(_ => SavedPostServiceMock.Object);
             services.AddScoped<IPostViewService>(_  => PostViewServiceMock.Object);
+            // The caller is resolved from the token, so endpoints that answer
+            // "which author am I" need this mocked rather than a service method.
+            services.AddScoped<IPostAuthorResolver>(_ => PostAuthorResolverMock.Object);
         });
     }
 }

@@ -123,7 +123,7 @@ public class MappingProfileTests
         var createDto = new PostCreateDto
         {
             Title = "New Post", Description = "Desc",
-            CreatedBy = "user", PostAuthorId = 1, Status = "Published"
+            Status = "Published"
         };
 
         var post = mapper.Map<Post>(createDto);
@@ -137,7 +137,7 @@ public class MappingProfileTests
     public void PostCreateDto_MapsTo_Post_DraftStatus()
     {
         var mapper    = BuildMapper();
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", Status = "Draft" };
+        var createDto = new PostCreateDto { Title = "T", Status = "Draft" };
 
         var post = mapper.Map<Post>(createDto);
 
@@ -148,7 +148,7 @@ public class MappingProfileTests
     public void PostCreateDto_WithInvalidStatus_DefaultsToPublished()
     {
         var mapper    = BuildMapper();
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", Status = "BadStatus" };
+        var createDto = new PostCreateDto { Title = "T", Status = "BadStatus" };
 
         var post = mapper.Map<Post>(createDto);
 
@@ -159,7 +159,7 @@ public class MappingProfileTests
     public void PostCreateDto_WithNullStatus_DefaultsToPublished()
     {
         var mapper    = BuildMapper();
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u", Status = null };
+        var createDto = new PostCreateDto { Title = "T", Status = null };
 
         var post = mapper.Map<Post>(createDto);
 
@@ -170,7 +170,7 @@ public class MappingProfileTests
     public void PostCreateDto_PostId_IsIgnored()
     {
         var mapper    = BuildMapper();
-        var createDto = new PostCreateDto { Title = "T", CreatedBy = "u" };
+        var createDto = new PostCreateDto { Title = "T" };
 
         var post = mapper.Map<Post>(createDto);
 
@@ -182,7 +182,7 @@ public class MappingProfileTests
     {
         var mapper    = BuildMapper();
         var existing  = new Post { PostId = 5, Title = "Old", Status = PostStatus.Published };
-        var updateDto = new PostUpdateDto { Title = "Updated", UpdatedBy = "bob", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "Updated", TagIds = new() };
 
         mapper.Map(updateDto, existing);
 
@@ -194,7 +194,7 @@ public class MappingProfileTests
     {
         var mapper    = BuildMapper();
         var existing  = new Post { PostId = 5, Title = "Old", Status = PostStatus.Published };
-        var updateDto = new PostUpdateDto { Title = "New", UpdatedBy = "bob", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "New", TagIds = new() };
 
         mapper.Map(updateDto, existing);
 
@@ -206,7 +206,7 @@ public class MappingProfileTests
     {
         var mapper    = BuildMapper();
         var existing  = new Post { PostId = 5, Title = "Old", Status = PostStatus.Draft };
-        var updateDto = new PostUpdateDto { Title = "New", UpdatedBy = "bob", TagIds = new() };
+        var updateDto = new PostUpdateDto { Title = "New", TagIds = new() };
 
         mapper.Map(updateDto, existing);
 
@@ -284,7 +284,7 @@ public class MappingProfileTests
     public void CommentCreateDto_MapsTo_Comment()
     {
         var mapper    = BuildMapper();
-        var createDto = new CommentCreateDto { PostId = 2, PostAuthorId = 1, Body = "Hello", CreatedBy = "alice" };
+        var createDto = new CommentCreateDto { PostId = 2, Body = "Hello" };
 
         var comment = mapper.Map<Comment>(createDto);
 
@@ -296,7 +296,7 @@ public class MappingProfileTests
     public void CommentCreateDto_MapsTo_Comment_CommentId_IsIgnored()
     {
         var mapper    = BuildMapper();
-        var createDto = new CommentCreateDto { PostId = 2, PostAuthorId = 1, Body = "Hi", CreatedBy = "u" };
+        var createDto = new CommentCreateDto { PostId = 2, Body = "Hi" };
 
         var comment = mapper.Map<Comment>(createDto);
 
@@ -308,7 +308,7 @@ public class MappingProfileTests
     {
         var mapper    = BuildMapper();
         var existing  = new Comment { CommentId = 7, PostId = 1, Body = "Old body" };
-        var updateDto = new CommentUpdateDto { Body = "New body", UpdatedBy = "user" };
+        var updateDto = new CommentUpdateDto { Body = "New body" };
 
         mapper.Map(updateDto, existing);
 
@@ -320,7 +320,7 @@ public class MappingProfileTests
     {
         var mapper    = BuildMapper();
         var existing  = new Comment { CommentId = 7, PostId = 1, Body = "Old" };
-        var updateDto = new CommentUpdateDto { Body = "New", UpdatedBy = "u" };
+        var updateDto = new CommentUpdateDto { Body = "New" };
 
         mapper.Map(updateDto, existing);
 
@@ -332,7 +332,7 @@ public class MappingProfileTests
     {
         var mapper    = BuildMapper();
         var existing  = new Comment { CommentId = 1, PostId = 9, Body = "Old" };
-        var updateDto = new CommentUpdateDto { Body = "New", UpdatedBy = "u" };
+        var updateDto = new CommentUpdateDto { Body = "New" };
 
         mapper.Map(updateDto, existing);
 
@@ -358,19 +358,19 @@ public class MappingProfileTests
     public void LikeCreateDto_MapsTo_Like()
     {
         var mapper    = BuildMapper();
-        var createDto = new LikeCreateDto { PostId = 5, UserId = 10 };
+        var createDto = new LikeCreateDto { PostId = 5 };
 
         var like = mapper.Map<Like>(createDto);
 
         like.PostId.Should().Be(5);
-        like.UserId.Should().Be(10);
+        like.UserId.Should().Be(0);
     }
 
     [Fact]
     public void LikeCreateDto_MapsTo_Like_LikeId_IsIgnored()
     {
         var mapper    = BuildMapper();
-        var createDto = new LikeCreateDto { PostId = 1, UserId = 1 };
+        var createDto = new LikeCreateDto { PostId = 1 };
 
         var like = mapper.Map<Like>(createDto);
 
@@ -419,19 +419,19 @@ public class MappingProfileTests
     public void SavedPostCreateDto_MapsTo_SavedPost()
     {
         var mapper    = BuildMapper();
-        var createDto = new SavedPostCreateDto { PostId = 3, UserId = 7 };
+        var createDto = new SavedPostCreateDto { PostId = 3 };
 
         var savedPost = mapper.Map<SavedPost>(createDto);
 
         savedPost.PostId.Should().Be(3);
-        savedPost.UserId.Should().Be(7);
+        savedPost.UserId.Should().Be(0);
     }
 
     [Fact]
     public void SavedPostCreateDto_MapsTo_SavedPost_SavedPostId_IsIgnored()
     {
         var mapper    = BuildMapper();
-        var createDto = new SavedPostCreateDto { PostId = 1, UserId = 1 };
+        var createDto = new SavedPostCreateDto { PostId = 1 };
 
         var savedPost = mapper.Map<SavedPost>(createDto);
 

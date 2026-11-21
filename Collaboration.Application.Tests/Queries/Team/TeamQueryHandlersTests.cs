@@ -1,3 +1,4 @@
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Application.Queries.Team;
 using Collaboration.Domain.Common.Helpers;
 using Collaboration.Domain.Entities;
@@ -14,7 +15,13 @@ namespace Collaboration.Application.Tests.Queries.Team;
 public class TeamQueryHandlersTests
 {
     private readonly Mock<ITeamRepository> _repoMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    private void SetCaller(string userId)
+    {
+        _callerMock.Setup(c => c.UserId).Returns(userId);
+    }
 
     private static Domain.Entities.Team CreateTeam(string name = "Test Team")
     {
@@ -90,29 +97,31 @@ public class TeamQueryHandlersTests
         result.TotalCount.Should().Be(1);
     }
 
-    // ── GetTeamsByMemberQueryHandler ──────────────────────────────────────────
+    // ── GetMyTeamsQueryHandler ────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetTeamsByMember_ReturnsTeamsUserIsMemberOf()
+    public async Task GetMyTeams_ReturnsTeamsCallerIsMemberOf()
     {
         var team = CreateTeam();
         _repoMock.Setup(r => r.GetByMemberIdAsync("owner-id", _ct))
                  .ReturnsAsync(new List<Domain.Entities.Team> { team });
+        SetCaller("owner-id");
 
-        var handler = new GetTeamsByMemberQueryHandler(_repoMock.Object);
-        var result = await handler.Handle(new GetTeamsByMemberQuery { UserId = "owner-id" }, _ct);
+        var handler = new GetMyTeamsQueryHandler(_repoMock.Object, _callerMock.Object);
+        var result = await handler.Handle(new GetMyTeamsQuery(), _ct);
 
         result.Should().ContainSingle(t => t.Name == "Test Team");
     }
 
     [Fact]
-    public async Task GetTeamsByMember_WhenNoTeams_ReturnsEmptyCollection()
+    public async Task GetMyTeams_WhenNoTeams_ReturnsEmptyCollection()
     {
         _repoMock.Setup(r => r.GetByMemberIdAsync("user-no-teams", _ct))
                  .ReturnsAsync(new List<Domain.Entities.Team>());
+        SetCaller("user-no-teams");
 
-        var handler = new GetTeamsByMemberQueryHandler(_repoMock.Object);
-        var result = await handler.Handle(new GetTeamsByMemberQuery { UserId = "user-no-teams" }, _ct);
+        var handler = new GetMyTeamsQueryHandler(_repoMock.Object, _callerMock.Object);
+        var result = await handler.Handle(new GetMyTeamsQuery(), _ct);
 
         result.Should().BeEmpty();
     }

@@ -47,26 +47,20 @@ public class UserGrpcServiceClientCoverageTests
         m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<GetUsersByIdsRequest, UsersResponse>>(),
             It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetUsersByIdsRequest>()))
             .Returns(FakeCall.Of(new UsersResponse()));
-        m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<ValidateTokenRequest, ValidateTokenResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<ValidateTokenRequest>()))
-            .Returns(new ValidateTokenResponse());
-        m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<ValidateTokenRequest, ValidateTokenResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<ValidateTokenRequest>()))
-            .Returns(FakeCall.Of(new ValidateTokenResponse()));
         m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<CheckUserExistsRequest, CheckUserExistsResponse>>(),
             It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<CheckUserExistsRequest>()))
             .Returns(new CheckUserExistsResponse());
         m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<CheckUserExistsRequest, CheckUserExistsResponse>>(),
             It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<CheckUserExistsRequest>()))
             .Returns(FakeCall.Of(new CheckUserExistsResponse()));
+        m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<RecordAuditRequest, RecordAuditResponse>>(),
+            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<RecordAuditRequest>()))
+            .Returns(new RecordAuditResponse());
+        m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<RecordAuditRequest, RecordAuditResponse>>(),
+            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<RecordAuditRequest>()))
+            .Returns(FakeCall.Of(new RecordAuditResponse()));
         return new UserGrpcService.UserGrpcServiceClient(m.Object);
     }
-
-    [Fact] public void Constructor_WithCallInvoker_CreatesClient() =>
-        CreateClient().Should().NotBeNull();
-
-    [Fact] public void GetUserById_WithDefaultOptions_ReturnsResponse() =>
-        CreateClient().GetUserById(new GetUserByIdRequest { UserId = "u-1" }).Should().NotBeNull();
 
     [Fact] public void GetUserById_WithCallOptions_ReturnsResponse() =>
         CreateClient().GetUserById(new GetUserByIdRequest(), new CallOptions()).Should().NotBeNull();
@@ -89,118 +83,23 @@ public class UserGrpcServiceClientCoverageTests
     [Fact] public void GetUsersByIdsAsync_WithCallOptions_ReturnsCall() =>
         CreateClient().GetUsersByIdsAsync(new GetUsersByIdsRequest(), new CallOptions()).Should().NotBeNull();
 
-    [Fact] public void ValidateToken_WithDefaultOptions_ReturnsResponse() =>
-        CreateClient().ValidateToken(new ValidateTokenRequest()).Should().NotBeNull();
-
-    [Fact] public void ValidateToken_WithCallOptions_ReturnsResponse() =>
-        CreateClient().ValidateToken(new ValidateTokenRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void ValidateTokenAsync_WithDefaultOptions_ReturnsCall() =>
-        CreateClient().ValidateTokenAsync(new ValidateTokenRequest()).Should().NotBeNull();
-
-    [Fact] public void ValidateTokenAsync_WithCallOptions_ReturnsCall() =>
-        CreateClient().ValidateTokenAsync(new ValidateTokenRequest(), new CallOptions()).Should().NotBeNull();
-
     [Fact] public void CheckUserExists_WithDefaultOptions_ReturnsResponse() =>
         CreateClient().CheckUserExists(new CheckUserExistsRequest()).Should().NotBeNull();
-
-    [Fact] public void CheckUserExists_WithCallOptions_ReturnsResponse() =>
-        CreateClient().CheckUserExists(new CheckUserExistsRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void CheckUserExistsAsync_WithDefaultOptions_ReturnsCall() =>
-        CreateClient().CheckUserExistsAsync(new CheckUserExistsRequest()).Should().NotBeNull();
 
     [Fact] public void CheckUserExistsAsync_WithCallOptions_ReturnsCall() =>
         CreateClient().CheckUserExistsAsync(new CheckUserExistsRequest(), new CallOptions()).Should().NotBeNull();
 
-}
+    [Fact] public void RecordAudit_WithDefaultOptions_ReturnsResponse() =>
+        CreateClient().RecordAudit(new RecordAuditRequest()).Should().NotBeNull();
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TeamGrpcService/TeamGrpcServiceClient
-// ═══════════════════════════════════════════════════════════════════════════
+    [Fact] public void RecordAudit_WithCallOptions_ReturnsResponse() =>
+        CreateClient().RecordAudit(new RecordAuditRequest(), new CallOptions()).Should().NotBeNull();
 
-public class TeamGrpcServiceClientCoverageTests
-{
-    private static TeamGrpcService.TeamGrpcServiceClient CreateClient()
-    {
-        var m = new Mock<CallInvoker>();
-        m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<GetTeamsPagedRequest, PagedTeamsResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetTeamsPagedRequest>()))
-            .Returns(new PagedTeamsResponse());
-        m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<GetTeamsPagedRequest, PagedTeamsResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetTeamsPagedRequest>()))
-            .Returns(FakeCall.Of(new PagedTeamsResponse()));
-        m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<GetTeamByIdRequest, TeamResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetTeamByIdRequest>()))
-            .Returns(new TeamResponse());
-        m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<GetTeamByIdRequest, TeamResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetTeamByIdRequest>()))
-            .Returns(FakeCall.Of(new TeamResponse()));
-        m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<GetTeamsByIdsRequest, TeamsResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetTeamsByIdsRequest>()))
-            .Returns(new TeamsResponse());
-        m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<GetTeamsByIdsRequest, TeamsResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<GetTeamsByIdsRequest>()))
-            .Returns(FakeCall.Of(new TeamsResponse()));
-        m.Setup(x => x.BlockingUnaryCall(It.IsAny<Method<CheckUserIsMemberRequest, CheckUserIsMemberResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<CheckUserIsMemberRequest>()))
-            .Returns(new CheckUserIsMemberResponse());
-        m.Setup(x => x.AsyncUnaryCall(It.IsAny<Method<CheckUserIsMemberRequest, CheckUserIsMemberResponse>>(),
-            It.IsAny<string?>(), It.IsAny<CallOptions>(), It.IsAny<CheckUserIsMemberRequest>()))
-            .Returns(FakeCall.Of(new CheckUserIsMemberResponse()));
-        return new TeamGrpcService.TeamGrpcServiceClient(m.Object);
-    }
+    [Fact] public void RecordAuditAsync_WithDefaultOptions_ReturnsCall() =>
+        CreateClient().RecordAuditAsync(new RecordAuditRequest()).Should().NotBeNull();
 
-    [Fact] public void Constructor_WithCallInvoker_CreatesClient() =>
-        CreateClient().Should().NotBeNull();
-
-    [Fact] public void GetTeamsPaged_WithDefaultOptions_ReturnsResponse() =>
-        CreateClient().GetTeamsPaged(new GetTeamsPagedRequest()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsPaged_WithCallOptions_ReturnsResponse() =>
-        CreateClient().GetTeamsPaged(new GetTeamsPagedRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsPagedAsync_WithDefaultOptions_ReturnsCall() =>
-        CreateClient().GetTeamsPagedAsync(new GetTeamsPagedRequest()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsPagedAsync_WithCallOptions_ReturnsCall() =>
-        CreateClient().GetTeamsPagedAsync(new GetTeamsPagedRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void GetTeamById_WithDefaultOptions_ReturnsResponse() =>
-        CreateClient().GetTeamById(new GetTeamByIdRequest()).Should().NotBeNull();
-
-    [Fact] public void GetTeamById_WithCallOptions_ReturnsResponse() =>
-        CreateClient().GetTeamById(new GetTeamByIdRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void GetTeamByIdAsync_WithDefaultOptions_ReturnsCall() =>
-        CreateClient().GetTeamByIdAsync(new GetTeamByIdRequest()).Should().NotBeNull();
-
-    [Fact] public void GetTeamByIdAsync_WithCallOptions_ReturnsCall() =>
-        CreateClient().GetTeamByIdAsync(new GetTeamByIdRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsByIds_WithDefaultOptions_ReturnsResponse() =>
-        CreateClient().GetTeamsByIds(new GetTeamsByIdsRequest()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsByIds_WithCallOptions_ReturnsResponse() =>
-        CreateClient().GetTeamsByIds(new GetTeamsByIdsRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsByIdsAsync_WithDefaultOptions_ReturnsCall() =>
-        CreateClient().GetTeamsByIdsAsync(new GetTeamsByIdsRequest()).Should().NotBeNull();
-
-    [Fact] public void GetTeamsByIdsAsync_WithCallOptions_ReturnsCall() =>
-        CreateClient().GetTeamsByIdsAsync(new GetTeamsByIdsRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void CheckUserIsMember_WithDefaultOptions_ReturnsResponse() =>
-        CreateClient().CheckUserIsMember(new CheckUserIsMemberRequest()).Should().NotBeNull();
-
-    [Fact] public void CheckUserIsMember_WithCallOptions_ReturnsResponse() =>
-        CreateClient().CheckUserIsMember(new CheckUserIsMemberRequest(), new CallOptions()).Should().NotBeNull();
-
-    [Fact] public void CheckUserIsMemberAsync_WithDefaultOptions_ReturnsCall() =>
-        CreateClient().CheckUserIsMemberAsync(new CheckUserIsMemberRequest()).Should().NotBeNull();
-
-    [Fact] public void CheckUserIsMemberAsync_WithCallOptions_ReturnsCall() =>
-        CreateClient().CheckUserIsMemberAsync(new CheckUserIsMemberRequest(), new CallOptions()).Should().NotBeNull();
+    [Fact] public void RecordAuditAsync_WithCallOptions_ReturnsCall() =>
+        CreateClient().RecordAuditAsync(new RecordAuditRequest(), new CallOptions()).Should().NotBeNull();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

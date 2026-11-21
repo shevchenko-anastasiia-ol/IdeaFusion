@@ -7,10 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Extensions\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\GrpcContracts\GrpcContracts.csproj" />
       <ProjectReference Include="..\IdentityBLL\IdentityBLL.csproj" />
     </ItemGroup>

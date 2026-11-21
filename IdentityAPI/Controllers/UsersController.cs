@@ -1,119 +1,106 @@
 ﻿using IdentityBLL.DTOs;
 using IdentityBLL.Interfaces;
+using IdentityServiceDomain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ServiceDefaults.Interfaces;
+using ServiceDefaults.Security;
 
 namespace IdentityAPI.Controllers;
 
+/// <summary>
+/// Local profile records. Keycloak owns the user list and the roles, so the
+/// searchable, authoritative user view lives on <c>/api/auth/users</c>; this
+/// controller only exposes the profile rows this service mirrors.
+/// </summary>
 [ApiController]
-    [Route("api/[controller]")]
-    [Authorize]
-    public class UsersController : ControllerBase
+[Route("api/users")]
+[Authorize]
+public class UsersController : ControllerBase
+{
+    private readonly IUserService _userService;
+    private readonly IAuditService _auditService;
+    private readonly ICurrentUserAccessor _currentUser;
+    private readonly ILogger<UsersController> _logger;
+
+    public UsersController(
+        IUserService userService,
+        IAuditService auditService,
+        ICurrentUserAccessor currentUser,
+        ILogger<UsersController> logger)
     {
-        private readonly IUserService _userService;
-        private readonly ILogger<UsersController> _logger;
-
-        public UsersController(IUserService userService, ILogger<UsersController> logger)
-        {
-            _userService = userService;
-            _logger = logger;
-        }
-
-        /// <summary>
-        /// Get a list of all registered users.
-        /// </summary>
-        [HttpGet]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("User requested user list");
-            var users = await _userService.GetUsersAsync(cancellationToken);
-            return Ok(users);
-        }
-
-        /// <summary>
-        /// Get a specific user by ID.
-        /// </summary>
-        [HttpGet("{userId:guid}")]
-        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<UserDto>> GetUser(Guid userId, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("User requested user {UserId}", userId);
-            var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
-            if (user == null)
-                return NotFound(new { message = "User not found." });
-            return Ok(user);
-        }
-
-        /// <summary>
-        /// Get all refresh tokens for a specific user. Admin only.
-        /// </summary>
-        [HttpGet("{userId:guid}/tokens")]
-        [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(IEnumerable<RefreshTokenDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<RefreshTokenDto>>> GetUserTokens(Guid userId, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Admin requested refresh tokens for user {UserId}", userId);
-            var tokens = await _userService.GetUserRefreshTokensAsync(userId, cancellationToken);
-            return Ok(tokens);
-        }
-
-        /// <summary>
-        /// Add a user to a specific role. Admin only.
-        /// </summary>
-        [Authorize(Roles = "Admin")]
-        [HttpPost("roles/add")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> AddUserToRole([FromBody] UserRoleDto dto, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Admin adding user {UserId} to role {Role}", dto.UserId, dto.RoleName);
-            var result = await _userService.AddUserToRoleAsync(dto.UserId, dto.RoleName, cancellationToken);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
-            return NoContent();
-        }
-
-        /// <summary>
-        /// Remove a user from a specific role. Admin only.
-        /// </summary>
-        [Authorize(Roles = "Admin")]
-        [HttpPost("roles/remove")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> RemoveUserFromRole([FromBody] UserRoleDto dto, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Admin removing user {UserId} from role {Role}", dto.UserId, dto.RoleName);
-            var result = await _userService.RemoveUserFromRoleAsync(dto.UserId, dto.RoleName, cancellationToken);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
-            return NoContent();
-        }
-
-        /// <summary>
-        /// Permanently delete a user account. Admin only.
-        /// </summary>
-        [Authorize(Roles = "Admin")]
-        [HttpDelete("{userId:guid}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteUser(Guid userId, CancellationToken cancellationToken)
-        {
-            var currentUserIdStr = User.FindFirst("sub")?.Value;
-            if (currentUserIdStr != null && Guid.TryParse(currentUserIdStr, out var currentUserId) && userId == currentUserId)
-                return BadRequest(new { message = "Admins cannot delete their own account." });
-
-            _logger.LogInformation("Admin deleting user {UserId}", userId);
-            var result = await _userService.DeleteUserAsync(userId, cancellationToken);
-            if (!result.Succeeded)
-            {
-                if (result.Errors.Any(e => e.Code == "UserNotFound"))
-                    return NotFound(new { message = "User not found." });
-                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
-            }
-            return NoContent();
-        }
+        _userService = userService;
+        _auditService = auditService;
+        _currentUser = currentUser;
+        _logger = logger;
     }
+
+    /// <summary>
+    /// All mirrored profiles. Administrators only: the list covers every account
+    /// in the realm, so it is not something anonymous callers may enumerate.
+    /// </summary>
+    [HttpGet]
+    [Authorize(Policy = IdeaFusionPolicies.RequireAdministrator)]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers(CancellationToken cancellationToken)
+    {
+        var users = await _userService.GetUsersAsync(cancellationToken);
+        return Ok(users);
+    }
+
+    /// <summary>
+    /// Get a specific mirrored profile by ID.
+    /// </summary>
+    [HttpGet("{userId:guid}")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserDto>> GetUser(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
+        if (user == null)
+            return NotFound(new { message = "User not found." });
+
+        return Ok(user);
+    }
+
+    /// <summary>
+    /// Permanently delete a mirrored profile. Administrators only. Audited.
+    /// This removes the local profile row; the Keycloak account itself is unaffected.
+    /// </summary>
+    [HttpDelete("{userId:guid}")]
+    [Authorize(Policy = IdeaFusionPolicies.RequireAdministrator)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUser(Guid userId, CancellationToken cancellationToken)
+    {
+        if (_currentUser.UserId is { } currentUserId && userId == currentUserId)
+            return BadRequest(new { message = "Administrators cannot delete their own account." });
+
+        var result = await _userService.DeleteUserAsync(userId, cancellationToken);
+        if (!result.Succeeded)
+        {
+            if (result.Errors.Any(e => e.Code == "UserNotFound"))
+                return NotFound(new { message = "User not found." });
+
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+        }
+
+        await _auditService.RecordAsync(
+            new AuditRecordDto
+            {
+                ActorId = _currentUser.UserId ?? Guid.Empty,
+                ActorName = _currentUser.UserName ?? _currentUser.Email,
+                Action = "user.profile.delete",
+                TargetType = "user",
+                TargetId = userId.ToString(),
+                Category = AuditCategory.User
+            },
+            cancellationToken);
+
+        _logger.LogInformation("Administrator deleted profile {UserId}.", userId);
+
+        return NoContent();
+    }
+}

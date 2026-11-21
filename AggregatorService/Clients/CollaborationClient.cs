@@ -82,6 +82,7 @@ public class CollaborationClient
                     Username = m.User?.Username ?? string.Empty,
                     AvatarUrl = m.User?.AvatarUrl,
                     Role     = m.Role ?? string.Empty,
+                    Position = m.Position,
                     Permissions = m.Permissions ?? new List<string>(),
                 }).ToList() ?? new List<AggregatorTeamMemberDto>(),
                 RequiredRoles = raw.RequiredRoles?.Select(r => new AggregatorRequiredRoleDto
@@ -190,6 +191,7 @@ public class CollaborationClient
     {
         public UserSnapshotRaw? User { get; set; }
         public string? Role { get; set; }
+        public string? Position { get; set; }
         public List<string>? Permissions { get; set; }
     }
 
@@ -206,6 +208,27 @@ public class CollaborationClient
         public string? Description { get; set; }
     }
  
+    public async Task<object> SearchVacanciesAsync(string? query, string? category, string? role, bool openOnly, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"/api/vacancies?openOnly={openOnly}&pageNumber={page}&pageSize={pageSize}";
+            if (!string.IsNullOrEmpty(query)) url += $"&query={Uri.EscapeDataString(query)}";
+            if (!string.IsNullOrEmpty(category)) url += $"&category={Uri.EscapeDataString(category)}";
+            if (!string.IsNullOrEmpty(role)) url += $"&role={Uri.EscapeDataString(role)}";
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode) return new { Items = new List<object>(), TotalCount = 0 };
+            return await response.Content.ReadFromJsonAsync<object>(JsonOptions, cancellationToken)
+                   ?? new { Items = new List<object>(), TotalCount = 0 };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling CollaborationService for vacancy search. Query: {Query}", query);
+            return new { Items = new List<object>(), TotalCount = 0 };
+        }
+    }
+
     // -------------------------------------------------------------------------
     // TEAM POSTS  →  TeamPostController: api/team-posts
     // -------------------------------------------------------------------------
@@ -312,8 +335,9 @@ public class CollaborationClient
                 "Calling CollaborationService for collaboration requests by user. UserId: {UserId}, CorrelationId: {CorrelationId}",
                 userId, correlationId);
  
+            // The /user/{userId} route is gone: requests are read for the token's subject only.
             var response = await _httpClient.GetAsync(
-                $"/api/collaboration-requests/user/{userId}", cancellationToken);
+                "/api/collaboration-requests/mine", cancellationToken);
  
             if (!response.IsSuccessStatusCode)
             {
@@ -410,8 +434,9 @@ public class CollaborationClient
                 "Calling CollaborationService for group invitations by user. UserId: {UserId}, CorrelationId: {CorrelationId}",
                 userId, correlationId);
  
+            // The /user/{userId} route is gone: invitations are read for the token's subject only.
             var response = await _httpClient.GetAsync(
-                $"/api/group-invitations/user/{userId}", cancellationToken);
+                "/api/group-invitations/mine", cancellationToken);
  
             if (!response.IsSuccessStatusCode)
             {

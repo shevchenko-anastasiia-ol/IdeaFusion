@@ -1,18 +1,16 @@
-using System.Text;
 using IdentityAPI.GrpcServices;
-using Minio;
-using IdentityBLL.Configuration;
+using IdentityAPI.Keycloak;
 using IdentityBLL.Interfaces;
 using IdentityBLL.MappingProfiles;
 using IdentityBLL.Services;
 using IdentityDAL.Data;
-using IdentityDAL.Interfaces;
-using IdentityDAL.Repositories;
-using IdentityServiceDomain.Entities;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Minio;
 using ServiceDefaults.Extensions;
 using ServiceDefaults.Health;
 
@@ -25,68 +23,56 @@ builder.Services.AddCorrelationIdForwarding();
 var connectionString = builder.Configuration.GetConnectionString("identityservicedb")
                     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("JwtSettings"));
-
 builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseNpgsql(connectionString!));
-
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
-    options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 8;
-    options.Password.RequireLowercase = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.User.RequireUniqueEmail = true;
-})
-    .AddEntityFrameworkStores<IdentityDbContext>()
-    .AddDefaultTokenProviders();
-
-// Suppress cookie redirects — return 401/403 for API requests instead of redirect to login page
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.Events.OnRedirectToLogin = ctx =>
-    {
-        ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-        return Task.CompletedTask;
-    };
-    options.Events.OnRedirectToAccessDenied = ctx =>
-    {
-        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
-        return Task.CompletedTask;
-    };
+    options.UseNpgsql(connectionString!);
+    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
 
-// Validate the custom JWTs this service issues (key/issuer/audience from JwtSettings)
-var jwtKey     = builder.Configuration["JwtSettings:Key"]!;
-var jwtIssuer  = builder.Configuration["JwtSettings:Issuer"]!;
-var jwtAudience = builder.Configuration["JwtSettings:Audience"]!;
+// Identity here means "the ASP.NET Identity user store", not authentication.
+// Keycloak owns credentials, roles and sessions; this registration exists only so
+// UserManager/RoleManager can read and write profile rows. AddIdentityCore is used
+// instead of AddIdentity because it does not install cookie schemes, which would
+// otherwise fight the Keycloak bearer scheme for the default.
+// Keycloak is the source of truth for account uniqueness, and the same email can
+// legitimately appear on more than one row during migration.
+builder.Services.Configure<IdentityOptions>(options => options.User.RequireUniqueEmail = false);
 
-builder.Services.AddAuthentication(options =>
+builder.Services
+    .AddIdentity<IdentityServiceDomain.Entities.ApplicationUser, IdentityServiceDomain.Entities.ApplicationRole>()
+    .AddEntityFrameworkStores<IdentityDbContext>();
+
+// Every service validates the same Keycloak access token: authority-based, no local
+// signing key, roles from the flat "role" claim.
+builder.Services.AddKeycloakAuthentication(builder.Configuration);
+
+// AddIdentity installs cookie schemes and points the defaults at them. Keycloak has
+// to win, and PostConfigure runs after every Configure callback, so this holds
+// regardless of registration order.
+builder.Services.PostConfigure<AuthenticationOptions>(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.MapInboundClaims = false;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer           = true,
-        ValidIssuer              = jwtIssuer,
-        ValidateAudience         = true,
-        ValidAudience            = jwtAudience,
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ValidateLifetime         = true,
-        ClockSkew                = TimeSpan.Zero,
-        // JsonWebTokenHandler (default in .NET 9) doesn't remap "role" → ClaimTypes.Role,
-        // so explicitly tell it which claim carries roles.
-        RoleClaimType            = "role",
-    };
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 });
+
+// Fail-closed fallback plus the shared RequireAuthor/Moderator/Administrator policies.
+builder.Services.AddIdeaFusionAuthorization();
+
+builder.Services.Configure<KeycloakAdminOptions>(builder.Configuration.GetSection(KeycloakAdminOptions.SectionName));
+// KeycloakAdminClient sends paths relative to the realm's admin root (users/{id}, roles/{name});
+// without a base address every admin call fails with "invalid request URI".
+builder.Services.AddHttpClient(KeycloakAdminClient.HttpClientName, client =>
+{
+    var keycloakUrl = builder.Configuration["Keycloak:Url"]
+                      ?? Environment.GetEnvironmentVariable("KEYCLOAK_URL")
+                      ?? "http://localhost:8080";
+    var realm = builder.Configuration["Keycloak:Realm"]
+                ?? Environment.GetEnvironmentVariable("KEYCLOAK_REALM")
+                ?? "IdeaFusion";
+    client.BaseAddress = new Uri($"{keycloakUrl.TrimEnd('/')}/admin/realms/{realm}/");
+});
+builder.Services.AddScoped<IKeycloakAdminClient, KeycloakAdminClient>();
 
 builder.Services.AddMinio(configureClient => configureClient
     .WithEndpoint(builder.Configuration["Minio:Endpoint"] ?? "localhost:9000")
@@ -100,13 +86,12 @@ builder.Services.AddGrpcWithObservability(builder.Environment);
 
 builder.Services.AddAutoMapperWithLogging(typeof(IdentityProfile).Assembly);
 
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerWithAuth(" Identity API");
+builder.Services.AddSwaggerWithKeycloak(builder.Configuration, "IdeaFusion Identity API");
 
 builder.Services.AddHealthChecks()
     .AddPostgresHealthCheck(
@@ -124,10 +109,9 @@ using (var scope = app.Services.CreateScope())
         await dbContext.Database.MigrateAsync();
     else
         await dbContext.Database.EnsureCreatedAsync();
-    await IdentitySeeder.SeedAsync(app.Services);
 }
 
-// app.UseSwaggerInDevelopment();
+app.UseSwaggerWithKeycloak(builder.Configuration);
 
 if (!app.Environment.IsDevelopment())
 {
@@ -140,7 +124,9 @@ app.UseCorrelationId();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHealthChecks("/health");
+
+// Probes must stay reachable without a token, so they opt out of the fallback policy.
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 
 await app.RunAsync();

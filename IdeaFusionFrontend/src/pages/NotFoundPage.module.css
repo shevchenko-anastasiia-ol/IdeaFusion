@@ -1,0 +1,11 @@
+.code {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  margin-top: var(--sp-8);
+  word-break: break-all;
+}
+.code span {
+  color: var(--accent);
+}

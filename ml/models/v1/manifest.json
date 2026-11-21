@@ -1,0 +1,49 @@
+{
+  "version": "v1",
+  "created_at": "2026-10-21T21:40:37+00:00",
+  "dataset": "artbench_v1",
+  "sscd_weights": "sscd_disc_mixup.torchscript.pt",
+  "sscd_weights_url": "https://dl.fbaipublicfiles.com/sscd-copy-detection/sscd_disc_mixup.torchscript.pt",
+  "fusion_model": "gbm: sscd+phash+kp",
+  "features": [
+    "sscd_raw",
+    "sscd_norm",
+    "sscd_gap",
+    "rank",
+    "phash_dist",
+    "kp_inliers_log",
+    "kp_inlier_ratio",
+    "kp_q_cov",
+    "kp_r_cov",
+    "kp_r_center_cov"
+  ],
+  "uses_clip": false,
+  "background_size": 2000,
+  "files": {
+    "background_sscd.npy": "3b8e35b48ef9c6b75d06c6a401dc69b450a2972496557eb24913d7ff8451d08b",
+    "fusion_model.joblib": "499e873ab8203216a53d505244fd388fb7f9857a39fa10bd2331e03958f5b1c4",
+    "sscd_disc_mixup.torchscript.pt": "9f26bd4c848cc19b73d2ae92eea6e04886f61a7b764ceb7a13aeee62e6a6db56",
+    "thresholds.json": "56a15cae89018b59a3c133a6085db2eda1b3ed22df0447e1aa95195b86f2305e"
+  },
+  "test_metrics": {
+    "muap": 0.9858841383655762,
+    "recall_at_fpr1_val_threshold": 0.9686111111111111,
+    "hard_negative_fpr_at_that_threshold": 0.0313588850174216,
+    "recall_at_fpr1_oracle": 0.9644444444444444,
+    "auc_copy_vs_hard_negative": 0.9977269752929102,
+    "recall_by_type_at_fpr1": {
+      "collage": 0.8133333333333334,
+      "color": 1.0,
+      "crop": 1.0,
+      "filter": 1.0,
+      "fragment": 0.9833333333333333,
+      "hflip": 1.0,
+      "jpeg": 1.0,
+      "resize": 1.0,
+      "rotate": 1.0,
+      "screenshot": 0.8266666666666667,
+      "text_overlay": 1.0,
+      "watermark": 1.0
+    }
+  }
+}

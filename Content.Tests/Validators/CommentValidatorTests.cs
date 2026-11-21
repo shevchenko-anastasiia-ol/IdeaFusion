@@ -12,9 +12,7 @@ public class CommentCreateDtoValidatorTests
     private static CommentCreateDto ValidDto() => new()
     {
         PostId = 1,
-        PostAuthorId = 2,
-        Body = "Great post!",
-        CreatedBy = "alice"
+        Body = "Great post!"
     };
 
     [Fact]
@@ -31,16 +29,6 @@ public class CommentCreateDtoValidatorTests
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "PostId");
-    }
-
-    [Fact]
-    public void PostAuthorIdZero_FailsValidation()
-    {
-        var dto = ValidDto();
-        dto.PostAuthorId = 0;
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "PostAuthorId");
     }
 
     [Fact]
@@ -61,26 +49,6 @@ public class CommentCreateDtoValidatorTests
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Body");
-    }
-
-    [Fact]
-    public void EmptyCreatedBy_FailsValidation()
-    {
-        var dto = ValidDto();
-        dto.CreatedBy = "";
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "CreatedBy");
-    }
-
-    [Fact]
-    public void CreatedByTooLong_FailsValidation()
-    {
-        var dto = ValidDto();
-        dto.CreatedBy = new string('A', 101);
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "CreatedBy");
     }
 
     [Fact]
@@ -117,14 +85,14 @@ public class CommentUpdateDtoValidatorTests
     [Fact]
     public void Valid_Dto_PassesValidation()
     {
-        var dto = new CommentUpdateDto { Body = "Updated body", UpdatedBy = "alice" };
+        var dto = new CommentUpdateDto { Body = "Updated body" };
         _validator.Validate(dto).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public void EmptyBody_FailsValidation()
     {
-        var dto = new CommentUpdateDto { Body = "", UpdatedBy = "alice" };
+        var dto = new CommentUpdateDto { Body = "" };
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Body");
@@ -133,25 +101,16 @@ public class CommentUpdateDtoValidatorTests
     [Fact]
     public void BodyTooLong_FailsValidation()
     {
-        var dto = new CommentUpdateDto { Body = new string('Z', 2001), UpdatedBy = "alice" };
+        var dto = new CommentUpdateDto { Body = new string('Z', 2001) };
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
     }
 
     [Fact]
-    public void EmptyUpdatedBy_FailsValidation()
+    public void BodyTooLong_ReportsLengthError()
     {
-        var dto = new CommentUpdateDto { Body = "Text", UpdatedBy = "" };
-        var result = _validator.Validate(dto);
+        var result = _validator.Validate(new CommentUpdateDto { Body = new string('U', 101) });
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UpdatedBy");
-    }
-
-    [Fact]
-    public void UpdatedByTooLong_FailsValidation()
-    {
-        var dto = new CommentUpdateDto { Body = "Text", UpdatedBy = new string('U', 101) };
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == "Body");
     }
 }

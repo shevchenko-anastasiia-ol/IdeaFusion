@@ -229,6 +229,25 @@ public class ContentClient
         }
     }
  
+    public async Task<List<AggregatorPostDto>> SearchPostsAsync(string query, string? category, string[]? tags, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = $"/api/post/search?q={Uri.EscapeDataString(query)}";
+            if (!string.IsNullOrEmpty(category)) url += $"&category={Uri.EscapeDataString(category)}";
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode) return new List<AggregatorPostDto>();
+            return await response.Content.ReadFromJsonAsync<List<AggregatorPostDto>>(JsonOptions, cancellationToken)
+                   ?? new List<AggregatorPostDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling ContentService for search. Query: {Query}", query);
+            return new List<AggregatorPostDto>();
+        }
+    }
+
     // -------------------------------------------------------------------------
     // COMMENTS  →  CommentController: api/comment
     // -------------------------------------------------------------------------
@@ -428,7 +447,9 @@ public class ContentClient
                 "Calling ContentService for saved posts. UserId: {UserId}, CorrelationId: {CorrelationId}",
                 userId, correlationId);
  
-            var response = await _httpClient.GetAsync($"/api/savedpost/by-user/{userId}", cancellationToken);
+            // Content dropped the by-user read (it let anyone list anybody's saved posts); the
+            // caller's own list comes from the token, which TokenPropagationHandler forwards.
+            var response = await _httpClient.GetAsync("/api/savedpost/me", cancellationToken);
  
             if (!response.IsSuccessStatusCode)
             {

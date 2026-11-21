@@ -48,6 +48,10 @@ public class ExceptionHandlingMiddleware
                     status = HttpStatusCode.BadRequest; 
                     title = "Validation Error";
                     break;
+                case ForbiddenException:
+                    status = HttpStatusCode.Forbidden;
+                    title = "Forbidden";
+                    break;
                 default:
                     status = HttpStatusCode.InternalServerError; 
                     title = "Internal Server Error";

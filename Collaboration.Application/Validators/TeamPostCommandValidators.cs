@@ -13,13 +13,6 @@ public class CreateTeamPostCommandValidator : AbstractValidator<CreateTeamPostCo
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
  
-        RuleFor(x => x.AuthorUserId)
-            .NotEmpty().WithMessage("AuthorUserId is required.");
- 
-        RuleFor(x => x.AuthorUsername)
-            .NotEmpty().WithMessage("AuthorUsername is required.")
-            .MaximumLength(100).WithMessage("AuthorUsername cannot exceed 100 characters.");
- 
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Title is required.")
             .MaximumLength(200).WithMessage("Title cannot exceed 200 characters.");
@@ -39,9 +32,6 @@ public class UpdateTeamPostTitleCommandValidator : AbstractValidator<UpdateTeamP
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Title is required.")
             .MaximumLength(200).WithMessage("Title cannot exceed 200 characters.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }
  
@@ -54,8 +44,5 @@ public class DeleteTeamPostCommandValidator : AbstractValidator<DeleteTeamPostCo
  
         RuleFor(x => x.TeamId)
             .NotEmpty().WithMessage("TeamId is required.");
- 
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId is required.");
     }
 }

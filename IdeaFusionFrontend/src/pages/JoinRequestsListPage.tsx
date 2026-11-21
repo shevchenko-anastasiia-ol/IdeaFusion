@@ -1,132 +1,147 @@
-import { FunctionComponent, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import FrameComponent2 from "../components/FrameComponent2";
-import Moderation from "../components/Moderation";
-import { collaborationRequestsApi } from "../api/teams";
-import type { CollaborationRequestEntity } from "../api/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { collaborationRequestsApi, teamsApi } from "../api/teams";
+import type { CollaborationRequestEntity, TeamEntity } from "../api/types";
 import { requestStatusKey, timeAgo } from "../api/types";
 import { useAuth } from "../context/AuthContext";
-import styles from "./JoinRequestsListPage.module.css";
+import { Page } from "../layout/AppShell";
+import { usePageMeta } from "../layout/PageMeta";
+import { Avatar, Button, ButtonLink, EmptyState, ErrorState, Loading, PageHeader, Status, Tabs, useToast } from "../ui";
+import { IconArrowLeft, IconInbox } from "../ui/icons";
+import { REQUEST_LABEL, requestTone } from "../lib/status";
+import sh from "./shared.module.css";
+import s from "./RequestList.module.css";
 
-const AVATAR_PALETTE = ["#7c5cfc","#ff6b6b","#3fcca0","#888","#ffb347","#29b6f6"];
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
-}
+type Filter = "all" | "new" | "accepted" | "rejected";
 
-const JoinRequestsListPage: FunctionComponent = () => {
-  const navigate      = useNavigate();
-  const [params]      = useSearchParams();
-  const { user }      = useAuth();
-  const teamId        = params.get('teamId') ?? '';
+export default function JoinRequestsListPage() {
+  const [params] = useSearchParams();
+  const { user } = useAuth();
+  const toast = useToast();
+  const teamId = params.get("teamId") ?? "";
+  const [filter, setFilter] = useState<Filter>("all");
+  const [requests, setRequests] = useState<CollaborationRequestEntity[]>([]);
+  const [team, setTeam] = useState<TeamEntity | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const [activeFilter, setActiveFilter] = useState("Всі");
-  const [requests,  setRequests]  = useState<CollaborationRequestEntity[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState<string | null>(null);
+  usePageMeta("Запити на вступ", [
+    { label: "Команди", to: "/collaborations" },
+    ...(teamId ? [{ label: team?.name ?? "Команда", to: `/teams/${teamId}` }] : []),
+  ]);
 
-  const filters = ["Всі", "Нові", "Прийняті", "Відхилені"];
-
-  useEffect(() => {
-    if (!teamId) { setLoading(false); return; }
-    collaborationRequestsApi.getByTeam(teamId)
+  const load = useCallback(() => {
+    if (!teamId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    teamsApi.getById(teamId).then(setTeam).catch(() => setTeam(null));
+    collaborationRequestsApi
+      .getByTeam(teamId)
       .then(setRequests)
-      .catch((e) => setError(e?.message ?? 'Помилка завантаження запитів'))
+      .catch(e => setError(e?.message ?? "Помилка завантаження запитів"))
       .finally(() => setLoading(false));
   }, [teamId]);
 
-  async function handleAccept(r: CollaborationRequestEntity) {
+  useEffect(load, [load]);
+
+  async function respond(r: CollaborationRequestEntity, accept: boolean) {
     if (!user) return;
-    await collaborationRequestsApi.accept(r.id, { requestId: r.id, userId: user.id });
-    setRequests(prev => prev.map(x => x.id === r.id ? { ...x, status: 1 } : x));
+    setBusy(r.id);
+    try {
+      if (accept) await collaborationRequestsApi.accept(r.id, { requestId: r.id });
+      else await collaborationRequestsApi.reject(r.id, { requestId: r.id });
+      setRequests(prev => prev.map(x => (x.id === r.id ? { ...x, status: accept ? 1 : 2 } : x)));
+      toast.success(accept ? "Учасника додано до команди" : "Запит відхилено");
+    } catch (err) {
+      toast.fromError(err, "Не вдалося обробити запит");
+    } finally {
+      setBusy(null);
+    }
   }
 
-  async function handleReject(r: CollaborationRequestEntity) {
-    if (!user) return;
-    await collaborationRequestsApi.reject(r.id, { requestId: r.id, userId: user.id });
-    setRequests(prev => prev.map(x => x.id === r.id ? { ...x, status: 2 } : x));
-  }
+  const counts = useMemo(() => {
+    const c = { new: 0, accepted: 0, rejected: 0, cancelled: 0 };
+    requests.forEach(r => c[requestStatusKey(r.status)]++);
+    return c;
+  }, [requests]);
 
-  const filtered = requests.filter(r => {
-    const k = requestStatusKey(r.status);
-    if (activeFilter === "Всі")      return true;
-    if (activeFilter === "Нові")     return k === "new";
-    if (activeFilter === "Прийняті") return k === "accepted";
-    if (activeFilter === "Відхилені") return k === "rejected";
-    return true;
-  });
+  const filtered = requests.filter(r => filter === "all" || requestStatusKey(r.status) === filter);
+
+  if (!teamId) {
+    return (
+      <Page width="narrow">
+        <PageHeader title="Запити на вступ" />
+        <EmptyState icon={<IconInbox />} title="Команду не вказано" text="Відкрийте запити зі сторінки своєї команди." action={<ButtonLink to="/collaborations">Мої команди</ButtonLink>} />
+      </Page>
+    );
+  }
 
   return (
-    <div className={styles.page}>
-      <FrameComponent2 />
-
-      <div className={styles.content}>
-        <header className={styles.header}>
-          <h2 className={styles.headerTitle}>Запити на вступ до команди</h2>
-          <button className={styles.backBtn} onClick={() => navigate(teamId ? `/teams/${teamId}` : "/teams")}>Назад</button>
-        </header>
-
-        <main className={styles.main}>
-          <div className={styles.filters}>
-            {filters.map(f => (
-              <button key={f} className={`${styles.filterBtn} ${activeFilter === f ? styles.filterActive : ""}`} onClick={() => setActiveFilter(f)}>
-                {f}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.list}>
-            {loading && <p style={{ color: "#aaa" }}>Завантаження...</p>}
-            {!loading && error && <p style={{ color: "#ff6b6b" }}>Помилка: {error}</p>}
-            {!loading && !error && filtered.length === 0 && <p style={{ color: "#666" }}>Запитів немає</p>}
+    <Page width="narrow">
+      <PageHeader
+        title="Запити на вступ"
+        description={team ? `Хто хоче долучитися до «${team.name}».` : undefined}
+        actions={
+          <ButtonLink to={`/teams/${teamId}`} variant="ghost" icon={<IconArrowLeft size={16} />}>
+            До команди
+          </ButtonLink>
+        }
+      />
+      <Tabs
+        label="Статус"
+        value={filter}
+        onChange={setFilter}
+        items={[
+          { value: "all", label: "Усі", count: requests.length },
+          { value: "new", label: "Нові", count: counts.new },
+          { value: "accepted", label: "Прийняті", count: counts.accepted },
+          { value: "rejected", label: "Відхилені", count: counts.rejected },
+        ]}
+      />
+      <div className={s.body}>
+        {loading && <Loading />}
+        {!loading && error && <ErrorState message={error} onRetry={load} />}
+        {!loading && !error && filtered.length === 0 && <EmptyState icon={<IconInbox />} title="Запитів немає" />}
+        {!loading && !error && filtered.length > 0 && (
+          <ul className={s.list}>
             {filtered.map(r => {
               const key = requestStatusKey(r.status);
-              const displayName = r.fromUsername ?? r.fromUserId;
+              const name = r.fromUsername ?? "Користувач";
               return (
-                <div key={r.id} className={`${styles.card} ${key === "new" ? styles.cardNew : key === "rejected" ? styles.cardRejected : styles.cardAccepted}`}>
-                  <div
-                    className={styles.cardTop}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/users/${r.fromUserId}`)}
-                  >
-                    {r.fromAvatarUrl ? (
-                      <img src={r.fromAvatarUrl} alt="" className={styles.avatar} style={{ objectFit: "cover" }} />
-                    ) : (
-                      <div className={styles.avatar} style={{ backgroundColor: avatarColor(r.fromUserId) }}>
-                        {displayName.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <div className={styles.meta}>
-                      <span className={styles.name}>{displayName}</span>
-                      <span className={styles.time}>{timeAgo(r.createdAt)}</span>
+                <li key={r.id} className={s.item} data-state={key}>
+                  <div className={s.head}>
+                    <Avatar name={name} src={r.fromAvatarUrl} seed={r.fromUserId} size={40} />
+                    <div className={s.headText}>
+                      <Link to={`/users/${r.fromUserId}`} className={s.title}>
+                        {name}
+                      </Link>
+                      <span className={sh.mono}>
+                        роль: {r.role} · {timeAgo(r.createdAt)}
+                      </span>
                     </div>
-                    {key === "new"      && <span className={styles.newBadge}>Нове</span>}
-                    {key === "rejected" && <span className={styles.rejectedBadge}>Відхилено</span>}
-                    {key === "accepted" && <span className={styles.acceptedBadge}>Прийнято</span>}
+                    <Status tone={requestTone(key)}>{REQUEST_LABEL[key].toLowerCase()}</Status>
                   </div>
-
-                  {r.message && <p className={styles.text}>{r.message}</p>}
-                  <p className={styles.text} style={{ fontSize: 12, color: "#888" }}>Роль: {r.role}</p>
-
+                  {r.message && <p className={s.message}>{r.message}</p>}
                   {key === "new" && (
-                    <div className={styles.actions}>
-                      <button className={styles.acceptBtn} onClick={() => handleAccept(r)}>Прийняти</button>
-                      <button className={styles.rejectBtn} onClick={() => handleReject(r)}>Відхилити</button>
+                    <div className={s.actions}>
+                      <Button size="sm" variant="primary" loading={busy === r.id} onClick={() => void respond(r, true)}>
+                        Прийняти
+                      </Button>
+                      <Button size="sm" variant="ghost" disabled={busy === r.id} onClick={() => void respond(r, false)}>
+                        Відхилити
+                      </Button>
                     </div>
                   )}
-                  {key === "rejected" && <span className={styles.actionLabel} style={{ color: "#ff6b6b" }}>Відхилено</span>}
-                  {key === "accepted" && <span className={styles.actionLabel} style={{ color: "#3fcca0" }}>Прийнято до команди</span>}
-                </div>
+                </li>
               );
             })}
-          </div>
-        </main>
-
-        <Moderation moderationPosition="relative" moderationMarginTop="auto" moderationTop="unset" moderationLeft="124px" />
+          </ul>
+        )}
       </div>
-    </div>
+    </Page>
   );
-};
-
-export default JoinRequestsListPage;
+}

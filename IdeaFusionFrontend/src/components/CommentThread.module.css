@@ -1,0 +1,101 @@
+.item {
+  list-style: none;
+}
+.comment {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  min-height: 28px;
+}
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--sp-2);
+  row-gap: 0;
+  padding-top: 4px;
+}
+.name {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: var(--fs-md);
+  color: var(--text);
+  text-decoration: none;
+}
+a.name:hover {
+  text-decoration: underline;
+}
+.time {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.avatarLink {
+  display: inline-flex;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+.actions {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: inline-flex;
+  opacity: 0.55;
+  transition: opacity var(--dur) var(--ease);
+}
+.comment:hover .actions,
+.actions:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+  }
+}
+.danger {
+  color: var(--red) !important;
+}
+.text {
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: 4px;
+}
+.editorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+.replies {
+  margin: var(--sp-3) 0 0 15px;
+  padding: 0 0 0 var(--sp-4);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}

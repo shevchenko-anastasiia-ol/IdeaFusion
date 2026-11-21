@@ -2,9 +2,13 @@
 
 namespace ContentBLL.DTO.Post;
 
+/// <summary>
+/// The author of a new post is whoever holds the token, so there is no author id or
+/// author name to accept here. Collaboration posts still name their team, and the
+/// database constraint requires exactly one of the two.
+/// </summary>
 public class PostCreateDto
 {
-    public int? PostAuthorId { get; set; }
     public int? CollaborationSnapshotId { get; set; }
 
     public string Title { get; set; } = null!;
@@ -17,11 +21,11 @@ public class PostCreateDto
     // Ідентифікатори тегів
     public List<int> TagIds { get; set; } = new();
 
-    public string CreatedBy { get; set; } = null!;
-
-    // Username to display as the post author (used in EnsurePostAuthor)
-    public string? AuthorUsername { get; set; }
-
+    /// <summary>
+    /// Avatar to cache against the author's row. Purely cosmetic and never used for
+    /// identity: the token decides who the author is, and Keycloak tokens carry no
+    /// avatar. Safe to drop it on a request that is not changing the avatar.
+    /// </summary>
     public string? AuthorAvatarUrl { get; set; }
 
     // "Draft" або "Published"

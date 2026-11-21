@@ -4,6 +4,7 @@ using ContentBLL.Services.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
 using ContentDomain.Exception;
+using ServiceDefaults.Interfaces;
 
 namespace ContentBLL.Services;
 
@@ -11,11 +12,19 @@ public class PostService : IPostService
 {
     private readonly IUnitOfWork _uow;
     private readonly IMapper _mapper;
+    private readonly IPostAuthorResolver _authorResolver;
+    private readonly ICurrentUserAccessor _currentUser;
 
-    public PostService(IUnitOfWork uow, IMapper mapper)
+    public PostService(
+        IUnitOfWork uow,
+        IMapper mapper,
+        IPostAuthorResolver authorResolver,
+        ICurrentUserAccessor currentUser)
     {
         _uow = uow;
         _mapper = mapper;
+        _authorResolver = authorResolver;
+        _currentUser = currentUser;
     }
 
     public async Task<PostDto?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -59,18 +68,25 @@ public class PostService : IPostService
         return await MapPostsWithTagsAndMediaAsync(posts, ct);
     }
 
+    public async Task<IEnumerable<PostDto>> SearchAsync(string query, CancellationToken ct = default)
+    {
+        var posts = await _uow.PostRepository.SearchAsync(query, ct);
+        return await MapPostsWithTagsAndMediaAsync(posts, ct);
+    }
+
     public async Task<PostDto> CreateAsync(PostCreateDto dto, CancellationToken ct = default)
     {
+        // The author is whoever holds the token, so there is nothing to trust in the
+        // body. This is also where a first-time author's PostAuthor row is created.
+        var caller = await _authorResolver.ResolveForWriteAsync(dto.AuthorAvatarUrl, ct);
+
         var post = _mapper.Map<Post>(dto);
         post.CreatedAt = DateTime.UtcNow;
+        post.CreatedBy = caller.UserName;
 
-        // Resolve the real PostAuthorId (FK to PostAuthors.PostAuthorId)
-        if (dto.PostAuthorId.HasValue)
-        {
-            var authorName = dto.AuthorUsername ?? dto.CreatedBy ?? "user";
-            post.PostAuthorId = await _uow.PostRepository.EnsurePostAuthorByUserIdAsync(
-                dto.PostAuthorId.Value, authorName, dto.AuthorAvatarUrl, ct);
-        }
+        // The check constraint allows exactly one owner. A collaboration post is
+        // owned by its team; a personal one by the caller.
+        post.PostAuthorId = dto.CollaborationSnapshotId.HasValue ? null : caller.PostAuthorId;
 
         await _uow.BeginTransactionAsync(ct);
         try
@@ -91,9 +107,11 @@ public class PostService : IPostService
             }
 
             await _uow.CommitAsync(ct);
+            Console.WriteLine($"Successfully created post: {post.PostId}");
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"Error creating post: {ex.Message}");
             await _uow.RollbackAsync(ct);
             throw;
         }
@@ -106,8 +124,12 @@ public class PostService : IPostService
         var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
 
+        var caller = await _authorResolver.ResolveForWriteAsync(ct: ct);
+        OwnershipGuard.EnsurePostOwnerOrModerator(existing, caller, _currentUser);
+
         _mapper.Map(dto, existing);
         existing.UpdatedAt = DateTime.UtcNow;
+        existing.UpdatedBy = caller.UserName;
 
         await _uow.BeginTransactionAsync(ct);
         try
@@ -144,6 +166,9 @@ public class PostService : IPostService
         var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
 
+        var caller = await _authorResolver.ResolveForWriteAsync(ct: ct);
+        OwnershipGuard.EnsurePostOwnerOrModerator(existing, caller, _currentUser);
+
         // Видалення медіа з MinIO
         await _uow.PostRepository.DeleteMediaAsync(id, ct);
 
@@ -155,7 +180,21 @@ public class PostService : IPostService
         var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
 
+        var caller = await _authorResolver.ResolveForWriteAsync(ct: ct);
+        OwnershipGuard.EnsurePostOwnerOrModerator(existing, caller, _currentUser);
+
         await _uow.PostRepository.ArchiveAsync(existing.PostId, ct);
+    }
+
+    public async Task ModerateDeleteAsync(int id, CancellationToken ct = default)
+    {
+        OwnershipGuard.EnsureModerator(_currentUser, "post.moderate.delete");
+
+        var existing = await _uow.PostRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException($"Пост з id={id} не знайдено.");
+
+        await _uow.PostRepository.DeleteMediaAsync(id, ct);
+        await _uow.PostRepository.DeleteAsync(existing.PostId, ct);
     }
 
     // ── helpers ────────────────────────────────────────────────
@@ -188,9 +227,6 @@ public class PostService : IPostService
         var posts = await _uow.PostRepository.GetByUserIdAsync(userId, ct);
         return await MapPostsWithTagsAndMediaAsync(posts, ct);
     }
-
-    public Task<(int PostAuthorId, int UserId)> EnsurePostAuthorAsync(string userName, string? avatarUrl = null, CancellationToken ct = default)
-        => _uow.PostRepository.EnsurePostAuthorAsync(userName, avatarUrl, ct);
 
     private async Task DeletePostTagsAsync(int postId, CancellationToken ct)
     {

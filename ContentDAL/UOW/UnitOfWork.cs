@@ -19,6 +19,7 @@ public class UnitOfWork : IUnitOfWork
     private readonly string _minioEndpoint;
 
     public IPostRepository PostRepository { get; private set; } = null!;
+    public IPostAuthorRepository PostAuthorRepository { get; private set; } = null!;
     public ICommentRepository CommentRepository { get; private set; } = null!;
     public ILikeRepository LikeRepository { get; private set; } = null!;
     public IPostViewRepository PostViewRepository { get; private set; } = null!;
@@ -44,6 +45,7 @@ public class UnitOfWork : IUnitOfWork
         if (_connection == null) throw new InvalidOperationException("Connection is null.");
 
         PostRepository     = new PostRepository(_connection, _minioClient, _bucketName, _minioEndpoint, _transaction);
+        PostAuthorRepository = new PostAuthorRepository(_connection, _transaction);
         CommentRepository  = new CommentRepository(_connection, _transaction);
         LikeRepository     = new LikeRepository(_connection, _transaction);
         PostViewRepository = new PostViewRepository(_connection, _transaction);

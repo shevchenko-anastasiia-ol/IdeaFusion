@@ -8,14 +8,11 @@
 
     <ItemGroup>
         <PackageReference Include="Minio" Version="7.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.14" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.15">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Protobuf Include="..\shared\GrpcContracts\Protos\user.proto" GrpcServices="Server" />
     </ItemGroup>
 
     <ItemGroup>

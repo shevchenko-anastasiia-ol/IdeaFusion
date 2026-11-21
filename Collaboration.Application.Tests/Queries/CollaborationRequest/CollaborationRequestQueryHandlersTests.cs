@@ -1,3 +1,4 @@
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Application.Queries.CollaborationRequest;
 using Collaboration.Domain.Common.Helpers;
 using Collaboration.Domain.Entities;
@@ -14,7 +15,14 @@ namespace Collaboration.Application.Tests.Queries.CollaborationRequest;
 public class CollaborationRequestQueryHandlersTests
 {
     private readonly Mock<ICollaborationRequestRepository> _repoMock = new();
+    private readonly Mock<ITeamRepository> _teamRepoMock = new();
+    private readonly Mock<ICallerContext> _callerMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
+
+    private void SetCaller(string userId)
+    {
+        _callerMock.Setup(c => c.UserId).Returns(userId);
+    }
 
     private static Domain.Entities.CollaborationRequest CreateRequest(
         string teamId = "team-1",
@@ -24,6 +32,15 @@ public class CollaborationRequestQueryHandlersTests
         return new Domain.Entities.CollaborationRequest(teamId, fromUserId, role, null);
     }
 
+    /// <summary>A team the caller leads, so the InviteMembers check inside the handlers passes.</summary>
+    private void SetupReviewableTeam(string teamId = "team-1", string callerId = "owner-id")
+    {
+        var team = new Domain.Entities.Team(
+            "Test Team", "desc", "Design", ["design"], new UserSnapshot(callerId, "owner"));
+        _teamRepoMock.Setup(r => r.GetByIdAsync(teamId, _ct)).ReturnsAsync(team);
+        SetCaller(callerId);
+    }
+
     // ── GetCollaborationRequestByIdQueryHandler ───────────────────────────────
 
     [Fact]
@@ -31,8 +48,9 @@ public class CollaborationRequestQueryHandlersTests
     {
         var request = CreateRequest();
         _repoMock.Setup(r => r.GetByIdAsync("req-1", _ct)).ReturnsAsync(request);
+        SetCaller("user-1");
 
-        var handler = new GetCollaborationRequestByIdQueryHandler(_repoMock.Object);
+        var handler = new GetCollaborationRequestByIdQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(new GetCollaborationRequestByIdQuery { RequestId = "req-1" }, _ct);
 
         result.Should().NotBeNull();
@@ -44,8 +62,9 @@ public class CollaborationRequestQueryHandlersTests
     {
         _repoMock.Setup(r => r.GetByIdAsync("missing", _ct))
                  .ReturnsAsync((Domain.Entities.CollaborationRequest?)null);
+        SetCaller("user-1");
 
-        var handler = new GetCollaborationRequestByIdQueryHandler(_repoMock.Object);
+        var handler = new GetCollaborationRequestByIdQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
 
         await handler.Invoking(h => h.Handle(
                          new GetCollaborationRequestByIdQuery { RequestId = "missing" }, _ct))
@@ -61,8 +80,9 @@ public class CollaborationRequestQueryHandlersTests
         var requests = new[] { CreateRequest(teamId: "team-1"), CreateRequest(teamId: "team-1") };
         _repoMock.Setup(r => r.GetByTeamIdAsync("team-1", _ct))
                  .ReturnsAsync(requests);
+        SetupReviewableTeam();
 
-        var handler = new GetCollaborationRequestsByTeamQueryHandler(_repoMock.Object);
+        var handler = new GetCollaborationRequestsByTeamQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetCollaborationRequestsByTeamQuery { TeamId = "team-1" }, _ct);
 
@@ -75,8 +95,9 @@ public class CollaborationRequestQueryHandlersTests
     {
         _repoMock.Setup(r => r.GetByTeamIdAsync("team-1", _ct))
                  .ReturnsAsync([]);
+        SetupReviewableTeam();
 
-        var handler = new GetCollaborationRequestsByTeamQueryHandler(_repoMock.Object);
+        var handler = new GetCollaborationRequestsByTeamQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetCollaborationRequestsByTeamQuery { TeamId = "team-1" }, _ct);
 
@@ -128,8 +149,9 @@ public class CollaborationRequestQueryHandlersTests
                      "team-1", null, null, null, null,
                      1, 10, false, _ct))
                  .ReturnsAsync(paged);
+        SetupReviewableTeam();
 
-        var handler = new GetCollaborationRequestsPagedQueryHandler(_repoMock.Object);
+        var handler = new GetCollaborationRequestsPagedQueryHandler(_repoMock.Object, _teamRepoMock.Object, _callerMock.Object);
         var result = await handler.Handle(
             new GetCollaborationRequestsPagedQuery { Parameters = parameters }, _ct);
 

@@ -21,13 +21,11 @@ public class PostCreateDtoValidator : AbstractValidator<PostCreateDto>
             .WithMessage("ExternalLink має бути валідним URL.")
             .When(x => !string.IsNullOrEmpty(x.ExternalLink));
 
-        RuleFor(x => x)
-            .Must(x => x.PostAuthorId.HasValue ^ x.CollaborationSnapshotId.HasValue)
-            .WithMessage("Пост має належати або автору, або колаборації — але не обом і не нікому.");
-
-        RuleFor(x => x.CreatedBy)
-            .NotEmpty().WithMessage("CreatedBy є обов'язковим.")
-            .MaximumLength(100).WithMessage("CreatedBy не може перевищувати 100 символів.");
+        // The author side of the constraint is satisfied by the token, so a personal
+        // post is the one that arrives without a collaboration snapshot.
+        RuleFor(x => x.CollaborationSnapshotId)
+            .GreaterThan(0).WithMessage("CollaborationSnapshotId має бути більше 0.")
+            .When(x => x.CollaborationSnapshotId.HasValue);
 
         // Додатково можна перевіряти TagIds
         RuleFor(x => x.TagIds)

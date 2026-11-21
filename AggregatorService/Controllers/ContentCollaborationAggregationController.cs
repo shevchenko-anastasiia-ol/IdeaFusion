@@ -568,14 +568,22 @@ public class ContentCollaborationAggregationController : ControllerBase
                 "ParallelDuration: {ParallelDuration}ms, CorrelationId: {CorrelationId}",
                 userId, overallStopwatch.ElapsedMilliseconds, parallelStopwatch.ElapsedMilliseconds, correlationId);
 
+            // "Waiting for an answer" means exactly that: the /mine endpoints return the whole
+            // history (accepted, rejected, expired), and only the open ones belong here.
+            var now = DateTime.UtcNow;
             var dashboard = new UserDashboardDto
             {
                 UserId             = userId,
                 MyPosts            = await myPostsTask,
                 SavedPosts         = await savedPostsTask,
                 MyTeams            = await myTeamsTask,
-                PendingRequests    = pendingRequests,
-                PendingInvitations = await pendingInvitationsTask
+                PendingRequests    = pendingRequests
+                    .Where(r => string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                    .ToList(),
+                PendingInvitations = (await pendingInvitationsTask)
+                    .Where(i => string.Equals(i.Status, "Pending", StringComparison.OrdinalIgnoreCase)
+                                && (i.ExpiresAt == default || i.ExpiresAt > now))
+                    .ToList()
             };
  
             if (!dashboard.IsValid())

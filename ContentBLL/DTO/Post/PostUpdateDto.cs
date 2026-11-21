@@ -13,6 +13,4 @@ public class PostUpdateDto
 
     // Ідентифікатори тегів
     public List<int> TagIds { get; set; } = new();
-
-    public string UpdatedBy { get; set; } = null!;
 }

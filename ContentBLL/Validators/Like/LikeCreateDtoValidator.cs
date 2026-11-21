@@ -9,8 +9,5 @@ public class LikeCreateDtoValidator : AbstractValidator<LikeCreateDto>
     {
         RuleFor(x => x.PostId)
             .GreaterThan(0).WithMessage("PostId має бути більше 0.");
- 
-        RuleFor(x => x.UserId)
-            .GreaterThan(0).WithMessage("UserId має бути більше 0.");
     }
 }

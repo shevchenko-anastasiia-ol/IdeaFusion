@@ -1,11 +1,17 @@
 using Collaboration.API;
+using Collaboration.API.Notifications;
+using Collaboration.Application.Commands.DirectMessage;
+using MediatR.Pipeline;
 using Collaboration.API.Controllers;
 using Collaboration.API.Hubs;
 using Collaboration.API.Middleware;
 using Collaboration.API.Services;
 using Collaboration.Application.Behaviors;
+using Collaboration.Application.Commands.CollaborationRequest;
+using Collaboration.Application.Commands.GroupInvitation;
 using Collaboration.Application.Commands.Team;
 using Collaboration.Application.Commands.Vacancy;
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Application.Queries.CollaborationRequest;
 using Collaboration.Application.Queries.Vacancy;
 using Collaboration.Application.Validators;
@@ -41,13 +47,35 @@ builder.Services.AddServiceDiscovery();
 
 builder.Services.AddGrpcClient<UserGrpcService.UserGrpcServiceClient>(o =>
     {
-        var address = builder.Configuration["Grpc__IdentityService"] ?? "https://identityservice";
+        // Aspire registers IdentityAPI's endpoints under the names "identity-http"/"identity-https",
+        // so the plain "https://identityservice" never resolved (gRPC went to DNS and failed with
+        // "No such host"). "_endpoint.service" picks the named endpoint. The env var Grpc__X is
+        // read as the configuration key Grpc:X.
+        var address = builder.Configuration["Grpc:IdentityService"] ?? "https://_identity-https.identityservice";
         o.Address = new Uri(address);
     })
+    // IdentityAPI requires an authenticated caller for everything, gRPC included, and this client
+    // never sent a token: every call came back 401 (names and email addresses never resolved).
+    // The caller's own bearer token is forwarded, as the aggregator does for HTTP.
+    .AddCallCredentials((_, metadata, services) =>
+    {
+        var authorization = services.GetRequiredService<IHttpContextAccessor>()
+            .HttpContext?.Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authorization))
+            metadata.Add("Authorization", authorization);
+        return Task.CompletedTask;
+    })
     .AddServiceDiscovery();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IUserGrpcClient, UserGrpcClient>();
 builder.Services.AddScoped<Collaboration.Application.Interfaces.Services.IUserSnapshotService, GrpcUserSnapshotService>();
+
+// Who is acting. Scoped, because it reads the token off the current HttpContext.
+builder.Services.AddScoped<ICallerContext, CallerContext>();
+
+// Privileged actions recorded in Identity's audit trail.
+builder.Services.AddScoped<ICollaborationAuditWriter, CollaborationAuditWriter>();
 
 // --- MongoDB ---
 var aspireConn = builder.Configuration.GetConnectionString("collaboration-db")
@@ -98,6 +126,7 @@ builder.Services.AddScoped<ICollaborationRequestRepository, CollaborationRequest
 builder.Services.AddScoped<IGroupInvitationRepository, GroupInvitationRepository>();
 builder.Services.AddScoped<ITeamPostRepository, TeamPostRepository>();
 builder.Services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+builder.Services.AddScoped<IDirectConversationRepository, DirectConversationRepository>();
 builder.Services.AddScoped<ITeamVacancyRepository, TeamVacancyRepository>();
 builder.Services.AddScoped<IVacancyApplicationRepository, VacancyApplicationRepository>();
 
@@ -108,7 +137,7 @@ builder.Services.AddSingleton<IDataSeeder, DatabaseSeeder>();
 // --- Auth ---
 builder.Services
     .AddKeycloakAuthentication(builder.Configuration)
-    .AddPermissionAuthorization();
+    .AddIdeaFusionAuthorization();
 
 // --- AutoMapper ---
 builder.Services.AddAutoMapperWithLogging(
@@ -125,11 +154,34 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(PerformanceBehavior<,>));
     cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
     cfg.AddOpenBehavior(typeof(CachingBehavior<,>));
+
+    // Email notifications: run after a command succeeded and only queue a letter.
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<CreateGroupInvitationCommand, Collaboration.Domain.Entities.GroupInvitation>, InvitationSentEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<AcceptGroupInvitationCommand, Collaboration.Domain.Entities.GroupInvitation>, InvitationAcceptedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<DeclineGroupInvitationCommand, Collaboration.Domain.Entities.GroupInvitation>, InvitationDeclinedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<CreateCollaborationRequestCommand, Collaboration.Domain.Entities.CollaborationRequest>, JoinRequestSentEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<AcceptCollaborationRequestCommand, Collaboration.Domain.Entities.CollaborationRequest>, JoinRequestAcceptedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<RejectCollaborationRequestCommand, Collaboration.Domain.Entities.CollaborationRequest>, JoinRequestRejectedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<ApplyToVacancyCommand, Collaboration.Domain.Entities.VacancyApplication>, ApplicationSentEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<AcceptVacancyApplicationCommand, Collaboration.Domain.Entities.VacancyApplication>, ApplicationAcceptedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<RejectVacancyApplicationCommand, Collaboration.Domain.Entities.VacancyApplication>, ApplicationRejectedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<SendDirectMessageCommand, DirectMessageSent>, DirectMessageEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<ChangeDirectConversationCommand, Collaboration.Domain.Entities.DirectConversation>, DirectRequestAcceptedEmail>();
+    cfg.AddRequestPostProcessor<IRequestPostProcessor<Collaboration.Application.Commands.ChatMessage.SendChatMessageCommand, Collaboration.Domain.Entities.ChatMessage>, TeamChatMessageEmail>();
 });
+
+// --- Email notifications ---
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.Section));
+builder.Services.AddSingleton<EmailQueue>();
+builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddSingleton<MessageEmailThrottle>();
+builder.Services.AddHostedService<EmailDispatcher>();
+builder.Services.AddScoped<INotificationSettingsRepository, NotificationSettingsRepository>();
 
 // --- Validators ---
 
 builder.Services.AddScoped<IValidator<CreateTeamVacancyCommand>, CreateTeamVacancyCommandValidator>();
+builder.Services.AddScoped<IValidator<UpdateTeamVacancyCommand>, UpdateTeamVacancyCommandValidator>();
 builder.Services.AddScoped<IValidator<CloseTeamVacancyCommand>, CloseTeamVacancyCommandValidator>();
 builder.Services.AddScoped<IValidator<ApplyToVacancyCommand>, ApplyToVacancyCommandValidator>();
 builder.Services.AddScoped<IValidator<AcceptVacancyApplicationCommand>, AcceptVacancyApplicationCommandValidator>();
@@ -138,8 +190,22 @@ builder.Services.AddScoped<IValidator<CancelVacancyApplicationCommand>, CancelVa
 builder.Services.AddScoped<IValidator<SearchVacanciesQuery>, SearchVacanciesQueryValidator>();
 builder.Services.AddScoped<IValidator<GetTeamVacanciesQuery>, GetTeamVacanciesQueryValidator>();
 builder.Services.AddScoped<IValidator<GetVacancyApplicationsQuery>, GetVacancyApplicationsQueryValidator>();
-builder.Services.AddScoped<IValidator<GetMyVacancyApplicationsQuery>, GetMyVacancyApplicationsQueryValidator>();
 builder.Services.AddScoped<IValidator<UpdateTeamMemberPermissionsCommand>, UpdateTeamMemberPermissionsCommandValidator>();
+builder.Services.AddScoped<IValidator<SetTeamMemberRoleCommand>, SetTeamMemberRoleCommandValidator>();
+
+// Invitations, collaboration requests and membership: without these the pipeline let
+// through invitations that then failed only when someone tried to accept them.
+builder.Services.AddScoped<IValidator<CreateGroupInvitationCommand>, CreateGroupInvitationCommandValidator>();
+builder.Services.AddScoped<IValidator<AcceptGroupInvitationCommand>, AcceptGroupInvitationCommandValidator>();
+builder.Services.AddScoped<IValidator<DeclineGroupInvitationCommand>, DeclineGroupInvitationCommandValidator>();
+builder.Services.AddScoped<IValidator<RevokeGroupInvitationCommand>, RevokeGroupInvitationCommandValidator>();
+builder.Services.AddScoped<IValidator<CreateCollaborationRequestCommand>, CreateCollaborationRequestCommandValidator>();
+builder.Services.AddScoped<IValidator<AcceptCollaborationRequestCommand>, AcceptCollaborationRequestCommandValidator>();
+builder.Services.AddScoped<IValidator<RejectCollaborationRequestCommand>, RejectCollaborationRequestCommandValidator>();
+builder.Services.AddScoped<IValidator<CancelCollaborationRequestCommand>, CancelCollaborationRequestCommandValidator>();
+builder.Services.AddScoped<IValidator<AddTeamMemberCommand>, AddTeamMemberCommandValidator>();
+builder.Services.AddScoped<IValidator<RemoveTeamMemberCommand>, RemoveTeamMemberCommandValidator>();
+builder.Services.AddScoped<IValidator<AddRequiredRoleCommand>, AddRequiredRoleCommandValidator>();
 
 // --- Memory Cache (для CachingBehavior) ---
 builder.Services.AddMemoryCache();
@@ -213,7 +279,7 @@ app.UseCorrelationId();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 app.MapGrpcService<CollaborationRequestGrpcServiceImpl>();
 app.MapGrpcServicesWithReflection();

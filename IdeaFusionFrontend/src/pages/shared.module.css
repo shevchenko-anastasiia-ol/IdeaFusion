@@ -1,0 +1,547 @@
+/* Layout patterns shared by the pages. Page-specific rules live next to each page. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.stackLg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.stackSm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.between {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.muted {
+  color: var(--text-2);
+}
+.faint {
+  color: var(--text-3);
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.small {
+  font-size: var(--fs-sm);
+}
+.prewrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Main column + right rail */
+.withRail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--sp-8);
+  align-items: start;
+}
+.rail {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--sp-6));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+@media (max-width: 1199px) {
+  .withRail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rail {
+    position: static;
+  }
+}
+
+/* Two equal-ish columns */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start;
+}
+@media (max-width: 899px) {
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Card grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-4);
+}
+.gridSm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-3);
+}
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+/* Toolbar above lists */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* Row lists (hairline separated) */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.list > li + li {
+  border-top: 1px solid var(--border);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  min-width: 0;
+}
+.rowLink {
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease);
+}
+.rowLink:hover {
+  background: var(--surface-2);
+}
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rowTitle {
+  font-weight: 600;
+  font-size: var(--fs-md);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a.rowTitle:hover {
+  text-decoration: underline;
+}
+.rowSub {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .row {
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+  }
+  .rowActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .rowActionsStretch > * {
+    flex: 1;
+  }
+}
+
+/* Forms */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+}
+@media (max-width: 640px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+}
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  padding-top: var(--sp-2);
+}
+@media (max-width: 640px) {
+  .formActions {
+    position: sticky;
+    bottom: calc(var(--bottomtabs-h) + 8px);
+    z-index: 5;
+    padding: var(--sp-3);
+    margin: 0 calc(-1 * var(--sp-3));
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .formActions > * {
+    flex: 1;
+  }
+}
+
+/* Entity header (team, user, vacancy) */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-5);
+  padding-bottom: var(--sp-6);
+  margin-bottom: var(--sp-6);
+  border-bottom: 1px solid var(--border);
+}
+.heroText {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.heroTitle {
+  font-size: var(--fs-2xl);
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+@media (max-width: 640px) {
+  .heroTitle {
+    font-size: var(--fs-xl);
+  }
+  .heroActions {
+    width: 100%;
+  }
+  .heroActions > * {
+    flex: 1;
+  }
+}
+
+/* Stats strip */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.stats > * {
+  padding: var(--sp-4) var(--sp-5);
+}
+.stats > * + * {
+  border-left: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stats > *:nth-child(odd) {
+    border-left: 0;
+  }
+  .stats > *:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+/* Simple table */
+.tableWrap {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-md);
+}
+.table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  text-transform: lowercase;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.table tr:last-child td {
+  border-bottom: 0;
+}
+@media (max-width: 760px) {
+  .tableStack thead {
+    display: none;
+  }
+  .tableStack tr {
+    display: block;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--border);
+  }
+  .tableStack tr:last-child {
+    border-bottom: 0;
+  }
+  .tableStack td {
+    display: flex;
+    gap: var(--sp-3);
+    padding: 4px 0;
+    border: 0;
+  }
+  .tableStack td::before {
+    content: attr(data-label);
+    min-width: 96px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+  }
+}
+
+.stats2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.stats2 > * {
+  padding: var(--sp-4) var(--sp-5);
+}
+.stats2 > *:nth-child(even) {
+  border-left: 1px solid var(--border);
+}
+.stats2 > *:nth-child(n + 3) {
+  border-top: 1px solid var(--border);
+}
+
+/* Square post tiles (profiles, team portfolio) */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+@media (max-width: 640px) {
+  .tiles {
+    gap: 3px;
+    margin: 0 calc(-1 * var(--sp-4));
+  }
+}
+
+/* Profile header (person or team) */
+.profile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sp-6) var(--sp-10);
+  align-items: center;
+  padding: var(--sp-4) 0 var(--sp-6);
+}
+.profileAvatar {
+  position: relative;
+  padding: 5px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+}
+.profileAvatarSquare {
+  border-radius: calc(var(--r-lg) + 7px);
+}
+.profileBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.profileName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.profileName h1 {
+  font-size: 2.5rem;
+  letter-spacing: -0.035em;
+  word-break: break-word;
+}
+.profileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.profileNums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-8);
+  color: var(--text-3);
+}
+.profileNums b {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xl);
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-right: 6px;
+}
+.profileBio {
+  color: var(--text-2);
+  max-width: 64ch;
+  white-space: pre-line;
+}
+.people {
+  display: flex;
+  gap: var(--sp-5);
+  overflow-x: auto;
+  padding: var(--sp-2) 0 var(--sp-6);
+  scrollbar-width: none;
+}
+.people::-webkit-scrollbar {
+  display: none;
+}
+.personBubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 84px;
+  flex-shrink: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+.personBubble:hover {
+  text-decoration: none;
+  color: var(--text);
+}
+.personBubble > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bubbleOpen {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--accent-border);
+  color: var(--accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.centerTabs {
+  display: flex;
+  justify-content: center;
+  /* The divider runs across the whole page, not only under the tabs; the tabs sit on it,
+     so the active underline lands right on the line. */
+  border-bottom: 1px solid var(--border);
+}
+.centerTabs > * {
+  margin-bottom: -1px;
+}
+@media (max-width: 640px) {
+  .profile {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--sp-4);
+    align-items: start;
+  }
+  .profileName h1 {
+    font-size: var(--fs-2xl);
+  }
+  .profileNums {
+    gap: var(--sp-1) var(--sp-5);
+  }
+  .profileNums b {
+    font-size: var(--fs-lg);
+  }
+  .profileAvatar > span:first-child {
+    width: 84px !important;
+    height: 84px !important;
+    font-size: 30px !important;
+  }
+  .profileActions,
+  .profileBio {
+    grid-column: 1 / -1;
+  }
+}

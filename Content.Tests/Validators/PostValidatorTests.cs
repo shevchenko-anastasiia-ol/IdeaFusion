@@ -13,9 +13,9 @@ public class PostCreateDtoValidatorTests
     {
         Title = "Correct Title",
         Description = "Some description",
-        PostAuthorId = 1,
+        // No collaboration snapshot means a personal post, and the author comes
+        // from the token rather than the body.
         CollaborationSnapshotId = null,
-        CreatedBy = "alice",
         TagIds = new List<int> { 1, 2 }
     };
 
@@ -76,33 +76,21 @@ public class PostCreateDtoValidatorTests
     }
 
     [Fact]
-    public void BothAuthorAndCollaboration_FailsValidation()
+    public void WithCollaborationSnapshot_PassesValidation()
     {
         var dto = ValidDto();
-        dto.PostAuthorId = 1;
         dto.CollaborationSnapshotId = 2;
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
+        _validator.Validate(dto).IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public void NeitherAuthorNorCollaboration_FailsValidation()
+    public void CollaborationSnapshotIdZero_FailsValidation()
     {
         var dto = ValidDto();
-        dto.PostAuthorId = null;
-        dto.CollaborationSnapshotId = null;
+        dto.CollaborationSnapshotId = 0;
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public void EmptyCreatedBy_FailsValidation()
-    {
-        var dto = ValidDto();
-        dto.CreatedBy = "";
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "CreatedBy");
+        result.Errors.Should().Contain(e => e.PropertyName == "CollaborationSnapshotId");
     }
 
     [Fact]
@@ -132,7 +120,6 @@ public class PostUpdateDtoValidatorTests
     private static PostUpdateDto ValidDto() => new()
     {
         Title = "Updated Title",
-        UpdatedBy = "alice",
         TagIds = new List<int> { 1 }
     };
 
@@ -159,16 +146,6 @@ public class PostUpdateDtoValidatorTests
         dto.Title = new string('B', 201);
         var result = _validator.Validate(dto);
         result.IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public void EmptyUpdatedBy_FailsValidation()
-    {
-        var dto = ValidDto();
-        dto.UpdatedBy = "";
-        var result = _validator.Validate(dto);
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e => e.PropertyName == "UpdatedBy");
     }
 
     [Fact]

@@ -36,6 +36,12 @@ public class MongoDbContext
     public IMongoCollection<ChatMessage> ChatMessages
         => _database.GetCollection<ChatMessage>("ChatMessages");
 
+    public IMongoCollection<NotificationSettings> NotificationSettings
+        => _database.GetCollection<NotificationSettings>("NotificationSettings");
+
+    public IMongoCollection<DirectConversation> DirectConversations
+        => _database.GetCollection<DirectConversation>("DirectConversations");
+
     public IMongoCollection<TeamVacancy> TeamVacancies
         => _database.GetCollection<TeamVacancy>("TeamVacancies");
 

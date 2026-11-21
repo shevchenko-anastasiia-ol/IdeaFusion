@@ -79,6 +79,7 @@ message MemberDto {
   string avatar_url = 3;
   string role       = 4;
   string joined_at  = 5;
+  string position   = 6;  // "Веб-розробник" etc.; empty when not set
 }
 
 message RequiredRoleDto {

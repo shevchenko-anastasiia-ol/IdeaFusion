@@ -20,6 +20,10 @@ public static class BLL_DI
         services.AddScoped<IPostViewService, PostViewService>();
         services.AddScoped<ISavedPostService, SavedPostService>();
         services.AddScoped<ITagService, TagService>();
+
+        // The single source of "who is calling". Registered here rather than in the
+        // API so every service can take it without the API having to pass it down.
+        services.AddScoped<IPostAuthorResolver, PostAuthorResolver>();
  
         return services;
     }

@@ -1,0 +1,162 @@
+.avatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.avatarBtn {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  background: var(--surface-3);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatarBtn:hover {
+  background: var(--accent);
+}
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: 4px;
+}
+.tabBody {
+  padding-top: var(--sp-6);
+}
+.blockTitle {
+  font-size: var(--fs-base);
+}
+.about {
+  color: var(--text);
+  line-height: 1.6;
+}
+.tagLine {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-text);
+}
+.person {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  flex: 1;
+  color: var(--text);
+}
+.person:hover {
+  text-decoration: none;
+}
+.person:hover .personName {
+  text-decoration: underline;
+}
+.personText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.personName {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.miniMembers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.roles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+}
+.role:first-child {
+  border-top: 0;
+}
+.roleName {
+  flex: 1;
+  font-weight: 500;
+}
+.roleName::before {
+  content: "+ ";
+  font-family: var(--font-mono);
+  color: var(--accent-text);
+}
+.perms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4) 68px;
+  background: var(--surface-2);
+  border-top: 1px dashed var(--border);
+}
+.permGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+@media (max-width: 640px) {
+  .perms {
+    padding-left: var(--sp-4);
+  }
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  color: var(--text);
+}
+.tile:hover {
+  border-color: var(--border-strong);
+  text-decoration: none;
+}
+.tileBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3) var(--sp-4);
+}
+.tileTitle {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+.danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: var(--r-lg);
+}

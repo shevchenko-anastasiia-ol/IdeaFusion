@@ -1,7 +1,7 @@
 ﻿using IdeaFusion.Grpc.Users;
-using Grpc.Core;
 using GrpcClients.Interfaces;
 using GrpcClients.Models;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace IdeaFusion.GrpcClients.Clients
@@ -57,30 +57,6 @@ namespace IdeaFusion.GrpcClients.Clients
             }
         }
 
-        public async Task<ValidatedTokenResult?> ValidateTokenAsync(
-            string accessToken,
-            CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var response = await _client.ValidateTokenAsync(new ValidateTokenRequest
-                {
-                    AccessToken = accessToken
-                }, cancellationToken: cancellationToken);
-
-                return new ValidatedTokenResult(
-                    IsValid:  response.IsValid,
-                    UserId:   response.UserId,
-                    UserName: response.UserName,
-                    Email:    response.Email);
-            }
-            catch (RpcException ex)
-            {
-                _logger.LogError(ex, "Failed to validate access token.");
-                return null;
-            }
-        }
-
         public async Task<bool> CheckUserExistsAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             try
@@ -95,6 +71,36 @@ namespace IdeaFusion.GrpcClients.Clients
             catch (RpcException ex)
             {
                 _logger.LogError(ex, "Failed to check existence of user {UserId}.", userId);
+                return false;
+            }
+        }
+
+        public async Task<bool> RecordAuditAsync(AuditRecordMessage record, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var response = await _client.RecordAuditAsync(new RecordAuditRequest
+                {
+                    ActorId    = record.ActorId,
+                    ActorName  = record.ActorName,
+                    Action     = record.Action,
+                    TargetType = record.TargetType,
+                    TargetId   = record.TargetId,
+                    TargetName = record.TargetName,
+                    Details    = record.Details,
+                    Category   = record.Category
+                }, cancellationToken: cancellationToken);
+
+                return response.Recorded;
+            }
+            catch (RpcException ex)
+            {
+                // Auditing must never take down the operation it is describing, so a
+                // failure here is logged loudly and reported as "not recorded".
+                _logger.LogError(
+                    ex,
+                    "Failed to record audit entry {Action} on {TargetType} {TargetId}.",
+                    record.Action, record.TargetType, record.TargetId);
                 return false;
             }
         }

@@ -15,6 +15,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ContentDAL\ContentDAL.csproj" />
+      <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
     </ItemGroup>
 
 </Project>

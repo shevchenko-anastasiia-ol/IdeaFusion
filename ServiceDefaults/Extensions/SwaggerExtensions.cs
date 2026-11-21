@@ -27,7 +27,7 @@ public static class SwaggerExtensions
             var realm =
                 configuration["Keycloak:Realm"]
                 ?? Environment.GetEnvironmentVariable("KEYCLOAK_REALM")
-                ?? "GameNest";
+                ?? "IdeaFusion";
 
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen(options =>
@@ -36,7 +36,7 @@ public static class SwaggerExtensions
                 {
                     Title = title,
                     Version = version,
-                    Description = $"GameNest API authenticated via Keycloak (Realm: {realm})",
+                    Description = $"IdeaFusion API authenticated via Keycloak (Realm: {realm})",
                 });
 
                 options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
@@ -57,25 +57,8 @@ public static class SwaggerExtensions
                                 { "profile", "User profile information" },
                                 { "email", "User email address" },
 
-                                // GameNest API access
-                                { "gamenest_api", "Full access to GameNest APIs" },
-
-                                { "catalog:write", "Write to catalog" },
-                                { "catalog:delete", "Delete from catalog" },
-
-                                { "orders:read", "Read user's orders" },
-                                { "orders:create", "Create new orders" },
-                                { "orders:update", "Update existing orders" },
-                                { "orders:delete", "Delete existing orders" },
-
-                                { "payments:read", "Read payment records" },
-                                { "payments:create", "Create payment records" },
-                                { "payments:update", "Update payment records" },
-                                { "payments:delete", "Delete payment records" },
-
-                                { "reviews:write", "Create new reviews" },
-                                { "reviews:update", "Update reviews or comments" },
-                                { "reviews:delete", "Delete reviews" },
+                                // IdeaFusion API access
+                                { "ideafusion_api", "Full access to IdeaFusion APIs" },
                             }
                         }
                     }
@@ -96,20 +79,8 @@ public static class SwaggerExtensions
                         {
                             "openid",
                             "profile",
-                            "gamenest_api",
-                            "catalog:write",
-                            "catalog:delete",
-                            "orders:read",
-                            "orders:create",
-                            "orders:update",
-                            "orders:delete",
-                            "payments:read",
-                            "payments:create",
-                            "payments:update",
-                            "payments:delete",
-                            "reviews:write",
-                            "reviews:update",
-                            "reviews:delete"
+                            "email",
+                            "ideafusion_api"
                         }
                     }
                 });
@@ -141,15 +112,15 @@ public static class SwaggerExtensions
                     options.SwaggerEndpoint("/swagger/v1/swagger.json",
                         $"{app.Environment.ApplicationName} v1");
 
-                    options.OAuthClientId("swagger");
-                    options.OAuthAppName("GameNest Swagger UI");
+                    options.OAuthClientId("ideafusion-frontend");
+                    options.OAuthAppName("IdeaFusion Swagger UI");
                     options.OAuthUsePkce();
 
                     options.OAuthScopes(
                         "openid",
                         "profile",
                         "email",
-                        "gamenest_api"
+                        "ideafusion_api"
                     );
 
                     options.OAuthScopeSeparator(" ");

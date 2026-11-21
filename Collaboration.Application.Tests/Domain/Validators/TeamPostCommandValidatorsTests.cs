@@ -15,7 +15,6 @@ public class CreateTeamPostCommandValidatorTests
         var result = _validator.Validate(new CreateTeamPostCommand
         {
             PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "user-1", AuthorUsername = "alice",
             Title = "My Post Title"
         });
         result.IsValid.Should().BeTrue();
@@ -27,7 +26,7 @@ public class CreateTeamPostCommandValidatorTests
         var result = _validator.Validate(new CreateTeamPostCommand
         {
             PostId = "", TeamId = "team-1",
-            AuthorUserId = "user-1", AuthorUsername = "alice", Title = "Title"
+Title = "Title"
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -40,52 +39,11 @@ public class CreateTeamPostCommandValidatorTests
         var result = _validator.Validate(new CreateTeamPostCommand
         {
             PostId = "post-1", TeamId = "",
-            AuthorUserId = "user-1", AuthorUsername = "alice", Title = "Title"
+Title = "Title"
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
             e.PropertyName == "TeamId" && e.ErrorMessage == "TeamId is required.");
-    }
-
-    [Fact]
-    public void CreateTeamPost_WhenAuthorUserIdEmpty_FailsValidation()
-    {
-        var result = _validator.Validate(new CreateTeamPostCommand
-        {
-            PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "", AuthorUsername = "alice", Title = "Title"
-        });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "AuthorUserId" && e.ErrorMessage == "AuthorUserId is required.");
-    }
-
-    [Fact]
-    public void CreateTeamPost_WhenAuthorUsernameEmpty_FailsValidation()
-    {
-        var result = _validator.Validate(new CreateTeamPostCommand
-        {
-            PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "user-1", AuthorUsername = "", Title = "Title"
-        });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "AuthorUsername" &&
-            e.ErrorMessage == "AuthorUsername is required.");
-    }
-
-    [Fact]
-    public void CreateTeamPost_WhenAuthorUsernameTooLong_FailsValidation()
-    {
-        var result = _validator.Validate(new CreateTeamPostCommand
-        {
-            PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "user-1", AuthorUsername = new string('x', 101), Title = "Title"
-        });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "AuthorUsername" &&
-            e.ErrorMessage == "AuthorUsername cannot exceed 100 characters.");
     }
 
     [Fact]
@@ -94,7 +52,7 @@ public class CreateTeamPostCommandValidatorTests
         var result = _validator.Validate(new CreateTeamPostCommand
         {
             PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "user-1", AuthorUsername = "alice", Title = ""
+Title = ""
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -107,7 +65,6 @@ public class CreateTeamPostCommandValidatorTests
         var result = _validator.Validate(new CreateTeamPostCommand
         {
             PostId = "post-1", TeamId = "team-1",
-            AuthorUserId = "user-1", AuthorUsername = "alice",
             Title = new string('x', 201)
         });
         result.IsValid.Should().BeFalse();
@@ -126,7 +83,7 @@ public class UpdateTeamPostTitleCommandValidatorTests
     {
         var result = _validator.Validate(new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1", Title = "New Title"
         });
         result.IsValid.Should().BeTrue();
     }
@@ -136,7 +93,7 @@ public class UpdateTeamPostTitleCommandValidatorTests
     {
         var result = _validator.Validate(new UpdateTeamPostTitleCommand
         {
-            PostId = "", TeamId = "team-1", Title = "New Title", UserId = "user-1"
+            PostId = "", TeamId = "team-1", Title = "New Title"
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -148,7 +105,7 @@ public class UpdateTeamPostTitleCommandValidatorTests
     {
         var result = _validator.Validate(new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "", Title = "New Title", UserId = "user-1"
+            PostId = "post-1", TeamId = "", Title = "New Title"
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -160,7 +117,7 @@ public class UpdateTeamPostTitleCommandValidatorTests
     {
         var result = _validator.Validate(new UpdateTeamPostTitleCommand
         {
-            PostId = "post-1", TeamId = "team-1", Title = "", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1", Title = ""
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -173,7 +130,7 @@ public class UpdateTeamPostTitleCommandValidatorTests
         var result = _validator.Validate(new UpdateTeamPostTitleCommand
         {
             PostId = "post-1", TeamId = "team-1",
-            Title = new string('x', 201), UserId = "user-1"
+            Title = new string('x', 201)
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -181,17 +138,6 @@ public class UpdateTeamPostTitleCommandValidatorTests
             e.ErrorMessage == "Title cannot exceed 200 characters.");
     }
 
-    [Fact]
-    public void UpdateTeamPostTitle_WhenUserIdEmpty_FailsValidation()
-    {
-        var result = _validator.Validate(new UpdateTeamPostTitleCommand
-        {
-            PostId = "post-1", TeamId = "team-1", Title = "New Title", UserId = ""
-        });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "UserId" && e.ErrorMessage == "UserId is required.");
-    }
 }
 
 public class DeleteTeamPostCommandValidatorTests
@@ -203,7 +149,7 @@ public class DeleteTeamPostCommandValidatorTests
     {
         _validator.Validate(new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "team-1", UserId = "user-1"
+            PostId = "post-1", TeamId = "team-1"
         }).IsValid.Should().BeTrue();
     }
 
@@ -212,7 +158,7 @@ public class DeleteTeamPostCommandValidatorTests
     {
         var result = _validator.Validate(new DeleteTeamPostCommand
         {
-            PostId = "", TeamId = "team-1", UserId = "user-1"
+            PostId = "", TeamId = "team-1"
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
@@ -224,22 +170,11 @@ public class DeleteTeamPostCommandValidatorTests
     {
         var result = _validator.Validate(new DeleteTeamPostCommand
         {
-            PostId = "post-1", TeamId = "", UserId = "user-1"
+            PostId = "post-1", TeamId = ""
         });
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e =>
             e.PropertyName == "TeamId" && e.ErrorMessage == "TeamId is required.");
     }
 
-    [Fact]
-    public void DeleteTeamPost_WhenUserIdEmpty_FailsValidation()
-    {
-        var result = _validator.Validate(new DeleteTeamPostCommand
-        {
-            PostId = "post-1", TeamId = "team-1", UserId = ""
-        });
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(e =>
-            e.PropertyName == "UserId" && e.ErrorMessage == "UserId is required.");
-    }
 }

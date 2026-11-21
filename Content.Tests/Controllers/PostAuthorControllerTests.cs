@@ -1,4 +1,5 @@
 using ContentAPI.Controllers;
+using ContentBLL.DTO.Post;
 using ContentBLL.Services.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
@@ -9,19 +10,123 @@ namespace Content.Tests.Controllers;
 
 public class PostAuthorControllerTests
 {
-    private readonly Mock<IPostService> _serviceMock = new();
-    private PostAuthorController Ctrl() => new(_serviceMock.Object);
+    private readonly Mock<IPostAuthorResolver> _resolverMock = new();
+    private readonly CancellationToken _ct = CancellationToken.None;
 
-    // ── Returns Ok with the user id ───────────────────────────────────────────
+    private PostAuthorController Ctrl() => new(_resolverMock.Object);
+
+    private static ResolvedPostAuthor Author(
+        int postAuthorId = 1,
+        int userId = 201,
+        string userName = "alice",
+        string? avatarUrl = null,
+        bool created = false) =>
+        new(postAuthorId, userId, Guid.Empty, userName, avatarUrl, created);
+
+    // ── GetMe ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetMe_ReturnsOk()
+    {
+        _resolverMock.Setup(r => r.ResolveForWriteAsync(null, _ct)).ReturnsAsync(Author());
+
+        var result = await Ctrl().GetMe(_ct);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMe_ReturnsBothIds()
+    {
+        _resolverMock.Setup(r => r.ResolveForWriteAsync(null, _ct)).ReturnsAsync(Author(1, 201));
+
+        var result = await Ctrl().GetMe(_ct);
+
+        var dto = (PostAuthorDto)((OkObjectResult)result.Result!).Value!;
+        dto.PostAuthorId.Should().Be(1);
+        dto.UserId.Should().Be(201);
+    }
+
+    [Fact]
+    public async Task GetMe_ReportsWhetherTheRowWasJustCreated()
+    {
+        _resolverMock.Setup(r => r.ResolveForWriteAsync(null, _ct)).ReturnsAsync(Author(created: true));
+
+        var result = await Ctrl().GetMe(_ct);
+
+        var dto = (PostAuthorDto)((OkObjectResult)result.Result!).Value!;
+        dto.Created.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetMe_CallsResolverExactlyOnce()
+    {
+        _resolverMock.Setup(r => r.ResolveForWriteAsync(null, _ct)).ReturnsAsync(Author());
+
+        await Ctrl().GetMe(_ct);
+
+        _resolverMock.Verify(r => r.ResolveForWriteAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── UpdateOwnAvatar ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateOwnAvatar_WithAvatarUrl_ReturnsOk()
+    {
+        _resolverMock
+            .Setup(r => r.ResolveForWriteAsync("https://img.png", _ct))
+            .ReturnsAsync(Author(2, 202, "bob", "https://img.png"));
+
+        var result = await Ctrl().UpdateOwnAvatar("https://img.png", _ct);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateOwnAvatar_ReturnsUpdatedAvatar()
+    {
+        _resolverMock
+            .Setup(r => r.ResolveForWriteAsync("https://avatar.jpg", _ct))
+            .ReturnsAsync(Author(2, 202, "bob", "https://avatar.jpg"));
+
+        var result = await Ctrl().UpdateOwnAvatar("https://avatar.jpg", _ct);
+
+        var dto = (PostAuthorDto)((OkObjectResult)result.Result!).Value!;
+        dto.AvatarUrl.Should().Be("https://avatar.jpg");
+    }
+
+    [Fact]
+    public async Task UpdateOwnAvatar_NullAvatarUrl_PassesNullToResolver()
+    {
+        _resolverMock.Setup(r => r.ResolveForWriteAsync(null, _ct)).ReturnsAsync(Author(3, 203, "eve"));
+
+        await Ctrl().UpdateOwnAvatar(null, _ct);
+
+        _resolverMock.Verify(r => r.ResolveForWriteAsync(null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateOwnAvatar_PassesAvatarUrlToResolver()
+    {
+        _resolverMock
+            .Setup(r => r.ResolveForWriteAsync(It.IsAny<string?>(), _ct))
+            .ReturnsAsync(Author());
+
+        await Ctrl().UpdateOwnAvatar("https://avatar.jpg", _ct);
+
+        _resolverMock.Verify(r => r.ResolveForWriteAsync("https://avatar.jpg", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── GetByUserName ─────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetByUserName_ValidUser_ReturnsOk()
     {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync("alice", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 1, UserId: 201));
+        _resolverMock
+            .Setup(r => r.FindByUserNameAsync("alice", _ct))
+            .ReturnsAsync(Author(1, 201));
 
-        var result = await Ctrl().GetByUserName("alice", null, CancellationToken.None);
+        var result = await Ctrl().GetByUserName("alice", _ct);
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -29,89 +134,64 @@ public class PostAuthorControllerTests
     [Fact]
     public async Task GetByUserName_ValidUser_ReturnsBothIds()
     {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync("alice", null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 1, UserId: 201));
+        _resolverMock
+            .Setup(r => r.FindByUserNameAsync("alice", _ct))
+            .ReturnsAsync(Author(1, 201));
 
-        var result = await Ctrl().GetByUserName("alice", null, CancellationToken.None);
+        var result = await Ctrl().GetByUserName("alice", _ct);
 
-        var ok = (OkObjectResult)result.Result!;
-        var value = ok.Value!;
-        var postAuthorId = (int)value.GetType().GetProperty("postAuthorId")!.GetValue(value)!;
-        var userId = (int)value.GetType().GetProperty("userId")!.GetValue(value)!;
-        postAuthorId.Should().Be(1);
-        userId.Should().Be(201);
+        var dto = (PostAuthorDto)((OkObjectResult)result.Result!).Value!;
+        dto.PostAuthorId.Should().Be(1);
+        dto.UserId.Should().Be(201);
     }
 
     [Fact]
-    public async Task GetByUserName_WithAvatarUrl_ReturnsOk()
+    public async Task GetByUserName_WhenNoRow_ReturnsNotFound()
     {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync("bob", "https://img.png", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 2, UserId: 202));
+        _resolverMock
+            .Setup(r => r.FindByUserNameAsync("ghost", _ct))
+            .ReturnsAsync((ResolvedPostAuthor?)null);
 
-        var result = await Ctrl().GetByUserName("bob", "https://img.png", CancellationToken.None);
+        var result = await Ctrl().GetByUserName("ghost", _ct);
 
-        result.Result.Should().BeOfType<OkObjectResult>();
-    }
-
-    // ── Forwards arguments to service ─────────────────────────────────────────
-
-    [Fact]
-    public async Task GetByUserName_PassesUserNameToService()
-    {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 1, UserId: 201));
-
-        await Ctrl().GetByUserName("charlie", null, CancellationToken.None);
-
-        _serviceMock.Verify(
-            s => s.EnsurePostAuthorAsync("charlie", It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]
-    public async Task GetByUserName_PassesAvatarUrlToService()
+    public async Task GetByUserName_PassesUserNameToResolver()
     {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 1, UserId: 201));
+        _resolverMock
+            .Setup(r => r.FindByUserNameAsync(It.IsAny<string>(), _ct))
+            .ReturnsAsync(Author());
 
-        await Ctrl().GetByUserName("dave", "https://avatar.jpg", CancellationToken.None);
+        await Ctrl().GetByUserName("charlie", _ct);
 
-        _serviceMock.Verify(
-            s => s.EnsurePostAuthorAsync("dave", "https://avatar.jpg", It.IsAny<CancellationToken>()),
-            Times.Once);
+        _resolverMock.Verify(r => r.FindByUserNameAsync("charlie", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task GetByUserName_NullAvatarUrl_PassesNullToService()
+    public async Task GetByUserName_DoesNotCreateARow()
     {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync(It.IsAny<string>(), null, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 3, UserId: 203));
+        _resolverMock
+            .Setup(r => r.FindByUserNameAsync(It.IsAny<string>(), _ct))
+            .ReturnsAsync(Author(created: false));
 
-        await Ctrl().GetByUserName("eve", null, CancellationToken.None);
+        var result = await Ctrl().GetByUserName("dave", _ct);
 
-        _serviceMock.Verify(
-            s => s.EnsurePostAuthorAsync("eve", null, It.IsAny<CancellationToken>()),
-            Times.Once);
+        var dto = (PostAuthorDto)((OkObjectResult)result.Result!).Value!;
+        dto.Created.Should().BeFalse();
+        _resolverMock.Verify(r => r.ResolveForWriteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // ── Service is called exactly once ────────────────────────────────────────
-
     [Fact]
-    public async Task GetByUserName_CallsServiceExactlyOnce()
+    public async Task GetByUserName_CallsResolverExactlyOnce()
     {
-        _serviceMock
-            .Setup(s => s.EnsurePostAuthorAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((PostAuthorId: 4, UserId: 204));
+        _resolverMock
+            .Setup(r => r.FindByUserNameAsync(It.IsAny<string>(), _ct))
+            .ReturnsAsync(Author(4, 204, "frank"));
 
-        await Ctrl().GetByUserName("frank", null, CancellationToken.None);
+        await Ctrl().GetByUserName("frank", _ct);
 
-        _serviceMock.Verify(
-            s => s.EnsurePostAuthorAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+        _resolverMock.Verify(r => r.FindByUserNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

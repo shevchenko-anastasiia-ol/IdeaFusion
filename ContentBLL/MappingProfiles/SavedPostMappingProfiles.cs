@@ -19,6 +19,8 @@ public class SavedPostMappingProfiles : Profile
         // Мапінг SavedPostCreateDto -> SavedPost
         CreateMap<SavedPostCreateDto, SavedPost>()
             .ForMember(dest => dest.SavedPostId, opt => opt.Ignore())
+            // Derived from the token by the service, not from the request.
+            .ForMember(dest => dest.UserId,      opt => opt.Ignore())
             .ForMember(dest => dest.SavedAt,     opt => opt.Ignore())
             .ForMember(dest => dest.Post,        opt => opt.Ignore());
     }

@@ -17,10 +17,8 @@ public class PostGrpcProfile : Profile
             .ForMember(dest => dest.Author,        opt => opt.MapFrom(src => src.Author))
             .ForMember(dest => dest.Team,          opt => opt.MapFrom(src => src.Collaboration))
             .ForMember(dest => dest.Tags,          opt => opt.MapFrom(src => src.Tags))
-            // MediaUrls — це просто список рядків, мапимо в MediaDto з ObjectName
             .ForMember(dest => dest.Media,         opt => opt.MapFrom(src =>
                 src.MediaUrls.Select(url => new GrpcPost.MediaDto { ObjectName = url }).ToList()))
-            // LikesCount, ViewsCount, CommentsCount відсутні в BLL PostDto — залишаємо 0
             .ForMember(dest => dest.LikesCount,    opt => opt.Ignore())
             .ForMember(dest => dest.ViewsCount,    opt => opt.Ignore())
             .ForMember(dest => dest.CommentsCount, opt => opt.Ignore())
@@ -31,7 +29,8 @@ public class PostGrpcProfile : Profile
         CreateMap<AuthorDto, GrpcPost.PostAuthorDto>()
             .ForMember(dest => dest.UserId,    opt => opt.MapFrom(src => src.UserId.ToString()))
             .ForMember(dest => dest.UserName,  opt => opt.MapFrom(src => src.UserName))
-            .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.AvatarUrl ?? string.Empty));
+            .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.AvatarUrl ?? string.Empty))
+            .ForMember(dest => dest.ExternalId, opt => opt.MapFrom(src => src.ExternalId ?? string.Empty));
  
         // CollaborationDto → PostTeamDto
         CreateMap<CollaborationDto, GrpcPost.PostTeamDto>()

@@ -1,4 +1,5 @@
 using ContentAPI.Controllers;
+using ContentAPI.Services;
 using ContentBLL.DTO.Comment;
 using ContentBLL.Services.Interfaces;
 using FluentAssertions;
@@ -11,9 +12,10 @@ namespace Content.Tests.Controllers;
 public class CommentControllerTests
 {
     private readonly Mock<ICommentService> _svcMock = new();
+    private readonly Mock<IContentAuditWriter> _auditMock = new();
     private readonly CancellationToken _ct = CancellationToken.None;
 
-    private CommentController Ctrl() => new(_svcMock.Object);
+    private CommentController Ctrl() => new(_svcMock.Object, _auditMock.Object);
 
     // ── GetById ───────────────────────────────────────────────────────────────
 
@@ -74,7 +76,7 @@ public class CommentControllerTests
         _svcMock.Setup(s => s.CreateAsync(It.IsAny<CommentCreateDto>(), _ct)).ReturnsAsync(created);
 
         var result = await Ctrl().Create(
-            new CommentCreateDto { PostId = 1, PostAuthorId = 1, Body = "New comment", CreatedBy = "user" }, _ct);
+            new CommentCreateDto { PostId = 1, Body = "New comment" }, _ct);
 
         var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
         ((CommentDto)createdResult.Value!).CommentId.Should().Be(7);
@@ -88,7 +90,7 @@ public class CommentControllerTests
         var updated = new CommentDto { CommentId = 3, Body = "Updated" };
         _svcMock.Setup(s => s.UpdateAsync(3, It.IsAny<CommentUpdateDto>(), _ct)).ReturnsAsync(updated);
 
-        var result = await Ctrl().Update(3, new CommentUpdateDto { Body = "Updated", UpdatedBy = "user" }, _ct);
+        var result = await Ctrl().Update(3, new CommentUpdateDto { Body = "Updated" }, _ct);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         ((CommentDto)ok.Value!).Body.Should().Be("Updated");

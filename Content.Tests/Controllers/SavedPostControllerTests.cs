@@ -28,15 +28,15 @@ public class SavedPostControllerTests
         ok.Value.Should().Be(4);
     }
 
-    // ── GetByUser ─────────────────────────────────────────────────────────────
+    // ── GetMine ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetByUser_ReturnsOkWithSavedPosts()
+    public async Task GetMine_ReturnsOkWithSavedPosts()
     {
         var saved = new List<SavedPostDto> { new() { SavedPostId = 1 } };
-        _svcMock.Setup(s => s.GetByUserIdAsync(3, _ct)).ReturnsAsync(saved);
+        _svcMock.Setup(s => s.GetMineAsync(_ct)).ReturnsAsync(saved);
 
-        var result = await Ctrl().GetByUser(3, _ct);
+        var result = await Ctrl().GetMine(_ct);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         ((IEnumerable<SavedPostDto>)ok.Value!).Should().ContainSingle();
@@ -47,9 +47,9 @@ public class SavedPostControllerTests
     [Fact]
     public async Task Exists_ReturnsOkWithBool()
     {
-        _svcMock.Setup(s => s.ExistsAsync(1, 5, _ct)).ReturnsAsync(true);
+        _svcMock.Setup(s => s.ExistsAsync(1, _ct)).ReturnsAsync(true);
 
-        var result = await Ctrl().Exists(postId: 1, userId: 5, _ct);
+        var result = await Ctrl().Exists(postId: 1, _ct);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().Be(true);
@@ -63,7 +63,7 @@ public class SavedPostControllerTests
         var savedDto = new SavedPostDto { SavedPostId = 7, PostId = 1, UserId = 5 };
         _svcMock.Setup(s => s.SaveAsync(It.IsAny<SavedPostCreateDto>(), _ct)).ReturnsAsync(savedDto);
 
-        var result = await Ctrl().Save(new SavedPostCreateDto { PostId = 1, UserId = 5 }, _ct);
+        var result = await Ctrl().Save(new SavedPostCreateDto { PostId = 1 }, _ct);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         ((SavedPostDto)ok.Value!).SavedPostId.Should().Be(7);
@@ -74,9 +74,9 @@ public class SavedPostControllerTests
     [Fact]
     public async Task Unsave_ReturnsNoContent()
     {
-        _svcMock.Setup(s => s.UnsaveAsync(1, 5, _ct)).Returns(Task.CompletedTask);
+        _svcMock.Setup(s => s.UnsaveAsync(1, _ct)).Returns(Task.CompletedTask);
 
-        var result = await Ctrl().Unsave(postId: 1, userId: 5, _ct);
+        var result = await Ctrl().Unsave(postId: 1, _ct);
 
         result.Should().BeOfType<NoContentResult>();
     }

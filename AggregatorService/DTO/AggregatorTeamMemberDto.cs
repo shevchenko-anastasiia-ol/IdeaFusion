@@ -6,5 +6,6 @@ public class AggregatorTeamMemberDto
     public string Username { get; set; } = null!;
     public string? AvatarUrl { get; set; }
     public string Role { get; set; } = null!;
+    public string? Position { get; set; }
     public List<string> Permissions { get; set; } = new();
 }

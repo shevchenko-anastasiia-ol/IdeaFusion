@@ -264,6 +264,11 @@ namespace ContentDAL.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("avatarurl");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("externalid");
+
                     b.Property<DateTime>("SyncedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -282,6 +287,11 @@ namespace ContentDAL.Migrations
 
                     b.HasKey("PostAuthorId")
                         .HasName("pk_postauthors");
+
+                    b.HasIndex("ExternalId")
+                        .IsUnique()
+                        .HasFilter("externalid IS NOT NULL")
+                        .HasDatabaseName("ix_postauthors_externalid");
 
                     b.HasIndex("UserId")
                         .IsUnique()

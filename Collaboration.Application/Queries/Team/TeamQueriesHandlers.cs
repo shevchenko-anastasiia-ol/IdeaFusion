@@ -1,4 +1,5 @@
 ﻿using Collaboration.Application.Interfaces.Queries;
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Domain.Common.Helpers;
 using Collaboration.Domain.Exceptions;
 using Collaboration.Domain.Interfaces;
@@ -46,21 +47,41 @@ public class GetTeamsPagedQueryHandler : IQueryHandler<GetTeamsPagedQuery, Paged
     }
 }
  
+public class GetMyTeamsQueryHandler : IQueryHandler<GetMyTeamsQuery, IEnumerable<Domain.Entities.Team>>
+{
+    private readonly ITeamRepository _teamRepository;
+    private readonly ICallerContext _caller;
+ 
+    public GetMyTeamsQueryHandler(ITeamRepository teamRepository, ICallerContext caller)
+    {
+        _teamRepository = teamRepository;
+        _caller = caller;
+    }
+ 
+    public async Task<IEnumerable<Domain.Entities.Team>> Handle(GetMyTeamsQuery request, CancellationToken cancellationToken)
+    {
+        return await _teamRepository.GetByMemberIdAsync(_caller.UserId, cancellationToken);
+    }
+}
+ 
 public class GetTeamsByMemberQueryHandler : IQueryHandler<GetTeamsByMemberQuery, IEnumerable<Domain.Entities.Team>>
 {
     private readonly ITeamRepository _teamRepository;
- 
+
     public GetTeamsByMemberQueryHandler(ITeamRepository teamRepository)
     {
         _teamRepository = teamRepository;
     }
- 
+
     public async Task<IEnumerable<Domain.Entities.Team>> Handle(GetTeamsByMemberQuery request, CancellationToken cancellationToken)
     {
-        return await _teamRepository.GetByMemberIdAsync(request.UserId, cancellationToken);
+        if (string.IsNullOrWhiteSpace(request.UserId))
+            return [];
+        var teams = await _teamRepository.GetByMemberIdAsync(request.UserId.Trim(), cancellationToken);
+        return teams.Where(t => !t.IsDeleted).ToList();
     }
 }
- 
+
 public class GetTeamsByStatusQueryHandler : IQueryHandler<GetTeamsByStatusQuery, PagedList<Domain.Entities.Team>>
 {
     private readonly ITeamRepository _teamRepository;

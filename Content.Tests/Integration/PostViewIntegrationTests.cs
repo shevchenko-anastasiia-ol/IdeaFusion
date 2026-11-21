@@ -23,22 +23,45 @@ public class PostViewIntegrationTests : IClassFixture<ContentWebApplicationFacto
     public async Task Record_AuthenticatedUser_Returns204()
     {
         _factory.PostViewServiceMock
-            .Setup(s => s.RecordAsync(5, 10, It.IsAny<CancellationToken>()))
+            .Setup(s => s.RecordAsync(5, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var response = await _client.PostAsync("/api/postview/record?postId=5&userId=10", null);
+        var response = await _client.PostAsync("/api/postview/record?postId=5", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]
-    public async Task Record_AnonymousUser_Returns204()
+    public async Task Record_AnonymousUser_IsRejectedByTheFallbackPolicy()
     {
         _factory.PostViewServiceMock
-            .Setup(s => s.RecordAsync(5, null, It.IsAny<CancellationToken>()))
+            .Setup(s => s.RecordAsync(5, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var response = await _client.PostAsync("/api/postview/record?postId=5", null);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/postview/record?postId=5");
+        request.Headers.Add(TestAuthHandler.AnonymousHeader, "true");
+
+        var response = await _client.SendAsync(request);
+
+        // Phase 1: an endpoint with no [Authorize] attribute still requires an
+        // authenticated caller, so an anonymous request must not reach the BLL.
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _factory.PostViewServiceMock.Verify(
+            s => s.RecordAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Record_AuthenticatedUser_UsesTheSubjectFromTheToken()
+    {
+        _factory.PostViewServiceMock
+            .Setup(s => s.RecordAsync(5, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/postview/record?postId=5");
+        request.Headers.Add(TestAuthHandler.SubjectHeader, TestAuthHandler.DefaultSubject);
+
+        var response = await _client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }

@@ -37,7 +37,7 @@ public class CollaborationRequestGrpcServiceImpl : CollaborationRequestGrpcServi
             if (string.IsNullOrWhiteSpace(request.RequestId))
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "RequestId is required."));
  
-            var query = new GetCollaborationRequestByIdQuery { RequestId = request.RequestId };
+            var query = new GetCollaborationRequestByIdInternalQuery { RequestId = request.RequestId };
             var result = await _mediator.Send(query, context.CancellationToken);
  
             if (result is null)
@@ -73,7 +73,7 @@ public class CollaborationRequestGrpcServiceImpl : CollaborationRequestGrpcServi
             if (string.IsNullOrWhiteSpace(request.TeamId))
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "TeamId is required."));
  
-            var query = new GetCollaborationRequestsByTeamQuery { TeamId = request.TeamId };
+            var query = new GetCollaborationRequestsByTeamInternalQuery { TeamId = request.TeamId };
             var results = await _mediator.Send(query, context.CancellationToken);
  
             // Фільтр по статусу якщо передано

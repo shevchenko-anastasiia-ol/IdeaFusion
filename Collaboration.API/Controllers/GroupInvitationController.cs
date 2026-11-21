@@ -1,17 +1,26 @@
-﻿using Collaboration.Application.Commands.GroupInvitation;
+﻿using Collaboration.API.Services;
+using Collaboration.Application.Commands.GroupInvitation;
 using Collaboration.Application.Queries.GroupInvitation;
 using Collaboration.Domain.Entities.Parameters;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Collaboration.API.Controllers;
 
 [Route("api/group-invitations")]
+[Authorize]
 public class GroupInvitationController : BaseApiController
 {
-    public GroupInvitationController(IMediator mediator) : base(mediator) { }
+    private readonly ICollaborationAuditWriter _audit;
+
+    public GroupInvitationController(IMediator mediator, ICollaborationAuditWriter audit) : base(mediator)
+    {
+        _audit = audit;
+    }
  
     // GET: api/group-invitations/{id}
+    // Authenticated: an invitation names the invitee and the inviter's message.
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id, CancellationToken cancellationToken)
     {
@@ -25,6 +34,7 @@ public class GroupInvitationController : BaseApiController
     }
  
     // GET: api/group-invitations
+    // Authenticated: listing is scoped to one team and permission-checked.
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] GroupInvitationParameters parameters, CancellationToken cancellationToken)
     {
@@ -48,13 +58,15 @@ public class GroupInvitationController : BaseApiController
         catch (Exception ex) { return HandleException(ex); }
     }
  
-    // GET: api/group-invitations/user/{userId}
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetByUser(string userId, CancellationToken cancellationToken)
+    // GET: api/group-invitations/mine
+    // The invitations addressed to the caller. The old /user/{userId} route is gone:
+    // an invitation is personal, so it is never readable on somebody else's behalf.
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
     {
         try
         {
-            var invitations = await _mediator.Send(new GetGroupInvitationsByUserQuery { UserId = userId }, cancellationToken);
+            var invitations = await _mediator.Send(new GetMyGroupInvitationsQuery(), cancellationToken);
             return Ok(invitations);
         }
         catch (Exception ex) { return HandleException(ex); }
@@ -122,8 +134,24 @@ public class GroupInvitationController : BaseApiController
         {
             if (command.InvitationId != id)
                 return BadRequest(new { message = "ID mismatch." });
- 
+
+            // Read first: the command returns Unit, so the invitee and the team have to
+            // be captured before the revoke mutates them away.
+            var existing = await _mediator.Send(
+                new GetGroupInvitationByIdQuery { InvitationId = id }, cancellationToken);
+
             await _mediator.Send(command, cancellationToken);
+
+            await _audit.RecordAsync(
+                action: "RevokeGroupInvitation",
+                targetType: "GroupInvitation",
+                targetId: id,
+                targetName: existing?.InvitedUserId,
+                details: existing is null
+                    ? "Group invitation revoked."
+                    : $"Invitation to '{existing.InvitedUserId}' for team {existing.TeamId} revoked.",
+                cancellationToken: cancellationToken);
+
             return NoContent();
         }
         catch (Exception ex) { return HandleException(ex); }

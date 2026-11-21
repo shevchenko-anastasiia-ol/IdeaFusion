@@ -325,15 +325,34 @@ public class TeamEntityTests
     {
         var team = CreateTeam();
         var newUser = new UserSnapshot("user-2", "Bob");
-        team.AddMember(newUser, "Developer");
-        team.Members.Should().Contain(m => m.UserId == "user-2" && m.Role == "Developer");
+        team.Join(newUser, "Developer");
+        team.Members.Should().Contain(m => m.UserId == "user-2" && m.Role == TeamRole.Member && m.Position == "Developer");
+    }
+
+    [Fact]
+    public void Join_WithFreeTextPosition_AddsPlainMemberAndKeepsPosition()
+    {
+        var team = CreateTeam();
+        team.Join(new UserSnapshot("user-3", "Ann"), "Веб-розробник");
+        var member = team.Members.Single(m => m.UserId == "user-3");
+        member.Role.Should().Be(TeamRole.Member);
+        member.Position.Should().Be("Веб-розробник");
+        member.Permissions.Should().BeEquivalentTo(TeamRole.DefaultPermissionsFor(TeamRole.Member));
+    }
+
+    [Fact]
+    public void AddMember_WithUnknownAccessRole_Throws()
+    {
+        var team = CreateTeam();
+        team.Invoking(t => t.AddMember(new UserSnapshot("user-4", "Max"), "Веб-розробник"))
+            .Should().Throw<DomainException>();
     }
 
     [Fact]
     public void AddMember_WhenAlreadyMember_Throws()
     {
         var team = CreateTeam();
-        team.Invoking(t => t.AddMember(Owner, "Developer"))
+        team.Invoking(t => t.Join(Owner, "Developer"))
             .Should().Throw<DomainException>().WithMessage("User is already a member of this team.");
     }
 
@@ -344,7 +363,7 @@ public class TeamEntityTests
     {
         var team = CreateTeam();
         var newUser = new UserSnapshot("user-2", "Bob");
-        team.AddMember(newUser, "Developer");
+        team.Join(newUser, "Developer");
         team.RemoveMember("user-2", "owner-1");
         team.Members.Should().NotContain(m => m.UserId == "user-2");
         team.UpdatedBy.Should().Be("owner-1");
@@ -449,9 +468,38 @@ public class TeamEntityTests
         team.MarkAsDeleted();
         team.IsDeleted.Should().BeTrue();
     }
-}
 
-// ── TeamPost entity ───────────────────────────────────────────────────────────
+    // TeamVacancy.Update / Team.RenameRequiredRole
+
+    [Fact]
+    public void Vacancy_Update_ChangesTextAndClearsBlankFields()
+    {
+        var vacancy = new TeamVacancy("team-1", "Team", "Design", [], "Веб-розробник", "owner-1", "old", "old req");
+        vacancy.Update(" Frontend-розробник ", "React + TS", "  ", "owner-1");
+        vacancy.Role.Should().Be("Frontend-розробник");
+        vacancy.Description.Should().Be("React + TS");
+        vacancy.Requirements.Should().BeNull();
+        vacancy.UpdatedBy.Should().Be("owner-1");
+    }
+
+    [Fact]
+    public void Vacancy_Update_WhenClosed_Throws()
+    {
+        var vacancy = new TeamVacancy("team-1", "Team", "Design", [], "Веб-розробник", "owner-1");
+        vacancy.Close("owner-1");
+        vacancy.Invoking(v => v.Update("X", null, null, "owner-1")).Should().Throw<DomainException>();
+    }
+
+    [Fact]
+    public void RenameRequiredRole_RenamesMatchingRoleOnly()
+    {
+        var team = CreateTeam();
+        team.AddRequiredRole("Веб-розробник", null, "owner-1");
+        team.RenameRequiredRole("веб-розробник", "Frontend-розробник", "owner-1");
+        team.RenameRequiredRole("Не існує", "Щось", "owner-1");
+        team.RequiredRoles.Select(r => r.Role).Should().Equal("Frontend-розробник");
+    }
+}
 
 public class TeamPostEntityTests
 {

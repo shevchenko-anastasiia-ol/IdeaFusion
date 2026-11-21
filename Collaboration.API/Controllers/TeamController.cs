@@ -1,18 +1,31 @@
 ﻿using Collaboration.Application.Commands.Team;
+using Collaboration.Application.Interfaces.Services;
 using Collaboration.Application.Queries.Team;
 using Collaboration.Domain.Entities;
 using Collaboration.Domain.Entities.Parameters;
+using Collaboration.API.Services;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Collaboration.API.Controllers;
 
 [Route("api/[controller]")]
+[Authorize]
 public class TeamController : BaseApiController
 {
-    public TeamController(IMediator mediator) : base(mediator) { }
+    private readonly ICallerContext _caller;
+    private readonly ICollaborationAuditWriter _audit;
+
+    public TeamController(IMediator mediator, ICallerContext caller, ICollaborationAuditWriter audit)
+        : base(mediator)
+    {
+        _caller = caller;
+        _audit = audit;
+    }
  
     // GET: api/team/{id}
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id, CancellationToken cancellationToken)
     {
@@ -28,6 +41,7 @@ public class TeamController : BaseApiController
     }
  
     // GET: api/team
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] TeamParameters parameters, CancellationToken cancellationToken)
     {
@@ -40,6 +54,7 @@ public class TeamController : BaseApiController
     }
  
     // GET: api/team/search
+    [AllowAnonymous]
     [HttpGet("search")]
     public async Task<IActionResult> SearchByName([FromQuery] string name, CancellationToken cancellationToken)
     {
@@ -52,6 +67,7 @@ public class TeamController : BaseApiController
     }
  
     // GET: api/team/status/{status}
+    [AllowAnonymous]
     [HttpGet("status/{status}")]
     public async Task<IActionResult> GetByStatus(TeamStatus status, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
@@ -69,6 +85,7 @@ public class TeamController : BaseApiController
     }
  
     // GET: api/team/category/{category}
+    [AllowAnonymous]
     [HttpGet("category/{category}")]
     public async Task<IActionResult> GetByCategory(string category, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
@@ -86,12 +103,30 @@ public class TeamController : BaseApiController
     }
  
     // GET: api/team/member/{userId}
+    // Public, like the team pages that already list every member: which teams this person
+    // is in. The aggregator builds a member's portfolio from it, so that work a team
+    // published shows up on each member's profile and not only on the team's page.
+    // Read-only; nothing here acts on the user's behalf.
+    [AllowAnonymous]
     [HttpGet("member/{userId}")]
-    public async Task<IActionResult> GetByMember(string userId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetTeamsByMember(string userId, CancellationToken cancellationToken)
     {
         try
         {
             var teams = await _mediator.Send(new GetTeamsByMemberQuery { UserId = userId }, cancellationToken);
+            return Ok(teams);
+        }
+        catch (Exception ex) { return HandleException(ex); }
+    }
+
+    // GET: api/team/mine
+    // The caller's own memberships. Unlike member/{userId}, this one answers for the token.
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMyTeams(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var teams = await _mediator.Send(new GetMyTeamsQuery(), cancellationToken);
             return Ok(teams);
         }
         catch (Exception ex) { return HandleException(ex); }
@@ -150,11 +185,17 @@ public class TeamController : BaseApiController
  
     // DELETE: api/team/{id}
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id, [FromQuery] string requestedByUserId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
         try
         {
-            await _mediator.Send(new DeleteTeamCommand { TeamId = id, UserId = requestedByUserId }, cancellationToken);
+            await _mediator.Send(new DeleteTeamCommand { TeamId = id }, cancellationToken);
+            await _audit.RecordAsync(
+                action: "DeleteTeam",
+                targetType: "Team",
+                targetId: id,
+                details: "Team deleted.",
+                cancellationToken: cancellationToken);
             return NoContent();
         }
         catch (Exception ex) { return HandleException(ex); }
@@ -177,16 +218,29 @@ public class TeamController : BaseApiController
  
     // DELETE: api/team/{id}/members/{userId}
     [HttpDelete("{id}/members/{userId}")]
-    public async Task<IActionResult> RemoveMember(string id, string userId, [FromQuery] string requestedByUserId, CancellationToken cancellationToken)
+    public async Task<IActionResult> RemoveMember(string id, string userId, CancellationToken cancellationToken)
     {
         try
         {
             var team = await _mediator.Send(new RemoveTeamMemberCommand
             {
                 TeamId = id,
-                UserId = userId,
-                RequestedByUserId = requestedByUserId
+                MemberUserId = userId
             }, cancellationToken);
+
+            // Recorded after the removal has been applied, and only for a member being
+            // removed by somebody else: a voluntary exit is not a moderation event.
+            if (!string.Equals(userId, _caller.UserId, StringComparison.Ordinal))
+            {
+                await _audit.RecordAsync(
+                    action: "RemoveTeamMember",
+                    targetType: "Team",
+                    targetId: id,
+                    targetName: team.Name,
+                    details: $"Removed member {userId} from team '{team.Name}'.",
+                    cancellationToken: cancellationToken);
+            }
+
             return Ok(team);
         }
         catch (Exception ex) { return HandleException(ex); }
@@ -200,7 +254,7 @@ public class TeamController : BaseApiController
         {
             if (command.TeamId != id)
                 return BadRequest(new { message = "ID mismatch." });
-
+ 
             var team = await _mediator.Send(command, cancellationToken);
             return Ok(team);
         }
@@ -232,6 +286,42 @@ public class TeamController : BaseApiController
                 return BadRequest(new { message = "ID mismatch." });
 
             var team = await _mediator.Send(command, cancellationToken);
+
+            await _audit.RecordAsync(
+                action: "ChangeTeamMemberPermissions",
+                targetType: "Team",
+                targetId: id,
+                targetName: team.Name,
+                details: $"Permissions for {memberId} set to: " +
+                         (command.Permissions.Count == 0 ? "(none)" : string.Join(", ", command.Permissions)),
+                cancellationToken: cancellationToken);
+
+            return Ok(team);
+        }
+        catch (Exception ex) { return HandleException(ex); }
+    }
+
+    // PATCH: api/team/{id}/members/{memberId}/role
+    // Administrator only: this is the only route where a team role changes hands.
+    [Authorize(Policy = "RequireAdministrator")]
+    [HttpPatch("{id}/members/{memberId}/role")]
+    public async Task<IActionResult> SetMemberRole(string id, string memberId, [FromBody] SetTeamMemberRoleCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (command.TeamId != id || command.TargetMemberId != memberId)
+                return BadRequest(new { message = "ID mismatch." });
+
+            var team = await _mediator.Send(command, cancellationToken);
+
+            await _audit.RecordAsync(
+                action: "ChangeTeamMemberRole",
+                targetType: "Team",
+                targetId: id,
+                targetName: team.Name,
+                details: $"Member {memberId} was set to role '{command.Role}'.",
+                cancellationToken: cancellationToken);
+
             return Ok(team);
         }
         catch (Exception ex) { return HandleException(ex); }

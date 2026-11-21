@@ -1,12 +1,14 @@
 using AutoMapper;
 using ContentBLL.DTO.Comment;
 using ContentBLL.Services;
+using ContentBLL.Services.Interfaces;
 using ContentDAL.Repository.Interfaces;
 using ContentDAL.UOW;
 using ContentDomain.Entity;
 using ContentDomain.Exception;
 using FluentAssertions;
 using Moq;
+using ServiceDefaults.Interfaces;
 using Xunit;
 
 namespace Content.Tests.Services;
@@ -17,15 +19,24 @@ public class CommentServiceTests
     private readonly Mock<IMapper> _mapper = new();
     private readonly Mock<IPostRepository> _postRepo = new();
     private readonly Mock<ICommentRepository> _commentRepo = new();
+    private readonly Mock<IPostAuthorResolver> _authorResolver = new();
+    private readonly Mock<ICurrentUserAccessor> _currentUser = new();
     private readonly CancellationToken _ct = CancellationToken.None;
 
     public CommentServiceTests()
     {
         _uow.Setup(u => u.PostRepository).Returns(_postRepo.Object);
         _uow.Setup(u => u.CommentRepository).Returns(_commentRepo.Object);
+
+        // The caller is the token's subject: author id 1, so the comments these
+        // tests act on (PostAuthorId 1) belong to them.
+        _authorResolver
+            .Setup(r => r.ResolveForWriteAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ResolvedPostAuthor(1, 55, Guid.Empty, "user", null, false));
     }
 
-    private CommentService Svc() => new(_uow.Object, _mapper.Object);
+    private CommentService Svc() =>
+        new(_uow.Object, _mapper.Object, _authorResolver.Object, _currentUser.Object);
 
     // ── GetByIdAsync ──────────────────────────────────────────────────────────
 
@@ -89,7 +100,7 @@ public class CommentServiceTests
     public async Task CreateAsync_WhenPostNotFound_ThrowsNotFoundException()
     {
         _postRepo.Setup(r => r.GetByIdAsync(1, _ct)).ReturnsAsync((Post?)null);
-        var dto = new CommentCreateDto { PostId = 1, PostAuthorId = 1, Body = "Hi", CreatedBy = "user" };
+        var dto = new CommentCreateDto { PostId = 1, Body = "Hi" };
 
         await Svc().Invoking(s => s.CreateAsync(dto, _ct))
                    .Should().ThrowAsync<NotFoundException>()
@@ -105,7 +116,7 @@ public class CommentServiceTests
 
         var dto = new CommentCreateDto
         {
-            PostId = 2, PostAuthorId = 1, Body = "Reply", CreatedBy = "user",
+            PostId = 2, Body = "Reply",
             ParentCommentId = 99
         };
 
@@ -124,7 +135,7 @@ public class CommentServiceTests
 
         var dto = new CommentCreateDto
         {
-            PostId = 2, PostAuthorId = 1, Body = "Reply", CreatedBy = "user",
+            PostId = 2, Body = "Reply",
             ParentCommentId = 5
         };
 
@@ -145,7 +156,7 @@ public class CommentServiceTests
         _commentRepo.Setup(r => r.GetByIdAsync(10, _ct)).ReturnsAsync(comment);
         _mapper.Setup(m => m.Map<CommentDto>(comment)).Returns(resultDto);
 
-        var dto = new CommentCreateDto { PostId = 2, PostAuthorId = 1, Body = "Hello", CreatedBy = "user" };
+        var dto = new CommentCreateDto { PostId = 2, Body = "Hello" };
         var result = await Svc().CreateAsync(dto, _ct);
 
         result.CommentId.Should().Be(10);
@@ -158,7 +169,7 @@ public class CommentServiceTests
     public async Task UpdateAsync_WhenCommentNotFound_ThrowsNotFoundException()
     {
         _commentRepo.Setup(r => r.GetByIdAsync(99, _ct)).ReturnsAsync((Comment?)null);
-        var dto = new CommentUpdateDto { Body = "Updated", UpdatedBy = "user" };
+        var dto = new CommentUpdateDto { Body = "Updated" };
 
         await Svc().Invoking(s => s.UpdateAsync(99, dto, _ct))
                    .Should().ThrowAsync<NotFoundException>();
@@ -167,7 +178,7 @@ public class CommentServiceTests
     [Fact]
     public async Task UpdateAsync_WhenCommentFound_UpdatesAndReturnsDto()
     {
-        var comment = new Comment { CommentId = 3, Body = "Old" };
+        var comment = new Comment { CommentId = 3, Body = "Old", PostAuthorId = 1 };
         var updatedDto = new CommentDto { CommentId = 3, Body = "New" };
 
         _commentRepo.Setup(r => r.GetByIdAsync(3, _ct)).ReturnsAsync(comment);
@@ -175,7 +186,7 @@ public class CommentServiceTests
         _commentRepo.Setup(r => r.UpdateAsync(comment, _ct)).Returns(Task.CompletedTask);
         _mapper.Setup(m => m.Map<CommentDto>(comment)).Returns(updatedDto);
 
-        var dto = new CommentUpdateDto { Body = "New", UpdatedBy = "user" };
+        var dto = new CommentUpdateDto { Body = "New" };
         var result = await Svc().UpdateAsync(3, dto, _ct);
 
         result.CommentId.Should().Be(3);
@@ -196,7 +207,7 @@ public class CommentServiceTests
     [Fact]
     public async Task DeleteAsync_WhenCommentExists_CallsDelete()
     {
-        var comment = new Comment { CommentId = 7 };
+        var comment = new Comment { CommentId = 7, PostAuthorId = 1 };
         _commentRepo.Setup(r => r.GetByIdAsync(7, _ct)).ReturnsAsync(comment);
         _commentRepo.Setup(r => r.DeleteAsync(7, _ct)).Returns(Task.CompletedTask);
 
@@ -224,7 +235,7 @@ public class CommentServiceTests
 
         var createDto = new CommentCreateDto
         {
-            PostId = 4, PostAuthorId = 1, Body = "Reply", CreatedBy = "user",
+            PostId = 4, Body = "Reply",
             ParentCommentId = 20
         };
         var result = await Svc().CreateAsync(createDto, _ct);
